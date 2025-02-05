@@ -6,7 +6,6 @@
 /storage/*.key
 /storage/pail
 /vendor
-README.md
 .env
 .env.backup
 .env.production
