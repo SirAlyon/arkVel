@@ -184,11 +184,18 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
      *   non abilita emailVerification(), quindi il contratto MustVerifyEmail non
      *   introduce regressioni sull'admin. Il gating fine dell'admin sarà definito
      *   in una slice dedicata.
+     * - adopter: accesso permissivo per ogni utente autenticato (`true`). Qui non
+     *   c'è tenancy: l'ISOLAMENTO del pannello adopter è per OWNERSHIP a livello di
+     *   Policy (AdopterProfilePolicy: solo il proprietario vede/modifica il proprio
+     *   profilo) più la VERIFICA EMAIL obbligatoria (emailVerification() sul
+     *   pannello). Il ruolo Adopter è di piattaforma, assegnato team-independent dal
+     *   middleware EnsureAdopterRole, ed è bookkeeping (nessun permesso).
      */
     public function canAccessPanel(Panel $panel): bool
     {
         return match ($panel->getId()) {
             'shelter' => true,
+            'adopter' => true,
             default => true,
         };
     }

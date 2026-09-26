@@ -46,11 +46,11 @@ class DemoDataSeeder extends Seeder
     private const string SUPER_ADMIN_EMAIL = 'admin@arkvel.test';
 
     /**
-     * Team sentinel per il ruolo di piattaforma Super Admin: neutro, non
-     * coincide con nessuna Organization reale (le PK partono da 1). Il valore
-     * è irrilevante perché il rilevamento del Super Admin ignora il team.
+     * Team sentinel per i ruoli di piattaforma (non org-scoped): unica fonte di
+     * verità su RoleName. Neutro, non coincide con nessuna Organization reale (le
+     * PK partono da 1); irrilevante perché il rilevamento ignora il team.
      */
-    private const int PLATFORM_TEAM_ID = 0;
+    private const int PLATFORM_TEAM_ID = RoleName::PLATFORM_TEAM_ID;
 
     /**
      * Definizione dei 3 enti demo: chiave slug corta (per le email staff),
