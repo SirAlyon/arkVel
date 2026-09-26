@@ -10,6 +10,7 @@ use Database\Factories\FosterApplicationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Spatie\ModelStates\HasStates;
 
@@ -40,6 +41,7 @@ use Spatie\ModelStates\HasStates;
  * @property-read User $user
  * @property-read Organization $organization
  * @property-read User|null $assignedTo
+ * @property-read FosterPlacement|null $placement
  */
 class FosterApplication extends Model
 {
@@ -114,6 +116,17 @@ class FosterApplication extends Model
     public function assignedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * Affido fisico nato da questa richiesta (1:1). Presente solo dopo la
+     * finalizzazione dell'affido (Action della slice 3).
+     *
+     * @return HasOne<FosterPlacement, $this>
+     */
+    public function placement(): HasOne
+    {
+        return $this->hasOne(FosterPlacement::class);
     }
 
     /**
