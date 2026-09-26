@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use App\Models\User;
@@ -15,7 +17,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Ruoli e permessi globali per primi: gli altri seed possono dipenderne.
+        $this->call(RolesAndPermissionsSeeder::class);
 
         User::factory()->create([
             'name' => 'Test User',

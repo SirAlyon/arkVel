@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 use Spatie\Translatable\HasTranslations;
 
@@ -18,10 +19,9 @@ use Spatie\Translatable\HasTranslations;
  * Tenant della piattaforma (canile/rifugio/associazione/società).
  *
  * Model magro: solo cast, fillable, relazioni, scope e accessor.
- * Le relazioni verso animals/applications/adoptions e la membership
- * staff (pivot organization_user) verranno aggiunte nelle slice successive
- * quando i relativi model esisteranno. Logo/cover saranno gestiti da
- * spatie/laravel-medialibrary (nessuna colonna dedicata in questa slice).
+ * Le relazioni verso animals/applications/adoptions verranno aggiunte nelle
+ * slice successive quando i relativi model esisteranno. Logo/cover saranno
+ * gestiti da spatie/laravel-medialibrary (nessuna colonna dedicata qui).
  */
 class Organization extends Model
 {
@@ -95,5 +95,28 @@ class Organization extends Model
     protected function verified(Builder $query): void
     {
         $query->where('status', OrganizationStatus::Verified);
+    }
+
+    /**
+     * Tutti i membri dell'ente (a qualunque titolo), con dati di membership.
+     *
+     * @return BelongsToMany<User, $this, OrganizationUser>
+     */
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class)
+            ->using(OrganizationUser::class)
+            ->withPivot(['role', 'verified', 'invited_at'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Solo i membri verificati dell'ente (possono operare).
+     *
+     * @return BelongsToMany<User, $this, OrganizationUser>
+     */
+    public function verifiedStaff(): BelongsToMany
+    {
+        return $this->users()->wherePivot('verified', true);
     }
 }
