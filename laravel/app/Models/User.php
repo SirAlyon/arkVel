@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
@@ -73,6 +74,26 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
         return $this->organizations()
             ->wherePivot('verified', true)
             ->where('organizations.status', '!=', OrganizationStatus::Suspended);
+    }
+
+    /**
+     * Profilo/questionario dell'adottante (1:1). L'ownership è per utente, non
+     * per ente: non è una risorsa tenant-scoped.
+     *
+     * @return HasOne<AdopterProfile, $this>
+     */
+    public function adopterProfile(): HasOne
+    {
+        return $this->hasOne(AdopterProfile::class);
+    }
+
+    /**
+     * L'utente ha un profilo adottante completo (questionario obbligatorio +
+     * consenso GDPR). Delega il giudizio di completezza al profilo stesso.
+     */
+    public function hasCompleteAdopterProfile(): bool
+    {
+        return $this->adopterProfile?->isComplete() === true;
     }
 
     /**
