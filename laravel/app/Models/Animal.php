@@ -13,9 +13,11 @@ use App\Models\Concerns\GeneratesUniqueSlug;
 use Database\Factories\AnimalFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\Image\Enums\Fit;
@@ -58,6 +60,7 @@ use Spatie\Translatable\HasTranslations;
  * @property bool $application_paused
  * @property string|null $pause_reason
  * @property bool $featured
+ * @property-read Collection<int, MedicalRecord> $medicalRecords
  */
 class Animal extends Model implements HasMedia
 {
@@ -149,6 +152,16 @@ class Animal extends Model implements HasMedia
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Cartella sanitaria: vaccinazioni, trattamenti, interventi, visite.
+     *
+     * @return HasMany<MedicalRecord, $this>
+     */
+    public function medicalRecords(): HasMany
+    {
+        return $this->hasMany(MedicalRecord::class);
     }
 
     /**

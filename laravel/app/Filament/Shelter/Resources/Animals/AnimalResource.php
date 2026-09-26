@@ -7,6 +7,7 @@ namespace App\Filament\Shelter\Resources\Animals;
 use App\Filament\Shelter\Resources\Animals\Pages\CreateAnimal;
 use App\Filament\Shelter\Resources\Animals\Pages\EditAnimal;
 use App\Filament\Shelter\Resources\Animals\Pages\ListAnimals;
+use App\Filament\Shelter\Resources\Animals\RelationManagers\MedicalRecordsRelationManager;
 use App\Filament\Shelter\Resources\Animals\Schemas\AnimalForm;
 use App\Filament\Shelter\Resources\Animals\Tables\AnimalsTable;
 use App\Models\Animal;
@@ -87,8 +88,9 @@ class AnimalResource extends Resource
      */
     public static function getRelations(): array
     {
-        // RelationManager MedicalRecord: slice 6.
-        return [];
+        return [
+            MedicalRecordsRelationManager::class,
+        ];
     }
 
     /**
