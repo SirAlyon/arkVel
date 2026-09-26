@@ -57,6 +57,11 @@ class AdopterPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Rose,
             ])
+            // Campanella notifiche in-app (canale database, tabella `notifications`):
+            // l'adottante vede qui i cambi di stato candidatura e la conferma di
+            // adozione. Polling ogni 30s per l'aggiornamento del badge senza reload.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->discoverResources(in: app_path('Filament/Adopter/Resources'), for: 'App\Filament\Adopter\Resources')
             ->discoverPages(in: app_path('Filament/Adopter/Pages'), for: 'App\Filament\Adopter\Pages')
             ->discoverWidgets(in: app_path('Filament/Adopter/Widgets'), for: 'App\Filament\Adopter\Widgets')

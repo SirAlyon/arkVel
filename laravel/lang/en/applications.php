@@ -25,6 +25,17 @@ return [
         'database' => ':adopter applied for :animal.',
     ],
 
+    // Notification to organization members when an adopter withdraws the application.
+    'withdrawn' => [
+        'subject' => 'Application withdrawn for :animal',
+        'greeting' => 'Hi,',
+        'line' => ':adopter withdrew the adoption application for :animal.',
+        'action' => 'Manage applications',
+        'salutation' => 'See you soon, the ArkVel team',
+        // Short message for the in-app (database channel) notification.
+        'database' => ':adopter withdrew the application for :animal.',
+    ],
+
     // Application flow from the public animal detail page.
     'apply' => [
         'submitting' => 'Sending…',

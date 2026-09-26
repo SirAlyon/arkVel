@@ -11,10 +11,13 @@ use App\Exceptions\CannotWithdrawApplication;
 use App\Exceptions\InvalidApplicationTransition;
 use App\Models\AdoptionApplication;
 use App\Models\User;
+use App\Notifications\ApplicationWithdrawn;
 use App\States\Application\AdoptionPending;
 use App\States\Application\Completed;
 use App\States\Application\Withdrawn;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Spatie\ModelStates\Exceptions\CouldNotPerformTransition;
 
 /**
@@ -26,8 +29,12 @@ use Spatie\ModelStates\Exceptions\CouldNotPerformTransition;
  * fallisce perché il grafo non lo consente e viene surfacciato come
  * InvalidApplicationTransition, senza lasciare stato/log parziali.
  *
- * La notifica all'ente ("candidatura ritirata") arriva nella slice 11: qui si
- * logga soltanto.
+ * Notifica (slice 11): dopo il ritiro (e l'eventuale rilascio dell'animale), lo
+ * STAFF dell'ente riceve {@see ApplicationWithdrawn} (mail + database). I
+ * destinatari sono l'operatore in carico (assignedTo) se assegnato, altrimenti i
+ * membri verificati dell'ente ({@see Organization::verifiedStaff()}). La notifica
+ * è accodata after-commit: l'ordinamento rispetto alla transazione è garantito
+ * dalla notifica stessa ($afterCommit), l'Action resta lineare.
  *
  * Accoppiamento con lo stato dell'ANIMALE (slice 10): se la candidatura ritirata
  * aveva RISERVATO l'animale (animale in AnimalStatus::AdoptionPending e nessun'
@@ -82,8 +89,33 @@ final class WithdrawApplication
                 ])
                 ->log('application.withdrawn');
 
+            // Notifica allo staff dell'ente. Accodata after-commit: parte solo dopo
+            // il commit di questa transazione (nessun invio mail sincrono qui).
+            // Recipient vuoto → Notification::send è un no-op sicuro.
+            Notification::send(
+                $this->recipients($application),
+                new ApplicationWithdrawn($application),
+            );
+
             return $application;
         });
+    }
+
+    /**
+     * Destinatari lato ente della notifica di ritiro: l'operatore in carico
+     * (assignedTo) se assegnato, altrimenti i membri VERIFICATI dell'ente
+     * (owner + staff). Restituita come Collection di User, coerente col contratto
+     * di Notification::send.
+     *
+     * @return Collection<int, User>
+     */
+    private function recipients(AdoptionApplication $application): Collection
+    {
+        if ($application->assignedTo !== null) {
+            return collect([$application->assignedTo]);
+        }
+
+        return $application->organization->verifiedStaff()->get();
     }
 
     /**

@@ -25,6 +25,17 @@ return [
         'database' => ':adopter si è candidato per :animal.',
     ],
 
+    // Notifica ai membri dell'ente quando un adottante ritira la candidatura.
+    'withdrawn' => [
+        'subject' => 'Candidatura ritirata per :animal',
+        'greeting' => 'Ciao,',
+        'line' => ':adopter ha ritirato la candidatura di adozione per :animal.',
+        'action' => 'Gestisci le candidature',
+        'salutation' => 'A presto, il team di ArkVel',
+        // Messaggio breve per la notifica in-app (canale database).
+        'database' => ':adopter ha ritirato la candidatura per :animal.',
+    ],
+
     // Flusso di candidatura dalla scheda pubblica dell'animale.
     'apply' => [
         'submitting' => 'Invio in corso…',

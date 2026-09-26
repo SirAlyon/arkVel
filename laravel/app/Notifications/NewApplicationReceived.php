@@ -6,6 +6,7 @@ namespace App\Notifications;
 
 use App\Models\AdoptionApplication;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -18,18 +19,25 @@ use Illuminate\Notifications\Notification;
  * specchio ad ApplicationStatusChanged (che invece notifica l'adottante).
  * Canali: mail (testo tradotto) + database (alimenta la UI notifiche dello staff).
  *
- * Il link punta all'area di gestione dell'ente nel pannello shelter. L'area
- * "candidature" vera e propria arriva nella slice 9: fino ad allora usiamo un
- * link best-effort alla dashboard del tenant, calcolato senza dipendere dalla
- * registrazione di rotte non ancora esistenti (nessun hard-fail).
+ * Il link punta all'area di gestione dell'ente nel pannello shelter (la board
+ * candidature). Se la rotta non fosse ancora registrata (contesti di test/futuri
+ * refactor) ricadiamo sulla base del pannello, senza mai sollevare eccezioni.
+ *
+ * Robustezza (slice 11): accodata (ShouldQueue) e dispatchata SOLO DOPO il commit
+ * ($afterCommit), così l'invio mail sincrono esce dalla transazione di
+ * SubmitApplication: un intoppo del mailer non fa più rollback della candidatura.
  */
-final class NewApplicationReceived extends Notification
+final class NewApplicationReceived extends Notification implements ShouldQueue
 {
     use Queueable;
 
     public function __construct(
         public readonly AdoptionApplication $application,
-    ) {}
+    ) {
+        // Dispatch solo dopo il commit della transazione circostante (flag
+        // $afterCommit del trait Queueable, nessuna ridefinizione di proprietà).
+        $this->afterCommit();
+    }
 
     /**
      * @return list<string>

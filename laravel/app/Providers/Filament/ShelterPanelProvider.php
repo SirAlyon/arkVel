@@ -60,6 +60,11 @@ class ShelterPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Emerald,
             ])
+            // Campanella notifiche in-app (canale database, tabella `notifications`):
+            // lo staff dell'ente vede qui le nuove candidature e i ritiri. Polling
+            // ogni 30s per l'aggiornamento del badge senza reload.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->tenant(Organization::class, slugAttribute: 'slug')
             ->tenantRegistration(RegisterOrganization::class)
             ->discoverResources(in: app_path('Filament/Shelter/Resources'), for: 'App\Filament\Shelter\Resources')

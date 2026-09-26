@@ -6,6 +6,7 @@ namespace App\Notifications;
 
 use App\Models\Adoption;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -19,14 +20,25 @@ use Illuminate\Support\Facades\Storage;
  * 'local' (storage/app/private/contracts/...): l'allegato viaggia in email, il
  * file non è mai esposto pubblicamente. Canali: mail + database (alimenta la UI
  * notifiche dell'adottante).
+ *
+ * Robustezza (slice 11): accodata (ShouldQueue) e dispatchata SOLO DOPO il commit
+ * ($afterCommit), così l'invio mail sincrono esce dalla transazione di
+ * FinalizeAdoption: un intoppo del mailer non fa più rollback di un'adozione
+ * valida. L'Adoption viaggia serializzata (SerializesModels, via Queueable) e
+ * viene ricaricata al momento dell'invio: il contratto è letto dal disco privato
+ * ALLA SEND, quando il file esiste già (scritto in transazione prima del commit).
  */
-final class AdoptionCompleted extends Notification
+final class AdoptionCompleted extends Notification implements ShouldQueue
 {
     use Queueable;
 
     public function __construct(
         public readonly Adoption $adoption,
-    ) {}
+    ) {
+        // Dispatch solo dopo il commit della transazione circostante (flag
+        // $afterCommit del trait Queueable, nessuna ridefinizione di proprietà).
+        $this->afterCommit();
+    }
 
     /**
      * @return list<string>

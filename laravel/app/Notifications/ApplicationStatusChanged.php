@@ -7,6 +7,7 @@ namespace App\Notifications;
 use App\Enums\ApplicationStatus;
 use App\Models\AdoptionApplication;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -16,10 +17,14 @@ use Illuminate\Notifications\Notification;
  * È emessa da App\Actions\Applications\AdvanceApplication (transizione staff)
  * verso il proprietario della candidatura. Trasporta la coppia from/to come
  * enum per tenere UI/messaggi allineati all'unica fonte di verità delle label.
- * Canali: mail (testo tradotto) + database (alimenta la UI notifiche adottante,
- * slice 11).
+ * Canali: mail (testo tradotto) + database (alimenta la UI notifiche adottante).
+ *
+ * Robustezza (slice 11): la notifica è accodata (ShouldQueue) e dispatchata SOLO
+ * DOPO il commit della transazione circostante ($afterCommit). Così l'invio mail
+ * sincrono esce dalla transazione di dominio (AdvanceApplication/FinalizeAdoption):
+ * un intoppo del mailer non può più fare rollback di uno stato già valido.
  */
-final class ApplicationStatusChanged extends Notification
+final class ApplicationStatusChanged extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -27,7 +32,12 @@ final class ApplicationStatusChanged extends Notification
         public readonly AdoptionApplication $application,
         public readonly ApplicationStatus $from,
         public readonly ApplicationStatus $to,
-    ) {}
+    ) {
+        // Dispatch solo dopo il commit della transazione circostante: la notifica
+        // non parte finché lo stato non è persistito in modo definitivo. Usa il
+        // flag $afterCommit del trait Queueable (nessuna ridefinizione di proprietà).
+        $this->afterCommit();
+    }
 
     /**
      * @return list<string>
