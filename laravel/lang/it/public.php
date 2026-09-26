@@ -65,6 +65,16 @@ return [
         'photo_alt' => 'Foto di :name',
     ],
 
+    'favorites' => [
+        'add' => 'Aggiungi ai preferiti',
+        'remove' => 'Rimuovi dai preferiti',
+        'title' => 'I miei preferiti',
+        'view' => 'Vedi la scheda',
+        'browse_catalog' => 'Sfoglia il catalogo',
+        'empty_title' => 'Nessun preferito',
+        'empty_body' => 'Non hai ancora salvato nessun animale. Aggiungi ai preferiti gli animali che ti interessano dal catalogo.',
+    ],
+
     'detail' => [
         'breadcrumb' => 'Percorso di navigazione',
         'sex' => 'Sesso',

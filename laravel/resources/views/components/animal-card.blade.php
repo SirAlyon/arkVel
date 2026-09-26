@@ -10,8 +10,19 @@
     $location = collect([$organization?->city, $organization?->region])->filter()->implode(', ');
 @endphp
 
-<a href="{{ route('animals.show', $animal) }}"
-   class="group flex h-full flex-col overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
+<div class="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-md focus-within:ring-2 focus-within:ring-brand-500 focus-within:ring-offset-2">
+    {{-- Toggle preferiti: sibling del link (mai <button> annidato in <a>), --}}
+    {{-- sopra l'immagine e sopra l'overlay-link (z-20 > z-10). --}}
+    <div class="absolute right-3 top-3 z-20">
+        <livewire:favorite-button :animal="$animal" :key="'fav-'.$animal->id" />
+    </div>
+
+    {{-- Overlay-link a piena card: rende cliccabile l'intera superficie senza --}}
+    {{-- annidare interattivi. Il toggle preferiti resta sopra (z superiore). --}}
+    <a href="{{ route('animals.show', $animal) }}"
+       class="absolute inset-0 z-10 rounded-2xl focus:outline-none"
+       aria-label="{{ $animal->name }}"></a>
+
     <div class="relative aspect-[4/3] overflow-hidden bg-brand-100">
         @if ($thumb)
             <img src="{{ $thumb }}"
@@ -61,4 +72,4 @@
             </span>
         </div>
     </div>
-</a>
+</div>

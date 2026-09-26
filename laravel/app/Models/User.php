@@ -97,6 +97,33 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
     }
 
     /**
+     * Animali messi tra i preferiti dall'utente (wishlist). La relazione è
+     * SELF-OWNED: ogni riga della pivot `favorites` appartiene all'utente che
+     * l'ha creata, quindi tutte le letture/scritture passano SEMPRE da
+     * `auth()->user()->favorites()`. Non esiste azione cross-utente da
+     * autorizzare a livello di riga: non serve una Policy sulla pivot,
+     * l'ownership è implicita nella scope della relazione.
+     *
+     * @return BelongsToMany<Animal, $this>
+     */
+    public function favorites(): BelongsToMany
+    {
+        return $this->belongsToMany(Animal::class, 'favorites')
+            ->withTimestamps();
+    }
+
+    /**
+     * L'utente ha già l'animale indicato tra i preferiti. Predicato banale sulla
+     * relazione self-owned: nessuna business logic, solo una query di appartenenza.
+     */
+    public function hasFavorited(Animal $animal): bool
+    {
+        return $this->favorites()
+            ->whereKey($animal->getKey())
+            ->exists();
+    }
+
+    /**
      * L'utente è membro (a qualunque titolo) dell'ente indicato.
      */
     public function belongsToOrganization(Organization $organization): bool

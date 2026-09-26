@@ -65,6 +65,16 @@ return [
         'photo_alt' => 'Photo of :name',
     ],
 
+    'favorites' => [
+        'add' => 'Add to favorites',
+        'remove' => 'Remove from favorites',
+        'title' => 'My favorites',
+        'view' => 'View details',
+        'browse_catalog' => 'Browse the catalog',
+        'empty_title' => 'No favorites',
+        'empty_body' => 'You have not saved any animals yet. Favorite the animals you are interested in from the catalog.',
+    ],
+
     'detail' => [
         'breadcrumb' => 'Breadcrumb',
         'sex' => 'Sex',

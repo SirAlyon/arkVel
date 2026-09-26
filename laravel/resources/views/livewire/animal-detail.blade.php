@@ -46,7 +46,10 @@
                 @endif
             </div>
 
-            <h1 class="mt-3 text-3xl font-bold tracking-tight text-stone-900">{{ $animal->name }}</h1>
+            <div class="mt-3 flex items-start justify-between gap-3">
+                <h1 class="text-3xl font-bold tracking-tight text-stone-900">{{ $animal->name }}</h1>
+                <livewire:favorite-button :animal="$animal" :key="'fav-detail-'.$animal->id" />
+            </div>
 
             @if ($animal->breed)
                 <p class="mt-1 text-stone-500">{{ $animal->breed }}</p>
