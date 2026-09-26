@@ -22,6 +22,11 @@ use Spatie\Translatable\HasTranslations;
  * Le relazioni verso animals/applications/adoptions verranno aggiunte nelle
  * slice successive quando i relativi model esisteranno. Logo/cover saranno
  * gestiti da spatie/laravel-medialibrary (nessuna colonna dedicata qui).
+ *
+ * @property int $id
+ * @property string $slug
+ * @property OrganizationType $type
+ * @property OrganizationStatus $status
  */
 class Organization extends Model
 {

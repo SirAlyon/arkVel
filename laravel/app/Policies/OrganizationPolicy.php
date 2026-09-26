@@ -31,9 +31,16 @@ class OrganizationPolicy
         return true;
     }
 
+    /**
+     * Registrazione self-service dell'ente: qualunque utente autenticato può
+     * registrare un nuovo ente e diventarne Owner (decisione di prodotto:
+     * "chi registra un ente lo gestisce subito internamente"). L'ente nasce
+     * in stato `Pending`; la verifica Super Admin (piano §6) gaterà la
+     * visibilità PUBBLICA del catalogo in Fase 2, non questa creazione.
+     */
     public function create(User $user): bool
     {
-        return false;
+        return true;
     }
 
     public function update(User $user, Organization $organization): bool

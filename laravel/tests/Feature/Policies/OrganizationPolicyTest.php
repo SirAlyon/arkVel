@@ -30,10 +30,13 @@ it('allows any authenticated user to view a single organization', function () {
     expect($user->can('view', $organization))->toBeTrue();
 });
 
-it('denies creation by default', function () {
+it('allows any authenticated user to register a new organization (self-service)', function () {
+    // Decisione di prodotto: chi registra un ente lo gestisce subito internamente.
+    // La verifica Super Admin gaterà la visibilità PUBBLICA in Fase 2, non questa
+    // creazione; l'ente nasce comunque in stato Pending.
     $user = User::factory()->create();
 
-    expect($user->can('create', Organization::class))->toBeFalse();
+    expect($user->can('create', Organization::class))->toBeTrue();
 });
 
 it('denies deletion by default', function () {
