@@ -26,6 +26,24 @@ services:
       redis:
         condition: service_started
 
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arkvel-queue
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=1", "--max-time=3600"]
+    volumes:
+      - ./laravel/:/var/www/html/arkvel
+    working_dir: /var/www/html/arkvel
+    networks:
+      - arkvel
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
   nginx:
     build:
       context: ./nginx/
