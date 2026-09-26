@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -94,6 +95,20 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
     public function hasCompleteAdopterProfile(): bool
     {
         return $this->adopterProfile?->isComplete() === true;
+    }
+
+    /**
+     * Candidature di adozione inviate dall'utente (lato adottante). La relazione
+     * è SELF-OWNED per user_id: la pagina "Le mie candidature" del pannello
+     * adottante legge sempre da `Auth::user()->applications()`. L'ownership è
+     * quindi implicita nella scope; la AdoptionApplicationPolicy resta il
+     * confine per view/withdraw sulla singola riga.
+     *
+     * @return HasMany<AdoptionApplication, $this>
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(AdoptionApplication::class);
     }
 
     /**

@@ -9,8 +9,10 @@ use App\Exceptions\IncompleteAdopterProfile;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\User;
+use App\Notifications\NewApplicationReceived;
 use App\States\Application\Submitted;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Invia una candidatura di adozione: un adottante si candida per un animale.
@@ -18,11 +20,16 @@ use Illuminate\Support\Facades\DB;
  * Single responsibility: è l'unico punto in cui una candidatura nasce. Le
  * guardie di dominio (profilo/consenso completo, unicità animale/utente) sono
  * verificate PRIMA di scrivere, così un rifiuto non lascia righe orfane; lo
- * unique DB (animal_id, user_id) resta il backstop. La persistenza e la
- * tracciatura (activity log) sono orchestrate qui, non nel model.
+ * unique DB (animal_id, user_id) resta il backstop. La persistenza, la
+ * tracciatura (activity log) e la notifica all'ente sono orchestrate qui, non
+ * nel model.
  *
- * La notifica "nuova candidatura" all'ente arriverà nella slice 8: qui NON si
- * notifica.
+ * Notifica (slice 8): dopo la creazione, i membri VERIFICATI dell'ente
+ * (owner + staff, {@see Organization::verifiedStaff()}) ricevono
+ * {@see NewApplicationReceived} (mail + database). L'invio avviene DENTRO la
+ * transazione: se la scrittura fallisce non parte alcuna notifica, e viceversa
+ * un errore d'invio annulla anche la candidatura (coerenza atomica). Nessuna
+ * notifica se una guardia fallisce (nessuna riga creata).
  */
 final class SubmitApplication
 {
@@ -67,6 +74,14 @@ final class SubmitApplication
                 ->performedOn($application)
                 ->causedBy($adopter)
                 ->log('application.submitted');
+
+            // Notifica ai membri verificati dell'ente (owner + staff): il filtro
+            // verifiedStaff() è per `verified=true`, non per ruolo, quindi include
+            // gli owner. Recipient vuoto → Notification::send è un no-op sicuro.
+            Notification::send(
+                $animal->organization->verifiedStaff()->get(),
+                new NewApplicationReceived($application),
+            );
 
             return $application;
         });

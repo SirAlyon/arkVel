@@ -77,6 +77,17 @@ class ManageAdopterProfile extends Page
             403,
         );
 
+        // Se l'utente è stato instradato qui da un tentativo di candidatura con
+        // profilo incompleto (slice 8), mostriamo l'avviso passato via flash.
+        $notice = session()->get('adopter.profile_notice');
+
+        if (is_string($notice) && $notice !== '') {
+            Notification::make()
+                ->warning()
+                ->title($notice)
+                ->send();
+        }
+
         $this->fillForm();
     }
 
