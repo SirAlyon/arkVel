@@ -83,63 +83,63 @@ class AdoptionApplicationInfolist
                     ->label(__('applications.shelter.adopter')),
                 TextEntry::make('user.email')
                     ->label('Email'),
-                TextEntry::make('profile.housing_type')
+                TextEntry::make('adopter_housing_type')
                     ->label(__('applications.shelter.profile.housing_type'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->housing_type?->getLabel())
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.rent_or_own')
+                TextEntry::make('adopter_rent_or_own')
                     ->label(__('applications.shelter.profile.rent_or_own'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->rent_or_own?->getLabel())
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.landlord_allows_pets')
+                TextEntry::make('adopter_landlord_allows_pets')
                     ->label(__('applications.shelter.profile.landlord_allows_pets'))
                     ->state(fn (AdoptionApplication $record): string => self::yesNoUnknown(self::profile($record)?->landlord_allows_pets)),
-                TextEntry::make('profile.has_garden')
+                TextEntry::make('adopter_has_garden')
                     ->label(__('applications.shelter.profile.has_garden'))
                     ->state(fn (AdoptionApplication $record): string => self::yesNoUnknown(self::profile($record)?->has_garden)),
-                TextEntry::make('profile.fenced')
+                TextEntry::make('adopter_fenced')
                     ->label(__('applications.shelter.profile.fenced'))
                     ->state(fn (AdoptionApplication $record): string => self::yesNoUnknown(self::profile($record)?->fenced)),
-                TextEntry::make('profile.adults_in_home')
+                TextEntry::make('adopter_adults_in_home')
                     ->label(__('applications.shelter.profile.adults_in_home'))
                     ->state(fn (AdoptionApplication $record): ?int => self::profile($record)?->adults_in_home)
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.kids_in_home')
+                TextEntry::make('adopter_kids_in_home')
                     ->label(__('applications.shelter.profile.kids_in_home'))
                     ->state(fn (AdoptionApplication $record): ?int => self::profile($record)?->kids_in_home)
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.hours_alone_weekday')
+                TextEntry::make('adopter_hours_alone_weekday')
                     ->label(__('applications.shelter.profile.hours_alone_weekday'))
                     ->state(fn (AdoptionApplication $record): ?int => self::profile($record)?->hours_alone_weekday)
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.hours_alone_weekend')
+                TextEntry::make('adopter_hours_alone_weekend')
                     ->label(__('applications.shelter.profile.hours_alone_weekend'))
                     ->state(fn (AdoptionApplication $record): ?int => self::profile($record)?->hours_alone_weekend)
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.previous_surrender')
+                TextEntry::make('adopter_previous_surrender')
                     ->label(__('applications.shelter.profile.previous_surrender'))
                     ->state(fn (AdoptionApplication $record): string => self::yesNoUnknown(self::profile($record)?->previous_surrender)),
-                TextEntry::make('profile.other_pets')
+                TextEntry::make('adopter_other_pets')
                     ->label(__('applications.shelter.profile.other_pets'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->other_pets)
                     ->placeholder(__('applications.shelter.unknown'))
                     ->columnSpanFull(),
-                TextEntry::make('profile.experience')
+                TextEntry::make('adopter_experience')
                     ->label(__('applications.shelter.profile.experience'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->experience)
                     ->placeholder(__('applications.shelter.unknown'))
                     ->columnSpanFull(),
-                TextEntry::make('profile.lifestyle')
+                TextEntry::make('adopter_lifestyle')
                     ->label(__('applications.shelter.profile.lifestyle'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->lifestyle)
                     ->placeholder(__('applications.shelter.unknown'))
                     ->columnSpanFull(),
-                TextEntry::make('profile.ideal_animal')
+                TextEntry::make('adopter_ideal_animal')
                     ->label(__('applications.shelter.profile.ideal_animal'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->ideal_animal)
                     ->placeholder(__('applications.shelter.unknown'))
                     ->columnSpanFull(),
-                TextEntry::make('profile.contingency_plan')
+                TextEntry::make('adopter_contingency_plan')
                     ->label(__('applications.shelter.profile.contingency_plan'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->contingency_plan)
                     ->placeholder(__('applications.shelter.unknown'))
@@ -152,26 +152,26 @@ class AdoptionApplicationInfolist
         return Section::make(__('applications.shelter.section_contact'))
             ->columns(2)
             ->schema([
-                TextEntry::make('profile.phone')
+                TextEntry::make('adopter_phone')
                     ->label(__('applications.shelter.profile.phone'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->phone)
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.city')
+                TextEntry::make('adopter_city')
                     ->label(__('applications.shelter.profile.city'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->city)
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.region')
+                TextEntry::make('adopter_region')
                     ->label(__('applications.shelter.profile.region'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->region)
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.country')
+                TextEntry::make('adopter_country')
                     ->label(__('applications.shelter.profile.country'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->country)
                     ->placeholder(__('applications.shelter.unknown')),
-                TextEntry::make('profile.consent')
+                TextEntry::make('adopter_consent')
                     ->label(__('applications.shelter.profile.consent'))
                     ->state(fn (AdoptionApplication $record): string => self::yesNoUnknown(self::profile($record)?->consent_data_processing)),
-                TextEntry::make('profile.consented_at')
+                TextEntry::make('adopter_consented_at')
                     ->label(__('applications.shelter.profile.consented_at'))
                     ->state(fn (AdoptionApplication $record): ?string => self::profile($record)?->consented_at?->translatedFormat('d/m/Y H:i'))
                     ->placeholder('—'),

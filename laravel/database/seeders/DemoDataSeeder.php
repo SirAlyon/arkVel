@@ -16,20 +16,24 @@ use App\Models\MedicalRecord;
 use App\Models\Organization;
 use App\Models\User;
 use Database\Seeders\Support\PlaceholderImageFactory;
+use Database\Seeders\Support\RemoteAnimalPhotoFetcher;
 use Faker\Generator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * Popola un dataset dimostrativo REALISTICO e OFFLINE (Faker it_IT, foto
- * generate con GD, nessuna chiamata di rete):
+ * Popola un dataset dimostrativo REALISTICO (Faker it_IT):
  *
  *   - 1 Super Admin a credenziali note (login demo del pannello admin);
  *   - 3 enti verificati, ciascuno con Owner/Staff/Volunteer a credenziali note;
  *   - 6–10 animali per ente con mix di specie/stato/comportamento realistico,
- *     ognuno con 1 avatar + 1–3 foto placeholder;
+ *     ognuno con 1 avatar + 1–3 foto REALI species-appropriate (cani da
+ *     placedog.net, gatti da cataas.com, altri da picsum; vedi
+ *     {@see RemoteAnimalPhotoFetcher}); se la rete non è disponibile si ricade su
+ *     placeholder GD offline, senza mai abortire il seeding;
  *   - alcune cartelle sanitarie coerenti per una parte degli animali.
  *
  * Idempotenza: gli utenti a credenziali note usano firstOrCreate (rieseguibile
@@ -81,6 +85,7 @@ class DemoDataSeeder extends Seeder
     public function __construct(
         private readonly AddOrganizationMember $addOrganizationMember,
         private readonly PlaceholderImageFactory $placeholderImages,
+        private readonly RemoteAnimalPhotoFetcher $remotePhotos,
         private readonly PermissionRegistrar $permissionRegistrar,
     ) {
         $this->faker = fake('it_IT');
@@ -226,7 +231,8 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * 6–10 animali per ente con mix realistico di specie/stato e foto offline.
+     * 6–10 animali per ente con mix realistico di specie/stato e foto reali
+     * species-appropriate (fallback offline se la rete non è disponibile).
      */
     private function createAnimals(Organization $organization): void
     {
@@ -274,11 +280,67 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * Attacca 1 avatar + 1–3 foto placeholder generate con GD, poi rimuove i
-     * file temporanei. addMedia copia il file nel disk media, quindi possiamo
-     * cancellare la sorgente subito dopo.
+     * Attacca 1–3 foto REALI (species-appropriate) all'animale, con la prima
+     * anche come avatar, così il catalogo demo risulta credibile.
+     *
+     * Idempotenza: se l'animale ha GIÀ foto (collection `photos`), non fa nulla —
+     * un re-run non duplica le immagini.
+     *
+     * Sorgente: {@see RemoteAnimalPhotoFetcher} (per-specie: cani placedog.net,
+     * gatti cataas.com, altri picsum; URL deterministico per specie/id). Ogni
+     * download e ogni attach sono resilienti: se falliscono (offline/timeout/file
+     * corrotto) si logga e si prosegue. Se NESSUNA foto reale è stata attaccata,
+     * ricadiamo sul placeholder GD offline così l'animale ha comunque almeno
+     * un'immagine (e un avatar) anche senza rete.
      */
     private function attachPhotos(Animal $animal, int $paletteSeed): void
+    {
+        // Idempotente: mai duplicare le foto su un re-run del seeder.
+        if ($animal->hasMedia('photos')) {
+            return;
+        }
+
+        $photoCount = $this->faker->numberBetween(1, 3);
+        $attached = 0;
+
+        for ($variant = 0; $variant < $photoCount; $variant++) {
+            $path = $this->remotePhotos->fetch($animal->species, $animal->getKey(), $variant);
+
+            if ($path === null) {
+                continue; // download fallito (già loggato): salta questo slot.
+            }
+
+            // Attach resiliente: se il file remoto è corrotto/inutilizzabile
+            // (attach fallito, già loggato) saltiamo lo slot senza abortire.
+            if (! $this->attachAndCleanup($animal, $path, 'photos', "{$animal->slug}-foto-".($variant + 1).'.jpg')) {
+                continue;
+            }
+
+            // La PRIMA foto attaccata con successo diventa anche l'avatar
+            // (single-file collection): riscarichiamo un file distinto da attaccare.
+            if ($attached === 0) {
+                $avatarPath = $this->remotePhotos->fetch($animal->species, $animal->getKey(), $variant);
+
+                if ($avatarPath !== null) {
+                    $this->attachAndCleanup($animal, $avatarPath, 'avatar', "{$animal->slug}-avatar.jpg");
+                }
+            }
+
+            $attached++;
+        }
+
+        // Rete non disponibile: nessuna foto reale ottenuta → placeholder GD
+        // offline (avatar + una foto) così il demo non resta muto.
+        if ($attached === 0) {
+            $this->attachOfflinePlaceholders($animal, $paletteSeed);
+        }
+    }
+
+    /**
+     * Fallback offline: 1 avatar + 1 foto placeholder GD (nessuna rete), usato
+     * solo quando il download delle foto reali non è andato a buon fine.
+     */
+    private function attachOfflinePlaceholders(Animal $animal, int $paletteSeed): void
     {
         $avatarPath = $this->placeholderImages->create(
             label: $animal->name,
@@ -288,25 +350,39 @@ class DemoDataSeeder extends Seeder
 
         $this->attachAndCleanup($animal, $avatarPath, 'avatar', "{$animal->slug}-avatar.jpg");
 
-        $photoCount = $this->faker->numberBetween(1, 3);
+        $photoPath = $this->placeholderImages->create(
+            label: $animal->name,
+            subtitle: 'foto 1',
+            paletteIndex: $paletteSeed + 1,
+        );
 
-        for ($p = 1; $p <= $photoCount; $p++) {
-            $photoPath = $this->placeholderImages->create(
-                label: $animal->name,
-                subtitle: "foto {$p}",
-                paletteIndex: $paletteSeed + $p,
-            );
-
-            $this->attachAndCleanup($animal, $photoPath, 'photos', "{$animal->slug}-foto-{$p}.jpg");
-        }
+        $this->attachAndCleanup($animal, $photoPath, 'photos', "{$animal->slug}-foto-1.jpg");
     }
 
-    private function attachAndCleanup(Animal $animal, string $path, string $collection, string $fileName): void
+    /**
+     * Attacca un file al media dell'animale e ripulisce la sorgente temporanea.
+     *
+     * Resiliente: un file remoto corrotto/troncato/scomparso (o una conversione
+     * fallita) NON deve abortire l'intero seeding demo. Qualunque errore di
+     * medialibrary viene loggato e assorbito; l'esito booleano dice al chiamante
+     * se l'attach è andato a buon fine (per decidere avatar/fallback).
+     */
+    private function attachAndCleanup(Animal $animal, string $path, string $collection, string $fileName): bool
     {
         try {
             $animal->addMedia($path)
                 ->usingFileName($fileName)
                 ->toMediaCollection($collection);
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::warning('DemoDataSeeder: attach media fallito, salto.', [
+                'animal' => $animal->slug,
+                'collection' => $collection,
+                'reason' => $exception->getMessage(),
+            ]);
+
+            return false;
         } finally {
             if (is_file($path)) {
                 @unlink($path);

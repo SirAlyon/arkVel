@@ -11,6 +11,7 @@ use App\Models\Animal;
 use App\Models\User;
 use App\Notifications\NewApplicationReceived;
 use App\States\Application\Submitted;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
@@ -26,10 +27,12 @@ use Illuminate\Support\Facades\Notification;
  *
  * Notifica (slice 8): dopo la creazione, i membri VERIFICATI dell'ente
  * (owner + staff, {@see Organization::verifiedStaff()}) ricevono
- * {@see NewApplicationReceived} (mail + database). L'invio avviene DENTRO la
- * transazione: se la scrittura fallisce non parte alcuna notifica, e viceversa
- * un errore d'invio annulla anche la candidatura (coerenza atomica). Nessuna
- * notifica se una guardia fallisce (nessuna riga creata).
+ * {@see NewApplicationReceived} (mail + database). La notifica è
+ * {@see ShouldQueue} + `$afterCommit`: viene accodata
+ * DOPO il commit di questa transazione, come le altre notifiche del flusso
+ * (nessun invio sincrono qui). L'ordinamento rispetto alla transazione è quindi
+ * garantito dalla notifica stessa, non dalla chiamata. Nessuna notifica se una
+ * guardia fallisce (nessuna riga creata → nessun commit → nessun accodamento).
  */
 final class SubmitApplication
 {
@@ -77,7 +80,9 @@ final class SubmitApplication
 
             // Notifica ai membri verificati dell'ente (owner + staff): il filtro
             // verifiedStaff() è per `verified=true`, non per ruolo, quindi include
-            // gli owner. Recipient vuoto → Notification::send è un no-op sicuro.
+            // gli owner. La notifica è accodata after-commit ($afterCommit): parte
+            // solo dopo il commit di questa transazione (nessun invio mail sincrono
+            // qui). Recipient vuoto → Notification::send è un no-op sicuro.
             Notification::send(
                 $animal->organization->verifiedStaff()->get(),
                 new NewApplicationReceived($application),

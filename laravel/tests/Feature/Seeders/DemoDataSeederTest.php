@@ -13,6 +13,7 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Spatie\Permission\PermissionRegistrar;
 
 uses(RefreshDatabase::class);
@@ -22,9 +23,34 @@ beforeEach(function () {
     // e nessuna conversione su disco durante i test.
     Storage::fake('public');
 
+    // Nessuna chiamata di rete reale nei test: la sorgente foto (LoremFlickr) è
+    // stubbata con un JPEG 1x1 valido, così esercitiamo il PERCORSO REALE del
+    // fetcher (foto scaricate) in modo deterministico e offline.
+    Http::preventStrayRequests();
+    Http::fake([
+        // Sorgenti foto per-specie del fetcher (placedog/cataas/picsum/loremflickr):
+        // stubbate con un JPEG 1x1 valido e content-type image/jpeg accettato.
+        '*' => Http::response(onePixelJpeg(), 200, [
+            'Content-Type' => 'image/jpeg',
+        ]),
+    ]);
+
     // Esegue l'intero orchestratore (ruoli + dati demo) come in produzione.
     $this->seed(DatabaseSeeder::class);
 });
+
+/**
+ * Byte di un JPEG 1x1 valido (medialibrary deduce il mime dal contenuto).
+ */
+function onePixelJpeg(): string
+{
+    return base64_decode(
+        '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRof'.
+        'Hh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAAB'.
+        'AAAAAAAAAAAAAAAAAAAACP/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AfwD/2Q==',
+        true,
+    ) ?: '';
+}
 
 /**
  * Imposta il contesto team per verificare i ruoli spatie team-scoped.
@@ -103,13 +129,21 @@ it('creates animals belonging to the seeded organizations', function () {
     });
 });
 
-it('attaches at least one media (avatar or photos) to every seeded animal', function () {
+it('attaches real photos (and an avatar) to every seeded animal', function () {
     Animal::query()->each(function (Animal $animal): void {
-        $mediaCount = $animal->getMedia('avatar')->count()
-            + $animal->getMedia('photos')->count();
-
-        expect($mediaCount)->toBeGreaterThan(0, "L'animale {$animal->slug} non ha media");
+        // Con la sorgente foto stubbata, ogni animale deve avere sia foto sia
+        // avatar (percorso reale del fetcher, non il fallback offline GD).
+        expect($animal->getMedia('photos')->count())
+            ->toBeGreaterThan(0, "L'animale {$animal->slug} non ha foto")
+            ->and($animal->getMedia('avatar')->count())
+            ->toBe(1, "L'animale {$animal->slug} non ha avatar");
     });
+
+    // Regressione: le sorgenti foto REMOTE per-specie sono state effettivamente
+    // interrogate (percorso reale del fetcher), non solo il fallback offline GD.
+    Http::assertSent(fn ($request): bool => str_contains($request->url(), 'placedog.net')
+        || str_contains($request->url(), 'cataas.com')
+        || str_contains($request->url(), 'picsum.photos'));
 });
 
 it('creates medical records linked to existing animals', function () {

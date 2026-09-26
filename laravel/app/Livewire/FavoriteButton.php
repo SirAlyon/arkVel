@@ -55,7 +55,11 @@ class FavoriteButton extends Component
         // Self-owned: toggle atomico sulla SOLA wishlist dell'utente corrente.
         // toggle() rispetta l'unique (user_id, animal_id): nessun duplicato.
         $user->favorites()->toggle($this->animalId);
-        $this->favorited = ! $this->favorited;
+
+        // Ricalcoliamo lo stato dal DB invece di invertire il flag alla cieca: la
+        // UI riflette così lo stato REALE della pivot (robusto a race o a un flag
+        // fuori sincrono col DB), non un'inversione presunta.
+        $this->favorited = $user->favorites()->whereKey($this->animalId)->exists();
 
         return null;
     }

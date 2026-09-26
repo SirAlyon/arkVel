@@ -20,7 +20,13 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('type');
             $table->morphs('notifiable');
-            $table->text('data');
+            // `json` (non `text`): la UI notifiche di Filament interroga
+            // `data->>'format'`. Su PostgreSQL l'operatore JSON `->>` NON esiste
+            // per `text` (SQLSTATE 42883), quindi ogni pagina del pannello con la
+            // campanella andrebbe in errore. `json` supporta `->>` nativamente; su
+            // SQLite `json()` è memorizzato come text e Laravel traduce `->>` in
+            // json_extract, così i test restano coerenti.
+            $table->json('data');
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });

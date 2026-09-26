@@ -11,6 +11,7 @@ use App\Exceptions\AnimalAlreadyHasPendingAdoption;
 use App\Exceptions\InvalidAnimalStatusTransition;
 use App\Exceptions\InvalidApplicationTransition;
 use App\Models\AdoptionApplication;
+use App\Models\Animal;
 use App\Models\User;
 use App\Notifications\ApplicationStatusChanged;
 use App\States\Application\AdoptionPending;
@@ -47,6 +48,13 @@ use Spatie\ModelStates\Exceptions\CouldNotPerformTransition;
  * transazione. Così la successiva finalizzazione (FinalizeAdoption) può
  * legalmente portare l'animale AdoptionPending → Adopted. Una riserva impossibile
  * (animale non in uno stato riservabile) fa rollback dell'intero avanzamento.
+ *
+ * Concorrenza "una sola adozione attiva per animale": la guardia
+ * assertNoOtherPendingAdoption gira DENTRO la transazione, dopo aver preso un
+ * lock sulla riga animale (lockForUpdate). Serializzare sull'animale chiude la
+ * finestra TOCTOU in cui due candidature sorelle raggiungerebbero entrambe
+ * AdoptionPending — invariante su cui poggia FinalizeAdoption. Postgres onora il
+ * lock; SQLite lo ignora senza danni.
  */
 final class AdvanceApplication
 {
@@ -77,14 +85,25 @@ final class AdvanceApplication
         // di dominio non consentite, coerenti con la superficie d'errore.
         $stateClass = $this->stateClassFor($from, $to);
 
-        // Guardia "una sola adozione attiva per animale": prima di portare QUESTA
-        // candidatura in AdoptionPending, verifica che nessun'ALTRA candidatura
-        // dello stesso animale sia già in AdoptionPending o Completed.
-        if ($to === ApplicationStatus::AdoptionPending) {
-            $this->assertNoOtherPendingAdoption($application);
-        }
-
         return DB::transaction(function () use ($application, $from, $to, $stateClass, $actor, $reason): AdoptionApplication {
+            // Guardia "una sola adozione attiva per animale" resa RACE-SAFE: la
+            // eseguiamo DENTRO la transazione e serializziamo sulla riga animale
+            // (lockForUpdate) PRIMA di leggere le candidature concorrenti. Così due
+            // candidature "sorelle" dello stesso animale non possono entrambe
+            // superare il controllo e raggiungere AdoptionPending (TOCTOU chiuso).
+            // Postgres onora il row lock; SQLite lo ignora senza danni (i test
+            // girano comunque serialmente). Su cui poggia
+            // FinalizeAdoption::rejectSiblingApplications, che assume un solo
+            // pending per animale.
+            if ($to === ApplicationStatus::AdoptionPending) {
+                Animal::query()
+                    ->whereKey($application->animal_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                $this->assertNoOtherPendingAdoption($application);
+            }
+
             // La transizione spatie è atomica: se il grafo la vieta solleva
             // CouldNotPerformTransition e NON tocca lo stato. La convertiamo nel
             // wrapper di dominio PRIMA di qualunque log/notifica.
