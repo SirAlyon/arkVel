@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Actions\Organizations\AddOrganizationMember;
 use App\Enums\AnimalStatus;
 use App\Enums\MembershipRole;
 use App\Enums\Sex;
@@ -12,10 +11,8 @@ use App\Filament\Shelter\Resources\Animals\Pages\EditAnimal;
 use App\Filament\Shelter\Resources\Animals\Pages\ListAnimals;
 use App\Models\Animal;
 use App\Models\Organization;
-use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Actions\Testing\TestAction;
-use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -33,45 +30,8 @@ afterEach(function () {
     app(PermissionRegistrar::class)->setPermissionsTeamId(null);
 });
 
-/**
- * Aggiunge un utente come membro verificato dell'ente col ruolo indicato,
- * delegando all'Action (crea anche il ruolo spatie team-scoped).
- */
-function member(Organization $organization, MembershipRole $role): User
-{
-    $user = User::factory()->create();
-
-    app(AddOrganizationMember::class)->handle(
-        organization: $organization,
-        user: $user,
-        role: $role,
-        verified: true,
-    );
-
-    return $user;
-}
-
-/**
- * Colloca l'utente nel contesto del pannello shelter e del tenant indicato,
- * allineando il team id spatie (come fa il middleware in produzione).
- */
-function actAsInTenant(User $user, Organization $tenant): void
-{
-    test()->actingAs($user);
-
-    $panel = Filament::getPanel('shelter');
-    // boot() registra gli observer di tenancy (auto-associazione del tenant in
-    // creazione, global scope di scoping). In produzione lo fa il kernel al
-    // boot dei pannelli; nei test lo forziamo per deterministicita.
-    $panel->boot();
-
-    Filament::setCurrentPanel($panel);
-    Filament::setTenant($tenant);
-
-    $registrar = app(PermissionRegistrar::class);
-    $registrar->setPermissionsTeamId($tenant->getKey());
-    $registrar->forgetCachedPermissions();
-}
+// I helper member() e actAsInTenant() sono definiti una sola volta in
+// tests/Pest.php (condivisi da tutti i test dello shelter).
 
 it('scopes the list to the current tenant and hides other tenants animals', function () {
     $orgA = Organization::factory()->verified()->create();
