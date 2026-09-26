@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\AnimalStatus;
 use App\Enums\EnergyLevel;
+use App\Enums\OrganizationStatus;
 use App\Enums\Sex;
 use App\Enums\Size;
 use App\Enums\Species;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Laravel\Scout\Searchable;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -71,6 +73,7 @@ class Animal extends Model implements HasMedia
 
     use HasTranslations;
     use InteractsWithMedia;
+    use Searchable;
     use SoftDeletes;
 
     /**
@@ -184,6 +187,76 @@ class Animal extends Model implements HasMedia
     protected function featured(Builder $query): void
     {
         $query->where('featured', true);
+    }
+
+    /**
+     * Nome stabile dell'indice di ricerca (Scout applica l'eventuale prefisso).
+     */
+    public function searchableAs(): string
+    {
+        return 'animals';
+    }
+
+    /**
+     * Documento indicizzato su Meilisearch.
+     *
+     * Espone solo valori scalari: Meilisearch non gestisce oggetti enum, quindi
+     * gli enum viaggiano come stringa (`->value`) e il timestamp come intero
+     * unix (ordinabile). La descrizione translatable e' appiattita nel valore
+     * della locale corrente piu' entrambe le traduzioni (`it`/`en`), cosi' la
+     * ricerca resta robusta a prescindere dalla lingua della query. I campi di
+     * localita' sono copiati dall'ente correlato (caricato in modo sicuro) per
+     * permettere il filtro geografico senza join lato indice.
+     *
+     * @return array<string, scalar|list<string>|null>
+     */
+    public function toSearchableArray(): array
+    {
+        $organization = $this->organization()->first();
+
+        return [
+            'id' => $this->getKey(),
+            'name' => $this->name,
+            'description' => $this->getTranslation('description', app()->getLocale(), false),
+            'description_it' => $this->getTranslation('description', 'it', false),
+            'description_en' => $this->getTranslation('description', 'en', false),
+            'species' => $this->species->value,
+            'sex' => $this->sex->value,
+            'size' => $this->size?->value,
+            'energy_level' => $this->energy_level?->value,
+            'breed' => $this->breed,
+            'organization_id' => $this->organization_id,
+            'country' => $organization?->country,
+            'region' => $organization?->region,
+            'city' => $organization?->city,
+            'featured' => $this->featured,
+            'created_at' => $this->created_at?->getTimestamp(),
+        ];
+    }
+
+    /**
+     * Gate di visibilita' pubblica dell'indice.
+     *
+     * Un animale e' ricercabile SOLO se e' `Available` e appartiene a un ente
+     * `Verified`: e' lo stesso confine che regola il catalogo pubblico, espresso
+     * come stato derivato (come lo scope `available()`), non come business logic.
+     * Scout esclude gia' i soft-deleted a livello di observer; qui lo ribadiamo
+     * per chiudere del tutto il predicato di visibilita'.
+     */
+    public function shouldBeSearchable(): bool
+    {
+        if ($this->trashed()) {
+            return false;
+        }
+
+        if ($this->status !== AnimalStatus::Available) {
+            return false;
+        }
+
+        $organization = $this->organization()->first();
+
+        return $organization !== null
+            && $organization->status === OrganizationStatus::Verified;
     }
 
     /**
