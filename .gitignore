@@ -1,2 +1,3 @@
-entrypoint.sh
+.DS_Store
+/nginx/logs/*.log
 seed.sh

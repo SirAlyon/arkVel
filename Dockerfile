@@ -1,36 +1,43 @@
-# Usa PHP 8.3 con Alpine
-FROM php:8.3-fpm-alpine
+# ArkVel — PHP 8.4 FPM (Alpine)
+FROM php:8.4-fpm-alpine
 
-# Installa pacchetti base
+# System dependencies
 RUN apk add --no-cache \
-    git \
-    curl \
-    zip \
-    unzip \
-    libintl \
-    icu-dev \
-    icu-libs \
-    nodejs \
-    npm \
-    mysql-client
+    git curl bash zip unzip \
+    icu-dev icu-libs \
+    libzip-dev \
+    libpng-dev libjpeg-turbo-dev freetype-dev \
+    postgresql-dev \
+    oniguruma-dev \
+    linux-headers \
+    $PHPIZE_DEPS \
+    nodejs npm
 
-# Installa le estensioni PHP necessarie
-RUN docker-php-ext-install \
-    mysqli \
-    pdo \
-    pdo_mysql \
-    intl
+# PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" \
+        pdo pdo_pgsql pgsql \
+        intl gd zip bcmath exif pcntl opcache \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del $PHPIZE_DEPS
 
-# Copia i file di Laravel nel container
+# Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Sensible PHP defaults for dev
+RUN { \
+        echo 'memory_limit=512M'; \
+        echo 'upload_max_filesize=20M'; \
+        echo 'post_max_size=25M'; \
+        echo 'opcache.enable=1'; \
+        echo 'opcache.enable_cli=0'; \
+    } > /usr/local/etc/php/conf.d/arkvel.ini
+
 WORKDIR /var/www/html/arkvel
 
-# Installa Composer globalmente
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Imposta l'entrypoint e avvia PHP-FPM
 COPY entrypoint.sh /entrypoint.sh
-COPY seed.sh /seed.sh
-
 RUN chmod +x /entrypoint.sh
+
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["php-fpm"]

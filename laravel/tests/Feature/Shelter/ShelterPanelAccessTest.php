@@ -1,0 +1,284 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Actions\Organizations\AddOrganizationMember;
+use App\Enums\MembershipRole;
+use App\Enums\OrganizationStatus;
+use App\Enums\PermissionName;
+use App\Enums\RoleName;
+use App\Http\Middleware\SetPermissionsTeamFromTenant;
+use App\Models\Organization;
+use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Facades\Filament;
+use Filament\Panel;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Spatie\Permission\PermissionRegistrar;
+
+uses(RefreshDatabase::class);
+
+beforeEach(function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+});
+
+// Nit 2: azzera lo stato in-memory del team id sul registrar spatie dopo ogni
+// test, così i test restano robusti a riordini ed evitiamo falsi positivi da
+// team id residuo lasciato da chi imposta esplicitamente il contesto team.
+afterEach(function () {
+    app(PermissionRegistrar::class)->setPermissionsTeamId(null);
+});
+
+/**
+ * Il pannello shelter (per risolvere il panel id in canAccessPanel/getTenants).
+ */
+function shelterPanel(): Panel
+{
+    return Filament::getPanel('shelter');
+}
+
+/**
+ * Aggiunge un utente a un ente con ruolo/verifica dati, delegando all'Action.
+ */
+function addMember(
+    Organization $organization,
+    User $user,
+    MembershipRole $role = MembershipRole::Staff,
+    bool $verified = true,
+): void {
+    app(AddOrganizationMember::class)->handle(
+        organization: $organization,
+        user: $user,
+        role: $role,
+        verified: $verified,
+    );
+}
+
+it('redirects a guest visiting the shelter panel to its login', function () {
+    $this->get('/manage')
+        ->assertRedirect('/manage/login');
+});
+
+it('lets a verified member access the shelter panel', function () {
+    $organization = Organization::factory()->verified()->create();
+    $user = User::factory()->create();
+    addMember($organization, $user);
+
+    // Un membro verificato accede allo shell del pannello E ha l'ente tra i
+    // propri tenant (isolamento: canAccessTenant true, incluso in getTenants).
+    expect($user->canAccessPanel(shelterPanel()))->toBeTrue()
+        ->and($user->canAccessTenant($organization))->toBeTrue()
+        ->and($user->getTenants(shelterPanel())->pluck('id')->all())
+        ->toContain($organization->id);
+});
+
+it('lets any authenticated user reach the shelter panel shell for self-registration', function () {
+    // MODELLO DI ACCESSO Filament-idiomatico: l'accesso allo SHELL del pannello
+    // è permissivo, così un utente senza membership può raggiungere la tenant
+    // registration page e creare il proprio primo ente. L'ISOLAMENTO reale sta
+    // a livello di tenant (getTenants/canAccessTenant), non nel gate di pannello.
+    $user = User::factory()->create();
+
+    expect($user->canAccessPanel(shelterPanel()))->toBeTrue()
+        // ...ma senza membership NON ha alcun tenant selezionabile: nessun
+        // accesso a dati d'ente, solo la possibilità di registrarne uno proprio.
+        ->and($user->getTenants(shelterPanel())->all())->toBe([]);
+});
+
+it('exposes only the organizations the user is a verified member of as tenants', function () {
+    $orgA = Organization::factory()->verified()->create();
+    $orgB = Organization::factory()->verified()->create();
+    $user = User::factory()->create();
+    addMember($orgA, $user);
+
+    $tenants = $user->getTenants(shelterPanel());
+
+    expect($tenants->pluck('id')->all())->toContain($orgA->id)
+        ->and($tenants->pluck('id')->all())->not->toContain($orgB->id);
+});
+
+it('lets a verified member operate an organization still Pending verification', function () {
+    // INVARIANTE di prodotto: un ente Pending è operabile dai suoi membri
+    // verificati (self-service pre-verifica). La verifica Super Admin gaterà
+    // la visibilità PUBBLICA del catalogo in Fase 2, non la gestione interna.
+    $organization = Organization::factory()->pending()->create();
+    $user = User::factory()->create();
+    addMember($organization, $user);
+
+    expect($organization->status)->toBe(OrganizationStatus::Pending)
+        ->and($user->canAccessTenant($organization))->toBeTrue()
+        ->and($user->canAccessPanel(shelterPanel()))->toBeTrue()
+        ->and($user->getTenants(shelterPanel())->pluck('id')->all())
+        ->toContain($organization->id);
+});
+
+it('denies a verified member operating a suspended organization', function () {
+    // Contraltare dell'invariante Pending: solo Suspended blocca l'ISOLAMENTO
+    // (l'accesso allo shell del pannello resta permissivo per tutti). Un ente
+    // sospeso non è tra i tenant operabili nemmeno per un suo membro verificato.
+    $organization = Organization::factory()->suspended()->create();
+    $user = User::factory()->create();
+    addMember($organization, $user);
+
+    expect($organization->status)->toBe(OrganizationStatus::Suspended)
+        ->and($user->canAccessTenant($organization))->toBeFalse()
+        ->and($user->getTenants(shelterPanel())->pluck('id')->all())
+        ->not->toContain($organization->id);
+});
+
+it('isolates an unverified member from the organization tenant', function () {
+    // Un membro NON verificato del proprio ente NON può operarlo: l'ISOLAMENTO
+    // (canAccessTenant false, escluso da getTenants) resta la barriera reale.
+    // canAccessPanel è ora permissivo (può al più registrare un proprio ente).
+    $organization = Organization::factory()->verified()->create();
+    $user = User::factory()->create();
+    addMember($organization, $user, verified: false);
+
+    expect($user->canAccessTenant($organization))->toBeFalse()
+        ->and($user->getTenants(shelterPanel())->pluck('id')->all())
+        ->not->toContain($organization->id);
+});
+
+it('isolates a non-member from an organization it is not part of', function () {
+    // Un non-membro NON risolve l'ente come tenant (canAccessTenant false) e
+    // l'ente NON compare tra i suoi getTenants: nessuna fuga cross-tenant, pur
+    // potendo accedere allo shell del pannello (per registrare un ente proprio).
+    $organization = Organization::factory()->verified()->create();
+    $user = User::factory()->create();
+
+    expect($user->canAccessTenant($organization))->toBeFalse()
+        ->and($user->getTenants(shelterPanel())->pluck('id')->all())
+        ->not->toContain($organization->id);
+});
+
+it('denies canAccessTenant for a suspended organization even to a verified member', function () {
+    $organization = Organization::factory()->suspended()->create();
+    $user = User::factory()->create();
+    addMember($organization, $user);
+
+    expect($user->canAccessTenant($organization))->toBeFalse();
+});
+
+it('excludes suspended organizations from the tenant list', function () {
+    $active = Organization::factory()->verified()->create();
+    $suspended = Organization::factory()->suspended()->create();
+    $user = User::factory()->create();
+    addMember($active, $user);
+    addMember($suspended, $user);
+
+    $tenants = $user->getTenants(shelterPanel());
+
+    expect($tenants->pluck('id')->all())->toContain($active->id)
+        ->and($tenants->pluck('id')->all())->not->toContain($suspended->id);
+});
+
+it('recognizes a super admin without any membership regardless of the current team id', function () {
+    // REGRESSIONE B1: il ruolo Super Admin è di piattaforma e l'assegnazione
+    // porta comunque un team id (qui un ente arbitrario), ma il rilevamento è
+    // TEAM-INDEPENDENT. All'accesso al pannello il team corrente è `null`
+    // (nessun tenant risolto): con l'implementazione rotta (roles() team-scoped)
+    // isSuperAdmin() restituiva FALSE. Qui verifichiamo il fix con team id sia
+    // `null` sia un id di ente estraneo. NB: dopo il fix di access-model
+    // canAccessPanel è permissivo per tutti; il super admin, non essendo membro
+    // di alcun ente, resta comunque SENZA tenant selezionabili (isolamento).
+    $registrar = app(PermissionRegistrar::class);
+
+    $assignmentTeamId = Organization::factory()->verified()->create()->getKey();
+    $registrar->setPermissionsTeamId($assignmentTeamId);
+    $user = User::factory()->create();
+    $user->assignRole(RoleName::SuperAdmin->value);
+
+    // Il Super Admin NON è membro di alcun ente (operableOrganizations vuoto):
+    // il riconoscimento deve derivare esclusivamente da isSuperAdmin().
+    expect($user->operableOrganizations()->exists())->toBeFalse();
+
+    // Caso 1: nessun tenant risolto (team id null), come all'accesso al pannello.
+    $registrar->setPermissionsTeamId(null);
+    $registrar->forgetCachedPermissions();
+    expect($user->isSuperAdmin())->toBeTrue()
+        ->and($user->canAccessPanel(shelterPanel()))->toBeTrue()
+        ->and($user->getTenants(shelterPanel())->all())->toBe([]);
+
+    // Caso 2: team id impostato a un ente estraneo, diverso da quello di assegnazione.
+    $strangerTeamId = Organization::factory()->verified()->create()->getKey();
+    $registrar->setPermissionsTeamId($strangerTeamId);
+    $registrar->forgetCachedPermissions();
+    expect($user->isSuperAdmin())->toBeTrue()
+        ->and($user->canAccessPanel(shelterPanel()))->toBeTrue()
+        ->and($user->getTenants(shelterPanel())->all())->toBe([]);
+});
+
+it('detects the super admin role independently of the current team id', function () {
+    // REGRESSIONE B1 (unit-ish): isSuperAdmin() è vero per ogni team corrente
+    // (null, ente A, ente B) per chi ha il ruolo, e falso per un utente normale.
+    $registrar = app(PermissionRegistrar::class);
+
+    $orgA = Organization::factory()->verified()->create();
+    $orgB = Organization::factory()->verified()->create();
+
+    // Assegnazione con il team dell'ente A (il team dell'assegnazione è irrilevante).
+    $registrar->setPermissionsTeamId($orgA->getKey());
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole(RoleName::SuperAdmin->value);
+
+    $normalUser = User::factory()->create();
+
+    foreach ([null, $orgA->getKey(), $orgB->getKey()] as $teamId) {
+        $registrar->setPermissionsTeamId($teamId);
+        $registrar->forgetCachedPermissions();
+
+        expect($superAdmin->isSuperAdmin())->toBeTrue()
+            ->and($normalUser->isSuperAdmin())->toBeFalse();
+    }
+});
+
+it('wires the spatie team id to the current tenant via middleware', function () {
+    $orgA = Organization::factory()->verified()->create();
+    $owner = User::factory()->create();
+    addMember($orgA, $owner, role: MembershipRole::Owner);
+
+    // setTenant emette TenantSet con l'utente corrente: serve un utente autenticato.
+    $this->actingAs($owner);
+    Filament::setCurrentPanel(shelterPanel());
+    Filament::setTenant($orgA);
+
+    $middleware = app(SetPermissionsTeamFromTenant::class);
+    $response = $middleware->handle(Request::create('/manage'), fn (): Response => new Response);
+
+    expect($response)->toBeInstanceOf(Response::class)
+        ->and(app(PermissionRegistrar::class)->getPermissionsTeamId())->toBe($orgA->getKey());
+});
+
+it('scopes org staff permissions to the tenant resolved by the middleware', function () {
+    $orgA = Organization::factory()->verified()->create();
+    $orgB = Organization::factory()->verified()->create();
+    // Membro (staff) solo di A; su B non ha alcun ruolo scoped.
+    $user = User::factory()->create();
+    addMember($orgA, $user, role: MembershipRole::Staff);
+
+    // Un secondo utente autenticato con accesso a entrambi i tenant, così da
+    // poter risolvere il tenant B senza dipendere dalla membership di $user.
+    $operator = User::factory()->create();
+    addMember($orgA, $operator, role: MembershipRole::Owner);
+    addMember($orgB, $operator, role: MembershipRole::Owner);
+
+    $this->actingAs($operator);
+    Filament::setCurrentPanel(shelterPanel());
+
+    $registrar = app(PermissionRegistrar::class);
+    $middleware = app(SetPermissionsTeamFromTenant::class);
+
+    // Contesto tenant A: lo staff ha animal.view.
+    Filament::setTenant($orgA);
+    $middleware->handle(Request::create('/manage'), fn (): Response => new Response);
+    $registrar->forgetCachedPermissions();
+    expect($user->can(PermissionName::AnimalView->value))->toBeTrue();
+
+    // Contesto tenant B: $user non ha alcun ruolo scoped su B, niente permesso.
+    Filament::setTenant($orgB);
+    $middleware->handle(Request::create('/manage'), fn (): Response => new Response);
+    $registrar->forgetCachedPermissions();
+    expect($user->fresh()->can(PermissionName::AnimalView->value))->toBeFalse();
+});
