@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
-it('serves the welcome page', function () {
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
+it('serves the public home page', function () {
     $this->get('/')->assertOk();
 });
 

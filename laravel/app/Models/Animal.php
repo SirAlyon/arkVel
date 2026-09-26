@@ -190,6 +190,27 @@ class Animal extends Model implements HasMedia
     }
 
     /**
+     * Confine di visibilita' pubblica: un animale compare nel catalogo/schede
+     * pubbliche SOLO se e' `Available` e appartiene a un ente `Verified`.
+     *
+     * E' lo stesso predicato di {@see shouldBeSearchable()}, ma espresso a
+     * livello di query cosi' da riusarlo ovunque (home, catalogo, dettaglio,
+     * pagina ente) e come difesa-in-profondita' quando la ricerca gira sul
+     * driver `collection` (test) che non ha indice ne' facet server-side.
+     *
+     * @param  Builder<Animal>  $query
+     */
+    #[Scope]
+    protected function publiclyVisible(Builder $query): void
+    {
+        $query
+            ->where('status', AnimalStatus::Available)
+            ->whereHas('organization', function (Builder $organization): void {
+                $organization->where('status', OrganizationStatus::Verified);
+            });
+    }
+
+    /**
      * Nome stabile dell'indice di ricerca (Scout applica l'eventuale prefisso).
      */
     public function searchableAs(): string

@@ -9,9 +9,11 @@ use App\Enums\OrganizationType;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Spatie\Translatable\HasTranslations;
 
@@ -27,6 +29,7 @@ use Spatie\Translatable\HasTranslations;
  * @property string $slug
  * @property OrganizationType $type
  * @property OrganizationStatus $status
+ * @property-read Collection<int, Animal> $animals
  */
 class Organization extends Model
 {
@@ -100,6 +103,17 @@ class Organization extends Model
     protected function verified(Builder $query): void
     {
         $query->where('status', OrganizationStatus::Verified);
+    }
+
+    /**
+     * Animali dell'ente. Per il catalogo pubblico filtra con lo scope
+     * {@see Animal::publiclyVisible()} (o `available()`), mai grezzo.
+     *
+     * @return HasMany<Animal, $this>
+     */
+    public function animals(): HasMany
+    {
+        return $this->hasMany(Animal::class);
     }
 
     /**

@@ -2,8 +2,52 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../views/**/*.blade.php';
+@source '../../app/Livewire/**/*.php';
 
+/*
+ | ArkVel brand — palette calda e accogliente per una charity di adozione
+ | animali. Primary: un arancio "terracotta" caldo e amichevole. Accent: un
+ | verde-acqua che richiama fiducia/natura. I toni neutri virano al caldo
+ | (stone) per evitare il grigio "clinico". Le scale sono complete cosi' i
+ | componenti possono usare tinte chiare per gli sfondi e scure per il testo.
+ */
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Primary — terracotta / arancio caldo */
+    --color-brand-50: #fdf6f0;
+    --color-brand-100: #fae8da;
+    --color-brand-200: #f4cdb1;
+    --color-brand-300: #ecac82;
+    --color-brand-400: #e28553;
+    --color-brand-500: #d96a35;
+    --color-brand-600: #c5522a;
+    --color-brand-700: #a33f24;
+    --color-brand-800: #833424;
+    --color-brand-900: #6b2d20;
+    --color-brand-950: #3a1510;
+
+    /* Accent — verde-acqua fiducia/natura */
+    --color-accent-50: #eefbf5;
+    --color-accent-100: #d5f5e5;
+    --color-accent-200: #aee9cf;
+    --color-accent-300: #79d6b2;
+    --color-accent-400: #43bd91;
+    --color-accent-500: #20a377;
+    --color-accent-600: #148361;
+    --color-accent-700: #10684f;
+    --color-accent-800: #115340;
+    --color-accent-900: #104436;
+    --color-accent-950: #05271f;
+}
+
+/* Focus visibile e coerente su tutti gli elementi interattivi. */
+@layer base {
+    :focus-visible {
+        outline: 2px solid var(--color-brand-500);
+        outline-offset: 2px;
+        border-radius: 0.25rem;
+    }
 }
