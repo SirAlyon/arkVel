@@ -1,54 +1,99 @@
 networks:
-  laravel:
+  arkvel:
     driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  meilisearch-data:
 
 services:
   php:
     build:
       context: .
-      dockerfile: Dockerfile  
-    container_name: php
+      dockerfile: Dockerfile
+    container_name: arkvel-php
     volumes:
       - ./laravel/:/var/www/html/arkvel
     working_dir: /var/www/html/arkvel
     networks:
-      - laravel
+      - arkvel
     expose:
       - "9000"
     depends_on:
-      - mariadb
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   nginx:
     build:
       context: ./nginx/
-      dockerfile: Dockerfile  
-    container_name: nginx
+      dockerfile: Dockerfile
+    container_name: arkvel-nginx
     ports:
-      - "80:80"
+      - "8090:80"
     volumes:
       - ./laravel/:/var/www/html/arkvel
       - ./nginx/conf/default.conf:/etc/nginx/conf.d/default.conf
       - ./nginx/logs:/var/log/nginx
     networks:
-      - laravel
+      - arkvel
     depends_on:
       - php
 
-  mariadb:
-    image: mariadb:latest
-    container_name: mariadb
-    restart: always
+  postgres:
+    image: postgres:16-alpine
+    container_name: arkvel-postgres
+    restart: unless-stopped
     environment:
-      MYSQL_DATABASE: laravel
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_USER: laravel
-      MYSQL_PASSWORD: secret
+      POSTGRES_DB: arkvel
+      POSTGRES_USER: arkvel
+      POSTGRES_PASSWORD: secret
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mariadb-data:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arkvel -d arkvel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
-      - laravel
+      - arkvel
 
-volumes:
-  mariadb-data:
+  redis:
+    image: redis:7-alpine
+    container_name: arkvel-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - arkvel
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: arkvel-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: masterKey
+      MEILI_ENV: development
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch-data:/meili_data
+    networks:
+      - arkvel
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: arkvel-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - arkvel

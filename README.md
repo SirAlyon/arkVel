@@ -28,10 +28,24 @@ To run ArkVel, ensure you have the following tools installed:
 
 ### 🚀 Technology Stack
 
-- **Laravel 11** - A robust and flexible PHP framework
-- **Filament 3** - An advanced and user-friendly admin panel
+- **Laravel 13** - A robust and flexible PHP framework (PHP 8.4)
+- **Filament 5** - Multi-panel, multi-tenant admin/app framework
+- **PostgreSQL 16** + **Redis** + **Meilisearch** (search) + **Mailpit** (mail)
+- **Spatie ecosystem** - permissions, media library, translatable, activity log, model states, data
 - **Docker** - Simplifies development environment management
 - **Tailwind CSS** - Ensures a modern and responsive design
+
+> 📋 Full architecture & roadmap: [docs/PIANO-DI-SVILUPPO.md](docs/PIANO-DI-SVILUPPO.md)
+
+#### Local development
+
+```sh
+docker compose up -d --build
+# App:        http://localhost:8090
+# Admin:      http://localhost:8090/admin
+# Mailpit:    http://localhost:8025
+# Meilisearch http://localhost:7700
+```
 
 ## 🎯 Key Objectives
 
