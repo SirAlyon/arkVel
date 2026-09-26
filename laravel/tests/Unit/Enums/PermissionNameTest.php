@@ -16,11 +16,13 @@ it('is backed by the expected string values', function () {
         ->and(PermissionName::MedicalRecordUpdate->value)->toBe('medical_record.update')
         ->and(PermissionName::MedicalRecordDelete->value)->toBe('medical_record.delete')
         ->and(PermissionName::ApplicationView->value)->toBe('application.view')
-        ->and(PermissionName::ApplicationManage->value)->toBe('application.manage');
+        ->and(PermissionName::ApplicationManage->value)->toBe('application.manage')
+        ->and(PermissionName::FosterApplicationView->value)->toBe('foster_application.view')
+        ->and(PermissionName::FosterApplicationManage->value)->toBe('foster_application.manage');
 });
 
-it('defines exactly twelve permissions', function () {
-    expect(PermissionName::cases())->toHaveCount(12);
+it('defines exactly fourteen permissions', function () {
+    expect(PermissionName::cases())->toHaveCount(14);
 });
 
 it('exposes a non-empty italian label for every case', function () {

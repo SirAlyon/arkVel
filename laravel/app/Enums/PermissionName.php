@@ -26,6 +26,8 @@ enum PermissionName: string implements HasLabel
     case MedicalRecordDelete = 'medical_record.delete';
     case ApplicationView = 'application.view';
     case ApplicationManage = 'application.manage';
+    case FosterApplicationView = 'foster_application.view';
+    case FosterApplicationManage = 'foster_application.manage';
 
     public function getLabel(): string
     {
@@ -42,6 +44,8 @@ enum PermissionName: string implements HasLabel
             self::MedicalRecordDelete => 'Elimina cartelle sanitarie',
             self::ApplicationView => 'Visualizza candidature',
             self::ApplicationManage => 'Gestisci candidature',
+            self::FosterApplicationView => 'Visualizza richieste di affido',
+            self::FosterApplicationManage => 'Gestisci richieste di affido',
         };
     }
 }

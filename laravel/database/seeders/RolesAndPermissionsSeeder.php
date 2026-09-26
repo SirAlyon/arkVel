@@ -84,6 +84,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::MedicalRecordDelete,
                 PermissionName::ApplicationView,
                 PermissionName::ApplicationManage,
+                PermissionName::FosterApplicationView,
+                PermissionName::FosterApplicationManage,
             ));
 
         $this->roleFor(RoleName::OrgVolunteer)
@@ -91,6 +93,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::AnimalView,
                 PermissionName::MedicalRecordView,
                 PermissionName::ApplicationView,
+                PermissionName::FosterApplicationView,
             ));
 
         // Adopter e SuperAdmin non hanno permessi d'ente espliciti.
