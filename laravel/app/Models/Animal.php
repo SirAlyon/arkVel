@@ -186,13 +186,25 @@ class Animal extends Model implements HasMedia
         $query->where('featured', true);
     }
 
+    /**
+     * Tipi MIME immagine accettati per le foto dell'animale.
+     *
+     * Unica fonte di verità: usata sia dalle media collection (validazione
+     * lato medialibrary) sia dallo schema Filament (validazione dell'upload),
+     * così i due lati non divergono. SVG escluso di proposito: è un vettore
+     * XSS per immagini caricate dagli utenti.
+     *
+     * @var list<string>
+     */
+    public const array ACCEPTED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('photos')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
+            ->acceptsMimeTypes(self::ACCEPTED_IMAGE_MIME_TYPES);
 
         $this->addMediaCollection('avatar')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp'])
+            ->acceptsMimeTypes(self::ACCEPTED_IMAGE_MIME_TYPES)
             ->singleFile();
     }
 

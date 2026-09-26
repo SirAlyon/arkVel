@@ -304,6 +304,31 @@ it('attaches an uploaded photo to the photos collection on create', function () 
     expect($animal->getMedia('photos'))->toHaveCount(1);
 });
 
+it('rejects an svg upload with a validation error instead of a media exception', function () {
+    // Regressione: senza acceptedFileTypes allineati alla media collection,
+    // un SVG passava il campo (->image() ammette image/svg+xml) e poi la
+    // collection lo rifiutava con FileUnacceptableForCollection (500). Ora il
+    // campo lo blocca in validazione. SVG resta escluso anche per sicurezza (XSS).
+    Storage::fake('public');
+
+    $orgA = Organization::factory()->verified()->create();
+    $staff = member($orgA, MembershipRole::Staff);
+    actAsInTenant($staff, $orgA);
+
+    Livewire::test(CreateAnimal::class)
+        ->fillForm([
+            'name' => 'Vektor',
+            'species' => Species::Dog->value,
+            'sex' => Sex::Male->value,
+            'status' => AnimalStatus::Draft->value,
+            'avatar' => [UploadedFile::fake()->create('logo.svg', 10, 'image/svg+xml')],
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['avatar']);
+
+    expect(Animal::query()->where('name', 'Vektor')->exists())->toBeFalse();
+});
+
 it('persists the multilingual description on both locales', function () {
     $orgA = Organization::factory()->verified()->create();
     $staff = member($orgA, MembershipRole::Staff);
