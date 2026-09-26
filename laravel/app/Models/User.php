@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password'])]
@@ -98,13 +99,39 @@ class User extends Authenticatable implements FilamentUser, HasTenants
     /**
      * L'utente ha il ruolo di piattaforma Super Admin.
      *
-     * In modalità teams l'assegnazione porta sempre un team id ma il ruolo è
-     * di piattaforma: lo rileviamo ignorando il team corrente.
+     * Il Super Admin è un ruolo di PIATTAFORMA, non org-scoped. In modalità
+     * teams l'assegnazione in `model_has_roles` porta sempre un team id (colonna
+     * NOT NULL, parte della PK), ma quel team è IRRILEVANTE: la scope spatie
+     * `$this->roles()` filtra però su `wherePivot('team_id', getPermissionsTeamId())`,
+     * quindi mascherebbe l'assegnazione ogni volta che il team corrente non
+     * coincide con quello usato in fase di assegnazione (tipicamente `null`
+     * all'accesso al pannello, oppure un ente diverso). Rileviamo perciò il
+     * ruolo con una query diretta sul pivot, TEAM-INDEPENDENT: unica fonte di
+     * verità, riusata anche dal bypass Gate::before in AppServiceProvider.
      */
     public function isSuperAdmin(): bool
     {
-        return $this->roles()
-            ->where('name', RoleName::SuperAdmin->value)
+        /** @var array<string, string> $tables */
+        $tables = config('permission.table_names');
+        /** @var array<string, string> $columns */
+        $columns = config('permission.column_names');
+
+        $modelHasRoles = $tables['model_has_roles'];
+        $rolesTable = $tables['roles'];
+        $morphKey = $columns['model_morph_key'];
+        $pivotRoleKey = $columns['role_pivot_key'] ?? 'role_id';
+
+        return DB::table($modelHasRoles)
+            ->join(
+                $rolesTable,
+                "{$modelHasRoles}.{$pivotRoleKey}",
+                '=',
+                "{$rolesTable}.id",
+            )
+            ->where("{$modelHasRoles}.{$morphKey}", $this->getKey())
+            ->where("{$modelHasRoles}.model_type", $this->getMorphClass())
+            ->where("{$rolesTable}.name", RoleName::SuperAdmin->value)
+            ->where("{$rolesTable}.guard_name", config('auth.defaults.guard'))
             ->exists();
     }
 

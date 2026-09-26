@@ -146,15 +146,60 @@ it('excludes suspended organizations from the tenant list', function () {
         ->and($tenants->pluck('id')->all())->not->toContain($suspended->id);
 });
 
-it('lets a super admin access the shelter panel', function () {
-    $user = User::factory()->create();
+it('lets a super admin without any membership access the shelter panel regardless of the current team id', function () {
+    // REGRESSIONE B1: il ruolo Super Admin è di piattaforma e l'assegnazione
+    // porta comunque un team id (qui un ente arbitrario), ma il rilevamento è
+    // TEAM-INDEPENDENT. In produzione, all'accesso al pannello il team corrente
+    // è `null` (nessun tenant risolto): con l'implementazione rotta (roles()
+    // team-scoped) canAccessPanel restituiva FALSE. Qui verifichiamo il fix con
+    // team id sia `null` sia un id di ente estraneo, PRIMA dell'asserzione.
+    $registrar = app(PermissionRegistrar::class);
 
-    // Il ruolo di piattaforma porta comunque un team id (colonna NOT NULL);
-    // il team è irrilevante per il rilevamento del Super Admin.
-    app(PermissionRegistrar::class)->setPermissionsTeamId(1);
+    $assignmentTeamId = Organization::factory()->verified()->create()->getKey();
+    $registrar->setPermissionsTeamId($assignmentTeamId);
+    $user = User::factory()->create();
     $user->assignRole(RoleName::SuperAdmin->value);
 
-    expect($user->canAccessPanel(shelterPanel()))->toBeTrue();
+    // Il Super Admin NON è membro di alcun ente (operableOrganizations vuoto):
+    // l'accesso deve derivare esclusivamente da isSuperAdmin().
+    expect($user->operableOrganizations()->exists())->toBeFalse();
+
+    // Caso 1: nessun tenant risolto (team id null), come all'accesso al pannello.
+    $registrar->setPermissionsTeamId(null);
+    $registrar->forgetCachedPermissions();
+    expect($user->canAccessPanel(shelterPanel()))->toBeTrue()
+        ->and($user->getTenants(shelterPanel())->all())->toBe([]);
+
+    // Caso 2: team id impostato a un ente estraneo, diverso da quello di assegnazione.
+    $strangerTeamId = Organization::factory()->verified()->create()->getKey();
+    $registrar->setPermissionsTeamId($strangerTeamId);
+    $registrar->forgetCachedPermissions();
+    expect($user->canAccessPanel(shelterPanel()))->toBeTrue()
+        ->and($user->getTenants(shelterPanel())->all())->toBe([]);
+});
+
+it('detects the super admin role independently of the current team id', function () {
+    // REGRESSIONE B1 (unit-ish): isSuperAdmin() è vero per ogni team corrente
+    // (null, ente A, ente B) per chi ha il ruolo, e falso per un utente normale.
+    $registrar = app(PermissionRegistrar::class);
+
+    $orgA = Organization::factory()->verified()->create();
+    $orgB = Organization::factory()->verified()->create();
+
+    // Assegnazione con il team dell'ente A (il team dell'assegnazione è irrilevante).
+    $registrar->setPermissionsTeamId($orgA->getKey());
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole(RoleName::SuperAdmin->value);
+
+    $normalUser = User::factory()->create();
+
+    foreach ([null, $orgA->getKey(), $orgB->getKey()] as $teamId) {
+        $registrar->setPermissionsTeamId($teamId);
+        $registrar->forgetCachedPermissions();
+
+        expect($superAdmin->isSuperAdmin())->toBeTrue()
+            ->and($normalUser->isSuperAdmin())->toBeFalse();
+    }
 });
 
 it('wires the spatie team id to the current tenant via middleware', function () {
