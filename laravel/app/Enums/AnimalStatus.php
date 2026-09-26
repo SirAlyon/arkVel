@@ -44,4 +44,46 @@ enum AnimalStatus: string implements HasColor, HasLabel
             self::NotAvailable => 'gray',
         };
     }
+
+    /**
+     * Grafo delle transizioni di stato consentite.
+     *
+     * La semantica del ciclo di vita (quali passaggi hanno senso) è una
+     * proprietà dello stato stesso e vive qui. L'orchestrazione (persistenza,
+     * guardia, activity log) è responsabilità di
+     * App\Actions\Animals\TransitionAnimalStatus, non dell'enum.
+     *
+     * `Adopted` è terminale: non ammette successori.
+     *
+     * @return list<AnimalStatus>
+     */
+    public function allowedTransitions(): array
+    {
+        return match ($this) {
+            self::Draft => [self::Available, self::NotAvailable],
+            self::Available => [
+                self::Reserved,
+                self::AdoptionPending,
+                self::MedicalHold,
+                self::Fostered,
+                self::NotAvailable,
+            ],
+            self::Reserved => [self::Available, self::AdoptionPending, self::NotAvailable],
+            self::AdoptionPending => [self::Adopted, self::Available, self::NotAvailable],
+            self::MedicalHold => [self::Available, self::NotAvailable],
+            self::Fostered => [self::Available, self::Adopted, self::NotAvailable],
+            // `Draft` e' pre-pubblicazione: da `NotAvailable` la ripubblicazione
+            // passa per `Available`, non c'e' ritorno a bozza.
+            self::NotAvailable => [self::Available],
+            self::Adopted => [],
+        };
+    }
+
+    /**
+     * Indica se è consentito passare dallo stato corrente a $to.
+     */
+    public function canTransitionTo(AnimalStatus $to): bool
+    {
+        return in_array($to, $this->allowedTransitions(), true);
+    }
 }
