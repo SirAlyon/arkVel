@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\OrganizationStatus;
 use App\Enums\RoleName;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,7 +24,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser, HasTenants
+class User extends Authenticatable implements FilamentUser, HasTenants, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable;
@@ -138,14 +138,36 @@ class User extends Authenticatable implements FilamentUser, HasTenants
     /**
      * Predicato di accesso al pannello (contratto Filament).
      *
-     * - shelter: solo membri verificati di un ente operabile, o Super Admin.
-     * - admin: accesso invariato rispetto a prima (autenticazione sufficiente);
-     *   il gating fine del pannello admin sarà definito in una slice dedicata.
+     * Modello di accesso Filament-idiomatico: l'accesso allo SHELL del pannello
+     * è PERMISSIVO; l'ISOLAMENTO reale è a livello di TENANT + verifica email.
+     *
+     * - shelter: qualunque utente autenticato può accedere allo shell del
+     *   pannello (`true`, coerente col ramo default/admin). Questo è NECESSARIO
+     *   al flusso di SELF-REGISTRATION del primo ente: un utente senza alcuna
+     *   membership deve poter raggiungere la tenant registration page
+     *   (`/manage/new`, pagina RegisterOrganization) per creare/entrare in un
+     *   ente. Gattiare qui sulla membership dava un 403 su TUTTE le rotte del
+     *   pannello (inclusa `/manage/new`), rendendo la self-registration via HTTP
+     *   irraggiungibile. I confini di sicurezza restano tre, e sono ALTROVE:
+     *     (a) ISOLAMENTO: `getTenants()`/`canAccessTenant()` ammettono solo gli
+     *         enti di cui l'utente è membro VERIFICATO e non SOSPESO; lo scoping
+     *         delle Resource (global scope di tenancy + Policy) impedisce ogni
+     *         fuga cross-tenant. Un non-membro non risolve né vede i record di
+     *         un ente altrui (404), pur potendo entrare nello shell.
+     *     (b) VERIFICA EMAIL: imposta dal middleware `verified` (abilitato da
+     *         emailVerification() sul pannello). Un utente con email non
+     *         verificata è rediretto alla prompt di verifica prima di
+     *         raggiungere qualunque rotta protetta, `/manage/new` inclusa.
+     *     (c) AUTENTICAZIONE: l'authMiddleware devia gli ospiti alla login.
+     * - admin: accesso invariato (autenticazione sufficiente); il pannello admin
+     *   non abilita emailVerification(), quindi il contratto MustVerifyEmail non
+     *   introduce regressioni sull'admin. Il gating fine dell'admin sarà definito
+     *   in una slice dedicata.
      */
     public function canAccessPanel(Panel $panel): bool
     {
         return match ($panel->getId()) {
-            'shelter' => $this->isSuperAdmin() || $this->operableOrganizations()->exists(),
+            'shelter' => true,
             default => true,
         };
     }

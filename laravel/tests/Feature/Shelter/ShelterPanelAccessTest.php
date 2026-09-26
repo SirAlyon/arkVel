@@ -66,7 +66,25 @@ it('lets a verified member access the shelter panel', function () {
     $user = User::factory()->create();
     addMember($organization, $user);
 
-    expect($user->canAccessPanel(shelterPanel()))->toBeTrue();
+    // Un membro verificato accede allo shell del pannello E ha l'ente tra i
+    // propri tenant (isolamento: canAccessTenant true, incluso in getTenants).
+    expect($user->canAccessPanel(shelterPanel()))->toBeTrue()
+        ->and($user->canAccessTenant($organization))->toBeTrue()
+        ->and($user->getTenants(shelterPanel())->pluck('id')->all())
+        ->toContain($organization->id);
+});
+
+it('lets any authenticated user reach the shelter panel shell for self-registration', function () {
+    // MODELLO DI ACCESSO Filament-idiomatico: l'accesso allo SHELL del pannello
+    // è permissivo, così un utente senza membership può raggiungere la tenant
+    // registration page e creare il proprio primo ente. L'ISOLAMENTO reale sta
+    // a livello di tenant (getTenants/canAccessTenant), non nel gate di pannello.
+    $user = User::factory()->create();
+
+    expect($user->canAccessPanel(shelterPanel()))->toBeTrue()
+        // ...ma senza membership NON ha alcun tenant selezionabile: nessun
+        // accesso a dati d'ente, solo la possibilità di registrarne uno proprio.
+        ->and($user->getTenants(shelterPanel())->all())->toBe([]);
 });
 
 it('exposes only the organizations the user is a verified member of as tenants', function () {
@@ -97,32 +115,42 @@ it('lets a verified member operate an organization still Pending verification', 
 });
 
 it('denies a verified member operating a suspended organization', function () {
-    // Contraltare dell'invariante Pending: solo Suspended blocca l'accesso.
+    // Contraltare dell'invariante Pending: solo Suspended blocca l'ISOLAMENTO
+    // (l'accesso allo shell del pannello resta permissivo per tutti). Un ente
+    // sospeso non è tra i tenant operabili nemmeno per un suo membro verificato.
     $organization = Organization::factory()->suspended()->create();
     $user = User::factory()->create();
     addMember($organization, $user);
 
     expect($organization->status)->toBe(OrganizationStatus::Suspended)
         ->and($user->canAccessTenant($organization))->toBeFalse()
-        ->and($user->canAccessPanel(shelterPanel()))->toBeFalse()
         ->and($user->getTenants(shelterPanel())->pluck('id')->all())
         ->not->toContain($organization->id);
 });
 
-it('denies access to an unverified member', function () {
+it('isolates an unverified member from the organization tenant', function () {
+    // Un membro NON verificato del proprio ente NON può operarlo: l'ISOLAMENTO
+    // (canAccessTenant false, escluso da getTenants) resta la barriera reale.
+    // canAccessPanel è ora permissivo (può al più registrare un proprio ente).
     $organization = Organization::factory()->verified()->create();
     $user = User::factory()->create();
     addMember($organization, $user, verified: false);
 
-    expect($user->canAccessPanel(shelterPanel()))->toBeFalse()
-        ->and($user->canAccessTenant($organization))->toBeFalse();
+    expect($user->canAccessTenant($organization))->toBeFalse()
+        ->and($user->getTenants(shelterPanel())->pluck('id')->all())
+        ->not->toContain($organization->id);
 });
 
-it('denies canAccessTenant for an organization the user is not a member of', function () {
+it('isolates a non-member from an organization it is not part of', function () {
+    // Un non-membro NON risolve l'ente come tenant (canAccessTenant false) e
+    // l'ente NON compare tra i suoi getTenants: nessuna fuga cross-tenant, pur
+    // potendo accedere allo shell del pannello (per registrare un ente proprio).
     $organization = Organization::factory()->verified()->create();
     $user = User::factory()->create();
 
-    expect($user->canAccessTenant($organization))->toBeFalse();
+    expect($user->canAccessTenant($organization))->toBeFalse()
+        ->and($user->getTenants(shelterPanel())->pluck('id')->all())
+        ->not->toContain($organization->id);
 });
 
 it('denies canAccessTenant for a suspended organization even to a verified member', function () {
@@ -146,13 +174,15 @@ it('excludes suspended organizations from the tenant list', function () {
         ->and($tenants->pluck('id')->all())->not->toContain($suspended->id);
 });
 
-it('lets a super admin without any membership access the shelter panel regardless of the current team id', function () {
+it('recognizes a super admin without any membership regardless of the current team id', function () {
     // REGRESSIONE B1: il ruolo Super Admin è di piattaforma e l'assegnazione
     // porta comunque un team id (qui un ente arbitrario), ma il rilevamento è
-    // TEAM-INDEPENDENT. In produzione, all'accesso al pannello il team corrente
-    // è `null` (nessun tenant risolto): con l'implementazione rotta (roles()
-    // team-scoped) canAccessPanel restituiva FALSE. Qui verifichiamo il fix con
-    // team id sia `null` sia un id di ente estraneo, PRIMA dell'asserzione.
+    // TEAM-INDEPENDENT. All'accesso al pannello il team corrente è `null`
+    // (nessun tenant risolto): con l'implementazione rotta (roles() team-scoped)
+    // isSuperAdmin() restituiva FALSE. Qui verifichiamo il fix con team id sia
+    // `null` sia un id di ente estraneo. NB: dopo il fix di access-model
+    // canAccessPanel è permissivo per tutti; il super admin, non essendo membro
+    // di alcun ente, resta comunque SENZA tenant selezionabili (isolamento).
     $registrar = app(PermissionRegistrar::class);
 
     $assignmentTeamId = Organization::factory()->verified()->create()->getKey();
@@ -161,20 +191,22 @@ it('lets a super admin without any membership access the shelter panel regardles
     $user->assignRole(RoleName::SuperAdmin->value);
 
     // Il Super Admin NON è membro di alcun ente (operableOrganizations vuoto):
-    // l'accesso deve derivare esclusivamente da isSuperAdmin().
+    // il riconoscimento deve derivare esclusivamente da isSuperAdmin().
     expect($user->operableOrganizations()->exists())->toBeFalse();
 
     // Caso 1: nessun tenant risolto (team id null), come all'accesso al pannello.
     $registrar->setPermissionsTeamId(null);
     $registrar->forgetCachedPermissions();
-    expect($user->canAccessPanel(shelterPanel()))->toBeTrue()
+    expect($user->isSuperAdmin())->toBeTrue()
+        ->and($user->canAccessPanel(shelterPanel()))->toBeTrue()
         ->and($user->getTenants(shelterPanel())->all())->toBe([]);
 
     // Caso 2: team id impostato a un ente estraneo, diverso da quello di assegnazione.
     $strangerTeamId = Organization::factory()->verified()->create()->getKey();
     $registrar->setPermissionsTeamId($strangerTeamId);
     $registrar->forgetCachedPermissions();
-    expect($user->canAccessPanel(shelterPanel()))->toBeTrue()
+    expect($user->isSuperAdmin())->toBeTrue()
+        ->and($user->canAccessPanel(shelterPanel()))->toBeTrue()
         ->and($user->getTenants(shelterPanel())->all())->toBe([]);
 });
 

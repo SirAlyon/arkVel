@@ -30,6 +30,20 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
  * pannello di default (resta l'admin). Il team id di spatie/permission viene
  * allineato al tenant corrente dal SetPermissionsTeamFromTenant (tenant
  * middleware persistente), così i check di autorizzazione sono tenant-scoped.
+ *
+ * Autenticazione (Fase 1, slice 8):
+ * - login()/registration(): accesso e self-registration dell'account.
+ * - passwordReset(): richiesta e reset password via email (Mailpit in locale).
+ * - emailVerification(): la verifica email è OBBLIGATORIA su questo pannello.
+ *   Filament aggiunge il middleware `verified` alle rotte di pagine/resource,
+ *   quindi un utente con email non verificata viene rediretto alla prompt di
+ *   verifica. È panel-scoped: l'AdminPanelProvider NON abilita la verifica,
+ *   perciò l'accesso admin resta invariato.
+ * - profile(): pagina account (nome/email/password) per l'utente autenticato.
+ *
+ * 2FA/MFA: differita alla fase di hardening. I provider MFA di Filament 5
+ * (App/TOTP ed Email) richiedono storage persistente sulla tabella users
+ * (secret, recovery codes, flag) → migrazioni/colonne non in scope qui.
  */
 class ShelterPanelProvider extends PanelProvider
 {
@@ -40,6 +54,9 @@ class ShelterPanelProvider extends PanelProvider
             ->path('manage')
             ->login()
             ->registration()
+            ->passwordReset()
+            ->emailVerification()
+            ->profile()
             ->colors([
                 'primary' => Color::Emerald,
             ])
