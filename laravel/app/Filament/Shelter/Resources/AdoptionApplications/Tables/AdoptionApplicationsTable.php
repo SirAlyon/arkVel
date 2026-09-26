@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Shelter\Resources\AdoptionApplications\Tables;
 
+use App\Actions\Adoptions\FinalizeAdoption;
 use App\Actions\Applications\AdvanceApplication;
 use App\Enums\ApplicationStatus;
 use App\Exceptions\AnimalAlreadyHasPendingAdoption;
+use App\Exceptions\InvalidAnimalStatusTransition;
 use App\Exceptions\InvalidApplicationTransition;
 use App\Filament\Shelter\Resources\AdoptionApplications\AdoptionApplicationResource;
 use App\Filament\Shelter\Resources\AdoptionApplications\Support\StaffTransitions;
@@ -18,6 +20,7 @@ use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
@@ -87,6 +90,7 @@ class AdoptionApplicationsTable
             ->recordActions([
                 ViewAction::make(),
                 self::advanceAction(),
+                self::finalizeAction(),
                 self::assignAction(),
                 self::editNotesAction(),
             ])
@@ -160,6 +164,78 @@ class AdoptionApplicationsTable
                 Notification::make()
                     ->title(__('applications.shelter.advanced'))
                     ->body(__('applications.shelter.advanced_body', ['status' => $target->getLabel()]))
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /**
+     * Azione "Finalizza adozione": disponibile SOLO su una candidatura in
+     * AdoptionPending, gated su update (ApplicationManage). Raccoglie il
+     * contributo (fee, facoltativo) e la valuta (default EUR) e delega ad
+     * App\Actions\Adoptions\FinalizeAdoption, che è l'unica fonte di verità della
+     * finalizzazione (crea l'Adozione, porta l'animale ad Adopted, chiude le
+     * candidature sorelle, genera il contratto PDF, notifica). Le eccezioni di
+     * dominio vengono intercettate e mostrate come notifica danger, senza
+     * propagare (nessun crash, stato invariato).
+     */
+    public static function finalizeAction(): Action
+    {
+        return Action::make('finalize')
+            ->label(__('adoptions.shelter.finalize'))
+            ->icon(Heroicon::OutlinedCheckBadge)
+            ->color('success')
+            ->modalHeading(__('adoptions.shelter.finalize_heading'))
+            ->modalDescription(__('adoptions.shelter.finalize_help'))
+            ->modalSubmitActionLabel(__('adoptions.shelter.finalize_submit'))
+            ->authorize('update')
+            // Solo su una candidatura in AdoptionPending: negli altri stati la
+            // finalizzazione non ha senso e l'azione resta nascosta.
+            ->visible(fn (AdoptionApplication $record): bool => $record->statusEnum() === ApplicationStatus::AdoptionPending)
+            ->schema([
+                TextInput::make('fee')
+                    ->label(__('adoptions.shelter.fee'))
+                    ->helperText(__('adoptions.shelter.fee_help'))
+                    ->numeric()
+                    ->minValue(0)
+                    ->step(0.01),
+                TextInput::make('currency')
+                    ->label(__('adoptions.shelter.currency'))
+                    ->default('EUR')
+                    ->maxLength(3)
+                    ->required(),
+            ])
+            ->action(function (AdoptionApplication $record, array $data): void {
+                $fee = ($data['fee'] ?? null) !== null && $data['fee'] !== ''
+                    ? (float) $data['fee']
+                    : null;
+                $currency = ($data['currency'] ?? null) !== null && $data['currency'] !== ''
+                    ? strtoupper((string) $data['currency'])
+                    : 'EUR';
+
+                try {
+                    app(FinalizeAdoption::class)->handle(
+                        application: $record,
+                        actor: self::actor(),
+                        fee: $fee,
+                        currency: $currency,
+                    );
+                } catch (InvalidApplicationTransition|InvalidAnimalStatusTransition $exception) {
+                    // La finalizzazione tocca più stati (candidatura + animale):
+                    // se una guardia scatta a runtime la notifichiamo senza
+                    // propagare, lasciando tutto invariato (transazione rollback).
+                    Notification::make()
+                        ->title(__('adoptions.shelter.finalize_failed'))
+                        ->body($exception->getMessage())
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->title(__('adoptions.shelter.finalized'))
+                    ->body(__('adoptions.shelter.finalized_body', ['animal' => $record->animal->name]))
                     ->success()
                     ->send();
             });

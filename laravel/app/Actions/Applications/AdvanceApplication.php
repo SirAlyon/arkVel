@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Actions\Applications;
 
+use App\Actions\Animals\TransitionAnimalStatus;
+use App\Enums\AnimalStatus;
 use App\Enums\ApplicationStatus;
 use App\Exceptions\AnimalAlreadyHasPendingAdoption;
+use App\Exceptions\InvalidAnimalStatusTransition;
 use App\Exceptions\InvalidApplicationTransition;
 use App\Models\AdoptionApplication;
 use App\Models\User;
@@ -37,9 +40,20 @@ use Spatie\ModelStates\Exceptions\CouldNotPerformTransition;
  * loggare: una transizione illegale solleva InvalidApplicationTransition senza
  * lasciare stato/log parziali (transitionTo è atomica). Su ogni transizione
  * riuscita si logga (activity) e si notifica l'adottante.
+ *
+ * Accoppiamento con lo stato dell'ANIMALE (slice 10): quando la candidatura
+ * entra in AdoptionPending, l'animale viene RISERVATO
+ * (AnimalStatus::AdoptionPending) via TransitionAnimalStatus, DENTRO la stessa
+ * transazione. Così la successiva finalizzazione (FinalizeAdoption) può
+ * legalmente portare l'animale AdoptionPending → Adopted. Una riserva impossibile
+ * (animale non in uno stato riservabile) fa rollback dell'intero avanzamento.
  */
 final class AdvanceApplication
 {
+    public function __construct(
+        private readonly TransitionAnimalStatus $transitionAnimalStatus,
+    ) {}
+
     /**
      * @throws InvalidApplicationTransition target non consentito dal grafo,
      *                                      oppure Completed/Withdrawn (fuori
@@ -47,6 +61,8 @@ final class AdvanceApplication
      * @throws AnimalAlreadyHasPendingAdoption quando si porterebbe in
      *                                         AdoptionPending un animale che ha
      *                                         già un'adozione attiva/completata
+     * @throws InvalidAnimalStatusTransition quando l'animale non è in uno stato
+     *                                       riservabile (propagata, fa rollback)
      */
     public function handle(
         AdoptionApplication $application,
@@ -83,6 +99,18 @@ final class AdvanceApplication
                 $application->decided_at = now();
                 $application->decision_reason = $reason;
                 $application->save();
+            }
+
+            // Accoppiamento con l'animale: entrando in AdoptionPending la
+            // candidatura RISERVA l'animale (→ AnimalStatus::AdoptionPending),
+            // così FinalizeAdoption potrà poi fare AdoptionPending → Adopted.
+            // Dentro la transazione: una riserva impossibile fa rollback
+            // dell'intero avanzamento (InvalidAnimalStatusTransition propaga).
+            if ($to === ApplicationStatus::AdoptionPending) {
+                $this->transitionAnimalStatus->handle(
+                    $application->animal,
+                    AnimalStatus::AdoptionPending,
+                );
             }
 
             activity()

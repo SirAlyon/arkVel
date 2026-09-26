@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Actions\Applications\AdvanceApplication;
+use App\Enums\AnimalStatus;
 use App\Enums\ApplicationStatus;
 use App\Exceptions\AnimalAlreadyHasPendingAdoption;
+use App\Exceptions\InvalidAnimalStatusTransition;
 use App\Exceptions\InvalidApplicationTransition;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
@@ -49,8 +51,10 @@ it('advances Submitted -> UnderReview persisting, logging and notifying the adop
     );
 });
 
-it('walks the full happy path Submitted -> UnderReview -> Interview -> Approved -> AdoptionPending', function () {
-    $application = AdoptionApplication::factory()->submitted()->create();
+it('walks the full happy path Submitted -> UnderReview -> Interview -> Approved -> AdoptionPending and reserves the animal', function () {
+    // L'animale parte Available: entrando in AdoptionPending deve essere riservato.
+    $animal = Animal::factory()->available()->create();
+    $application = AdoptionApplication::factory()->forAnimal($animal)->submitted()->create();
 
     foreach ([
         ApplicationStatus::UnderReview,
@@ -61,7 +65,12 @@ it('walks the full happy path Submitted -> UnderReview -> Interview -> Approved 
         app(AdvanceApplication::class)->handle($application, $to, $this->actor);
     }
 
-    expect($application->fresh()->statusEnum())->toBe(ApplicationStatus::AdoptionPending);
+    expect($application->fresh()->statusEnum())->toBe(ApplicationStatus::AdoptionPending)
+        // Accoppiamento animale: la riserva porta l'animale in AdoptionPending.
+        ->and($animal->fresh()->status)->toBe(AnimalStatus::AdoptionPending);
+
+    // La riserva dell'animale è loggata da TransitionAnimalStatus.
+    expect(Activity::query()->where('description', 'animal.status_changed')->count())->toBe(1);
 
     // Una notifica all'adottante per ciascuna delle 4 transizioni.
     Notification::assertSentToTimes($application->user, ApplicationStatusChanged::class, 4);
@@ -176,10 +185,40 @@ it('throws AnimalAlreadyHasPendingAdoption when a second application for the sam
 });
 
 it('allows AdoptionPending when no other application for the same animal is pending or completed', function () {
-    $animal = Animal::factory()->create();
+    $animal = Animal::factory()->available()->create();
     $application = AdoptionApplication::factory()->forAnimal($animal)->approved()->create();
 
     app(AdvanceApplication::class)->handle($application, ApplicationStatus::AdoptionPending, $this->actor);
 
-    expect($application->fresh()->statusEnum())->toBe(ApplicationStatus::AdoptionPending);
+    expect($application->fresh()->statusEnum())->toBe(ApplicationStatus::AdoptionPending)
+        ->and($animal->fresh()->status)->toBe(AnimalStatus::AdoptionPending);
+});
+
+it('reserves an animal that is Reserved when reaching AdoptionPending', function () {
+    // Reserved → AdoptionPending è ammesso dal grafo dell'animale.
+    $animal = Animal::factory()->create(['status' => AnimalStatus::Reserved]);
+    $application = AdoptionApplication::factory()->forAnimal($animal)->approved()->create();
+
+    app(AdvanceApplication::class)->handle($application, ApplicationStatus::AdoptionPending, $this->actor);
+
+    expect($animal->fresh()->status)->toBe(AnimalStatus::AdoptionPending);
+});
+
+it('rolls back the application transition when the animal cannot be reserved', function () {
+    // Un animale Adopted è terminale: non è riservabile. La riserva fallisce e
+    // fa rollback dell'intero avanzamento (candidatura invariata, niente log/notifica).
+    $animal = Animal::factory()->adopted()->create();
+    $application = AdoptionApplication::factory()->forAnimal($animal)->approved()->create();
+
+    expect(fn () => app(AdvanceApplication::class)->handle(
+        $application,
+        ApplicationStatus::AdoptionPending,
+        $this->actor,
+    ))->toThrow(InvalidAnimalStatusTransition::class);
+
+    expect($application->fresh()->statusEnum())->toBe(ApplicationStatus::Approved)
+        ->and($animal->fresh()->status)->toBe(AnimalStatus::Adopted)
+        ->and(Activity::query()->where('description', 'application.status_changed')->count())->toBe(0);
+
+    Notification::assertNothingSent();
 });

@@ -29,6 +29,7 @@ class ViewAdoptionApplication extends ViewRecord
     {
         return [
             AdoptionApplicationsTable::advanceAction(),
+            AdoptionApplicationsTable::finalizeAction(),
             AdoptionApplicationsTable::assignAction(),
             AdoptionApplicationsTable::editNotesAction(),
         ];

@@ -2,17 +2,22 @@
 
 declare(strict_types=1);
 
+use App\Enums\AnimalStatus;
 use App\Enums\ApplicationStatus;
 use App\Enums\MembershipRole;
 use App\Filament\Shelter\Resources\AdoptionApplications\Pages\ListAdoptionApplications;
 use App\Filament\Shelter\Resources\AdoptionApplications\Pages\ViewAdoptionApplication;
 use App\Models\AdopterProfile;
+use App\Models\Adoption;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\Organization;
+use App\Support\Contracts\ContractGenerator;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\Permission\PermissionRegistrar;
@@ -39,6 +44,22 @@ function shelterApplicationFor(Organization $organization): AdoptionApplication
 
     return AdoptionApplication::factory()
         ->submitted()
+        ->forAnimal($animal)
+        ->create();
+}
+
+/**
+ * Candidatura in AdoptionPending con l'animale RISERVATO (AdoptionPending),
+ * pronta per la finalizzazione dello staff.
+ */
+function shelterPendingApplicationFor(Organization $organization): AdoptionApplication
+{
+    $animal = Animal::factory()
+        ->forOrganization($organization)
+        ->create(['status' => AnimalStatus::AdoptionPending]);
+
+    return AdoptionApplication::factory()
+        ->adoptionPending()
         ->forAnimal($animal)
         ->create();
 }
@@ -252,4 +273,60 @@ it('forbids viewing an application that belongs to another tenant (record bindin
     // piu' forte: A non riesce nemmeno a legarla via rotta.
     Livewire::test(ViewAdoptionApplication::class, ['record' => $applicationB->getKey()])
         ->assertNotFound();
+});
+
+it('lets staff finalize an AdoptionPending application via the finalize action', function () {
+    Notification::fake();
+    Storage::fake('local');
+
+    // Fake del generatore PDF (Dependency Inversion): niente motore reale.
+    app()->bind(ContractGenerator::class, fn (): ContractGenerator => new class implements ContractGenerator
+    {
+        public function generate(Adoption $adoption): string
+        {
+            return '%PDF-1.4 shelter-fake';
+        }
+    });
+
+    $orgA = Organization::factory()->verified()->create();
+    $application = shelterPendingApplicationFor($orgA);
+
+    $staff = member($orgA, MembershipRole::Staff);
+    actAsInTenant($staff, $orgA);
+
+    Livewire::test(ListAdoptionApplications::class)
+        ->assertActionVisible(TestAction::make('finalize')->table($application))
+        ->callAction(
+            TestAction::make('finalize')->table($application),
+            ['fee' => '95.00', 'currency' => 'EUR'],
+        )
+        ->assertHasNoActionErrors()
+        ->assertNotified();
+
+    expect($application->refresh()->statusEnum())->toBe(ApplicationStatus::Completed)
+        ->and($application->animal->refresh()->status)->toBe(AnimalStatus::Adopted)
+        ->and(Adoption::query()->where('application_id', $application->getKey())->exists())->toBeTrue();
+})->group('transitions');
+
+it('hides the finalize action when the application is not AdoptionPending', function () {
+    $orgA = Organization::factory()->verified()->create();
+    // Submitted: la finalizzazione non è offerta.
+    $application = shelterApplicationFor($orgA);
+
+    $staff = member($orgA, MembershipRole::Staff);
+    actAsInTenant($staff, $orgA);
+
+    Livewire::test(ListAdoptionApplications::class)
+        ->assertActionHidden(TestAction::make('finalize')->table($application));
+});
+
+it('hides the finalize action from a volunteer (no ApplicationManage)', function () {
+    $orgA = Organization::factory()->verified()->create();
+    $application = shelterPendingApplicationFor($orgA);
+
+    $volunteer = member($orgA, MembershipRole::Volunteer);
+    actAsInTenant($volunteer, $orgA);
+
+    Livewire::test(ListAdoptionApplications::class)
+        ->assertActionHidden(TestAction::make('finalize')->table($application));
 });

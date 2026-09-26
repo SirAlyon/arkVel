@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use App\Actions\Applications\WithdrawApplication;
+use App\Enums\AnimalStatus;
 use App\Enums\ApplicationStatus;
 use App\Exceptions\CannotWithdrawApplication;
 use App\Exceptions\InvalidApplicationTransition;
 use App\Models\AdoptionApplication;
+use App\Models\Animal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Activitylog\Models\Activity;
@@ -63,6 +65,63 @@ it('rejects a non-owner and leaves the status untouched', function () {
 
     expect($application->fresh()->statusEnum())->toBe(ApplicationStatus::Submitted)
         ->and(Activity::query()->where('description', 'application.withdrawn')->count())->toBe(0);
+});
+
+it('releases the reserved animal (AdoptionPending -> Available) when withdrawing the holding application', function () {
+    $adopter = User::factory()->create();
+    // L'animale è RISERVATO (AdoptionPending) da questa candidatura.
+    $animal = Animal::factory()->create(['status' => AnimalStatus::AdoptionPending]);
+    $application = AdoptionApplication::factory()
+        ->forAnimal($animal)
+        ->forAdopter($adopter)
+        ->adoptionPending()
+        ->create();
+
+    app(WithdrawApplication::class)->handle($application, $adopter);
+
+    expect($application->fresh()->statusEnum())->toBe(ApplicationStatus::Withdrawn)
+        // Il ritiro rilascia l'animale: torna disponibile.
+        ->and($animal->fresh()->status)->toBe(AnimalStatus::Available);
+
+    // Il rilascio è loggato da TransitionAnimalStatus.
+    expect(Activity::query()->where('description', 'animal.status_changed')->count())->toBe(1);
+});
+
+it('does not touch the animal when withdrawing an application that had not reserved it', function () {
+    $adopter = User::factory()->create();
+    // Animale Available: la candidatura non lo teneva riservato.
+    $animal = Animal::factory()->available()->create();
+    $application = AdoptionApplication::factory()
+        ->forAnimal($animal)
+        ->forAdopter($adopter)
+        ->underReview()
+        ->create();
+
+    app(WithdrawApplication::class)->handle($application, $adopter);
+
+    expect($animal->fresh()->status)->toBe(AnimalStatus::Available)
+        ->and(Activity::query()->where('description', 'animal.status_changed')->count())->toBe(0);
+});
+
+it('does not release an animal still reserved by another pending application', function () {
+    $adopter = User::factory()->create();
+    $animal = Animal::factory()->create(['status' => AnimalStatus::AdoptionPending]);
+
+    // Due candidature in AdoptionPending per lo stesso animale (scenario limite):
+    // ritirandone una, l'altra mantiene la riserva.
+    $withdrawing = AdoptionApplication::factory()
+        ->forAnimal($animal)
+        ->forAdopter($adopter)
+        ->adoptionPending()
+        ->create();
+    AdoptionApplication::factory()
+        ->forAnimal($animal)
+        ->adoptionPending()
+        ->create();
+
+    app(WithdrawApplication::class)->handle($withdrawing, $adopter);
+
+    expect($animal->fresh()->status)->toBe(AnimalStatus::AdoptionPending);
 });
 
 it('throws InvalidApplicationTransition when withdrawing from a terminal state', function (string $factoryState) {

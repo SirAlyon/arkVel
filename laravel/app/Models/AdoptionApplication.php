@@ -10,6 +10,7 @@ use Database\Factories\AdoptionApplicationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Spatie\ModelStates\HasStates;
 
@@ -39,6 +40,7 @@ use Spatie\ModelStates\HasStates;
  * @property-read User $user
  * @property-read Organization $organization
  * @property-read User|null $assignedTo
+ * @property-read Adoption|null $adoption
  */
 class AdoptionApplication extends Model
 {
@@ -115,8 +117,17 @@ class AdoptionApplication extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
-    // La relazione adoption() (HasOne Adoption) arriverà nella slice 10, quando
-    // il model Adoption esisterà.
+    /**
+     * Adozione finalizzata a partire da questa candidatura (1:1). Popolata SOLO
+     * quando la candidatura raggiunge Completed via
+     * App\Actions\Adoptions\FinalizeAdoption; null altrimenti.
+     *
+     * @return HasOne<Adoption, $this>
+     */
+    public function adoption(): HasOne
+    {
+        return $this->hasOne(Adoption::class, 'application_id');
+    }
 
     /**
      * Enum di dominio dello stato corrente: comodo per riusare label/color
