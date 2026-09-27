@@ -1,0 +1,17 @@
+# Radicale — server CalDAV per TEST LOCALE (non per produzione).
+# Utente demo/demo (password in chiaro: solo per sviluppo). ArkVel vi si collega
+# come client CalDAV dalla pagina /manage -> Connessioni calendario.
+
+[server]
+hosts = 0.0.0.0:5232
+
+[auth]
+type = htpasswd
+htpasswd_filename = /config/users
+htpasswd_encryption = plain
+
+[rights]
+type = owner_only
+
+[storage]
+filesystem_folder = /data/collections
