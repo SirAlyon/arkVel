@@ -12,8 +12,8 @@ use App\Models\Animal;
 use App\Models\Appointment;
 use App\Models\User;
 use App\Notifications\NewAppointmentRequested;
+use App\Support\Appointments\AppointmentOverlapGuard;
 use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
@@ -26,15 +26,11 @@ use Illuminate\Support\Facades\Notification;
  * orfane:
  *  1. lo slot deve essere STRETTAMENTE nel futuro (InvalidAppointmentSlot);
  *  2. lo slot non deve sovrapporsi ad altri appuntamenti ATTIVI
- *     (Richiesto/Confermato) né dello stesso ANIMALE
- *     (AppointmentSlotUnavailable::forAnimal) né dello stesso RICHIEDENTE
- *     (AppointmentSlotUnavailable::forUser).
+ *     (Richiesto/Confermato) né dello stesso ANIMALE né dello stesso RICHIEDENTE.
  *
- * La finestra occupata da un appuntamento è [scheduled_at, scheduled_at + SLOT).
- * Due finestre si sovrappongono quando newStart < existingEnd && existingStart <
- * newEnd; con durata fissa (SLOT) ciò equivale a: existingStart è STRETTAMENTE
- * dentro (newStart - SLOT, newStart + SLOT). Gli stati terminali
- * (Completed/Cancelled/NoShow) liberano lo slot (scope `active`) e non bloccano.
+ * La guardia di overlap (matematica della finestra + entità controllate) vive in
+ * {@see AppointmentOverlapGuard}, condivisa con RescheduleAppointment (DRY) e
+ * iniettata via costruttore. In creazione non c'è alcun appuntamento da escludere.
  *
  * L'organization_id è derivato dall'animale (coerenza con animal.organization_id).
  * Dopo la creazione si logga (activity) e si notificano i membri VERIFICATI
@@ -43,6 +39,10 @@ use Illuminate\Support\Facades\Notification;
  */
 final class RequestAppointment
 {
+    public function __construct(
+        private readonly AppointmentOverlapGuard $overlapGuard,
+    ) {}
+
     /**
      * @throws InvalidAppointmentSlot quando lo slot non è nel futuro
      * @throws AppointmentSlotUnavailable quando lo slot si sovrappone a un altro
@@ -69,18 +69,11 @@ final class RequestAppointment
             Animal::query()->whereKey($animal->getKey())->lockForUpdate()->first();
             User::query()->whereKey($requester->getKey())->lockForUpdate()->first();
 
-            // Guardia di overlap PER ANIMALE: nessun altro appuntamento attivo
-            // dell'animale può occupare una finestra sovrapposta.
-            if ($this->hasOverlap($scheduledAt, 'animal_id', $animal->getKey())) {
-                throw AppointmentSlotUnavailable::forAnimal($animal, $scheduledAt);
-            }
-
-            // Guardia di overlap PER RICHIEDENTE: nessun altro appuntamento attivo
-            // del richiedente può occupare una finestra sovrapposta (anche su
-            // animali diversi: la persona non può essere in due posti insieme).
-            if ($this->hasOverlap($scheduledAt, 'user_id', $requester->getKey())) {
-                throw AppointmentSlotUnavailable::forUser($requester, $scheduledAt);
-            }
+            // Guardia di overlap (animale E richiedente): nessun altro appuntamento
+            // attivo può occupare una finestra sovrapposta. In creazione non c'è alcun
+            // appuntamento da escludere (id null). Logica condivisa con
+            // RescheduleAppointment via AppointmentOverlapGuard.
+            $this->overlapGuard->ensureAvailable($animal, $requester, $scheduledAt);
 
             $appointment = Appointment::query()->create([
                 'animal_id' => $animal->getKey(),
@@ -111,29 +104,5 @@ final class RequestAppointment
 
             return $appointment;
         });
-    }
-
-    /**
-     * Esiste un appuntamento ATTIVO per l'entità indicata la cui finestra si
-     * sovrappone allo slot richiesto? La finestra ha durata Appointment::SLOT_MINUTES
-     * a partire da scheduled_at; due finestre di pari durata si sovrappongono se lo
-     * start esistente cade STRETTAMENTE dentro (newStart - SLOT, newStart + SLOT).
-     *
-     * @param  'animal_id'|'user_id'  $column
-     */
-    private function hasOverlap(CarbonInterface $scheduledAt, string $column, int $id): bool
-    {
-        $windowStart = $scheduledAt->copy()->subMinutes(Appointment::SLOT_MINUTES);
-        $windowEnd = $scheduledAt->copy()->addMinutes(Appointment::SLOT_MINUTES);
-
-        return Appointment::query()
-            ->active()
-            ->where($column, $id)
-            ->where(function (Builder $query) use ($windowStart, $windowEnd): void {
-                $query
-                    ->where('scheduled_at', '>', $windowStart)
-                    ->where('scheduled_at', '<', $windowEnd);
-            })
-            ->exists();
     }
 }

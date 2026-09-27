@@ -25,6 +25,19 @@ return [
         'database' => 'Your appointment for :animal is confirmed for :when.',
     ],
 
+    // Notification to the requester when the organization moves the appointment.
+    'rescheduled' => [
+        'subject' => 'Appointment rescheduled for :animal',
+        'greeting' => 'Hi :name,',
+        'line' => 'Your appointment for :animal has been moved from :from to :to.',
+        'action' => 'Go to my account',
+        'salutation' => 'See you soon, the ArkVel team',
+        // Short message for the in-app (database channel) notification.
+        'database' => 'Your appointment for :animal has been moved to :to.',
+        // Domain error: attempting to move an appointment that is no longer active.
+        'terminal' => 'A :status appointment cannot be rescheduled.',
+    ],
+
     // Notification to the counterparty when an appointment is cancelled.
     'cancelled' => [
         'subject' => 'Appointment cancelled for :animal',
@@ -205,6 +218,26 @@ return [
         // Modal opened when clicking an event.
         'manage_heading' => 'Appointment details',
         'close' => 'Close',
+
+        // Creating an appointment from an empty slot (calendar click).
+        'create' => [
+            'heading' => 'New appointment',
+            'submit' => 'Create appointment',
+            'animal' => 'Animal',
+            'requester' => 'Requester',
+            'requester_help' => 'Only people already related to the organization (appointments or adoption/foster applications).',
+            'type' => 'Meeting type',
+            'notes' => 'Notes (optional)',
+            'scheduled_at' => 'Date and time',
+            'done' => 'Appointment created.',
+            'failed' => 'Could not create the appointment',
+        ],
+
+        // Rescheduling (drag-drop) an appointment.
+        'reschedule' => [
+            'done' => 'Appointment moved.',
+            'failed' => 'Could not move the appointment',
+        ],
         // Calendar toolbar labels (rendered client-side).
         'toolbar' => [
             'today' => 'Today',

@@ -4,16 +4,30 @@ declare(strict_types=1);
 
 namespace App\Filament\Shelter\Pages;
 
+use App\Actions\Appointments\RequestAppointment;
+use App\Actions\Appointments\RescheduleAppointment;
 use App\Enums\AppointmentStatus;
+use App\Enums\AppointmentType;
+use App\Enums\PermissionName;
+use App\Exceptions\AppointmentSlotUnavailable;
+use App\Exceptions\CannotRescheduleAppointment;
+use App\Exceptions\InvalidAppointmentSlot;
 use App\Filament\Shelter\Resources\Appointments\Schemas\AppointmentInfolist;
 use App\Filament\Shelter\Resources\Appointments\Support\StaffAppointmentActions;
+use App\Models\AdoptionApplication;
+use App\Models\Animal;
 use App\Models\Appointment;
+use App\Models\FosterApplication;
 use App\Models\Organization;
 use App\Models\User;
 use App\Providers\CalendarAssetServiceProvider;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -24,11 +38,12 @@ use Illuminate\Support\Facades\Auth;
  * Calendario appuntamenti del pannello ente (shelter) — l'esperienza primaria
  * dell'agenda, in sostituzione della lista come vista principale.
  *
- * SCOPE DI QUESTO SLICE (Cal-1): SOLA lettura + gestione. Il calendario mostra gli
+ * SCOPE (Cal-1 + Cal-2): lettura + gestione + INTERATTIVITÀ. Il calendario mostra gli
  * appuntamenti del tenant corrente e, al click su un evento, apre un modale con il
  * dettaglio (infolist) e le transizioni di staff (conferma / completa / assenza /
- * annulla). NIENTE drag-drop né create-by-click (Cal-2), né sync esterno (slice
- * successivi): `editable: false` lato client.
+ * annulla). Cal-2 aggiunge lo spostamento drag-drop e la creazione da slot vuoto —
+ * abilitati SOLO per chi può gestire ({@see canManageAppointments()}); il volontario
+ * (sola vista) resta su un calendario read-only. Il sync esterno è slice successivi.
  *
  * Pagina SOTTILE: interroga (tenant-scoped) e delega. Nessuna business logic qui.
  *  - {@see fetchEvents()} è l'unico feed dati del calendario: filtra sempre per
@@ -38,6 +53,9 @@ use Illuminate\Support\Facades\Auth;
  *    autorizza (view) e RIUSA le stesse azioni di transizione della table
  *    ({@see StaffAppointmentActions}) come footer del modale: nessuna duplicazione
  *    della logica di ciclo di vita, che resta nelle Action di dominio.
+ *  - {@see reschedule()} (drag-drop) e {@see createAction()} (slot vuoto) delegano a
+ *    RescheduleAppointment / RequestAppointment: nessuna logica di dominio qui, solo
+ *    risoluzione tenant-scoped, autorizzazione e mapping.
  *
  * Tenancy: come le Resource, la pagina è gated su membership verificata e opera nel
  * contesto del tenant risolto dal pannello. FullCalendar è caricato via
@@ -104,6 +122,29 @@ class AppointmentCalendar extends Page
         }
 
         return $user->can('viewAny', Appointment::class)
+            && $user->isVerifiedMemberOf($tenant);
+    }
+
+    /**
+     * L'utente corrente può GESTIRE gli appuntamenti del tenant (spostarli e crearli)?
+     *
+     * È il gate dell'interattività del calendario: drag-drop e create-by-click sono
+     * abilitati SOLO quando true. Rispecchia AppointmentPolicy::update
+     * (AppointmentManage + membership verificata del tenant): il volontario (solo
+     * AppointmentView) ottiene un calendario di sola lettura. Sfrutta il record binding
+     * per riga in fase di reschedule; qui è un gate a livello di UI, ricontrollato dalla
+     * Policy su ogni azione server.
+     */
+    public function canManageAppointments(): bool
+    {
+        $user = Auth::user();
+        $tenant = Filament::getTenant();
+
+        if (! $user instanceof User || ! $tenant instanceof Organization) {
+            return false;
+        }
+
+        return $user->can(PermissionName::AppointmentManage->value)
             && $user->isVerifiedMemberOf($tenant);
     }
 
@@ -212,6 +253,253 @@ class AppointmentCalendar extends Page
             ->modalSubmitAction(false)
             ->modalCancelActionLabel(__('appointments.calendar.close'))
             ->extraModalFooterActions(fn (array $arguments): array => $this->transitionFooterActions($arguments));
+    }
+
+    /**
+     * Sposta un appuntamento (drag-drop lato client) al nuovo inizio $newStart.
+     *
+     * Chiamata da FullCalendar via `$wire.reschedule(id, startStr)`: risolve il record
+     * TENANT-SCOPED (404 se non del tenant), autorizza `update` (AppointmentManage +
+     * membership verificata: il volontario è respinto qui, non solo lato client),
+     * parsifica l'orario e DELEGA a RescheduleAppointment.
+     *
+     * Ritorna un booleano per pilotare l'ottimismo del client: TRUE → il drag resta,
+     * il calendario si rinfresca; FALSE → il client fa `info.revert()` riportando
+     * l'evento all'orario precedente. Le eccezioni di dominio
+     * (CannotRescheduleAppointment / InvalidAppointmentSlot / AppointmentSlotUnavailable)
+     * sono intercettate e mostrate come notifica danger localizzata: nessun 500, stato
+     * invariato, drag annullato.
+     */
+    public function reschedule(int $id, string $newStart): bool
+    {
+        $appointment = $this->resolveTenantAppointment(['id' => $id]);
+
+        $this->authorize('update', $appointment);
+
+        try {
+            $when = Carbon::parse($newStart);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        try {
+            app(RescheduleAppointment::class)->handle($appointment, $this->actor(), $when);
+        } catch (CannotRescheduleAppointment|InvalidAppointmentSlot|AppointmentSlotUnavailable $exception) {
+            Notification::make()
+                ->title(__('appointments.calendar.reschedule.failed'))
+                ->body($exception->getMessage())
+                ->danger()
+                ->send();
+
+            return false;
+        }
+
+        Notification::make()
+            ->title(__('appointments.calendar.reschedule.done'))
+            ->success()
+            ->send();
+
+        $this->dispatch('calendar-refresh');
+
+        return true;
+    }
+
+    /**
+     * Azione "crea", montata da JS al select di uno slot vuoto
+     * (`$wire.mountAction('create', { start })`). Raccoglie animale, richiedente, tipo,
+     * note e data/ora (prefillata dallo slot selezionato) e DELEGA a RequestAppointment.
+     *
+     * Autorizzata sulla capacità di GESTIONE (canManageAppointments = AppointmentManage
+     * + membership verificata), NON su AppointmentPolicy::create — che è volutamente
+     * aperta per far richiedere una visita a qualunque adottante dal sito pubblico. Sul
+     * calendario staff la creazione è un'azione operativa: il volontario (sola vista)
+     * deve essere respinto anche lato server, non solo con la UI read-only.
+     * Gli input sono SCOPED:
+     *  - animale → solo animali del tenant corrente;
+     *  - richiedente → SOLO persone GIÀ in relazione con l'ente (appuntamento o
+     *    richiesta di adozione/affido esistente per questo ente). Mai la lista globale
+     *    degli utenti (GDPR: nessuna esposizione di anagrafiche non pertinenti).
+     *
+     * Le eccezioni di dominio (slot nel passato / overlap) sono intercettate e mostrate
+     * come notifica danger localizzata. Al successo si rinfresca il calendario.
+     */
+    public function createAction(): Action
+    {
+        return Action::make('create')
+            ->modalHeading(__('appointments.calendar.create.heading'))
+            ->modalSubmitActionLabel(__('appointments.calendar.create.submit'))
+            ->authorize(fn (): bool => $this->canManageAppointments())
+            ->fillForm(fn (array $arguments): array => [
+                'scheduled_at' => isset($arguments['start']) ? Carbon::parse($arguments['start']) : null,
+            ])
+            ->schema([
+                Select::make('animal_id')
+                    ->label(__('appointments.calendar.create.animal'))
+                    ->options(fn (): array => $this->tenantAnimalOptions())
+                    ->searchable()
+                    ->native(false)
+                    ->required(),
+                Select::make('user_id')
+                    ->label(__('appointments.calendar.create.requester'))
+                    ->helperText(__('appointments.calendar.create.requester_help'))
+                    ->options(fn (): array => $this->relatedRequesterOptions())
+                    ->searchable()
+                    ->native(false)
+                    ->required(),
+                Select::make('type')
+                    ->label(__('appointments.calendar.create.type'))
+                    ->options(AppointmentType::class)
+                    ->native(false)
+                    ->required(),
+                DateTimePicker::make('scheduled_at')
+                    ->label(__('appointments.calendar.create.scheduled_at'))
+                    ->seconds(false)
+                    ->required(),
+                Textarea::make('notes')
+                    ->label(__('appointments.calendar.create.notes'))
+                    ->rows(3)
+                    ->maxLength(2000),
+            ])
+            ->action(function (array $data): void {
+                $this->createAppointment($data);
+            });
+    }
+
+    /**
+     * Crea l'appuntamento delegando a RequestAppointment, dopo aver ri-validato che
+     * animale e richiedente appartengano agli insiemi consentiti (backstop di sicurezza
+     * oltre alla UI): un id fuori scope viene rifiutato senza toccare il DB.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function createAppointment(array $data): void
+    {
+        $animalId = (int) ($data['animal_id'] ?? 0);
+        $userId = (int) ($data['user_id'] ?? 0);
+
+        // Backstop: solo animali del tenant e richiedenti già in relazione con l'ente.
+        if (! array_key_exists($animalId, $this->tenantAnimalOptions())
+            || ! array_key_exists($userId, $this->relatedRequesterOptions())) {
+            Notification::make()
+                ->title(__('appointments.calendar.create.failed'))
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $type = $data['type'] instanceof AppointmentType
+            ? $data['type']
+            : AppointmentType::from((string) $data['type']);
+
+        $notes = ($data['notes'] ?? null) !== null && $data['notes'] !== ''
+            ? (string) $data['notes']
+            : null;
+
+        try {
+            app(RequestAppointment::class)->handle(
+                User::query()->findOrFail($userId),
+                Animal::query()->findOrFail($animalId),
+                $type,
+                Carbon::parse((string) $data['scheduled_at']),
+                $notes,
+            );
+        } catch (InvalidAppointmentSlot|AppointmentSlotUnavailable $exception) {
+            Notification::make()
+                ->title(__('appointments.calendar.create.failed'))
+                ->body($exception->getMessage())
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->title(__('appointments.calendar.create.done'))
+            ->success()
+            ->send();
+
+        $this->dispatch('calendar-refresh');
+    }
+
+    /**
+     * Animali del tenant corrente come opzioni id → nome per il Select di creazione.
+     * Scoping esplicito a organization_id = tenant: nessuna fuga cross-tenant.
+     *
+     * @return array<int, string>
+     */
+    private function tenantAnimalOptions(): array
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant instanceof Organization) {
+            return [];
+        }
+
+        return Animal::query()
+            ->where('organization_id', $tenant->getKey())
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    /**
+     * Richiedenti selezionabili in creazione: SOLO utenti GIÀ in relazione con il
+     * tenant corrente — hanno un appuntamento, una richiesta di adozione o una
+     * richiesta di affido per questo ente. La lista globale degli utenti NON è mai
+     * esposta (GDPR: minimizzazione, niente anagrafiche non pertinenti).
+     *
+     * @return array<int, string>
+     */
+    private function relatedRequesterOptions(): array
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant instanceof Organization) {
+            return [];
+        }
+
+        $organizationId = $tenant->getKey();
+
+        // Union degli user_id già in relazione con l'ente: chi ha un appuntamento, una
+        // richiesta di adozione o una richiesta di affido per questo tenant. Query
+        // dirette per user_id/organization_id (nessuna relazione dedicata sul model
+        // User): un utente estraneo all'ente non compare nella lista.
+        $relatedUserIds = Appointment::query()
+            ->where('organization_id', $organizationId)
+            ->distinct()
+            ->pluck('user_id')
+            ->merge(
+                AdoptionApplication::query()
+                    ->where('organization_id', $organizationId)
+                    ->distinct()
+                    ->pluck('user_id'),
+            )
+            ->merge(
+                FosterApplication::query()
+                    ->where('organization_id', $organizationId)
+                    ->distinct()
+                    ->pluck('user_id'),
+            )
+            ->unique()
+            ->all();
+
+        return User::query()
+            ->whereIn('id', $relatedUserIds)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    /**
+     * L'utente autenticato come attore delle azioni (mai null nel pannello autenticato).
+     */
+    private function actor(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
     }
 
     /**

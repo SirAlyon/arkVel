@@ -11,8 +11,11 @@
     evento monta l'azione server `manage` col solo id; il resto (risoluzione
     tenant-scoped, autorizzazione, transizioni) è lato server.
 
-    Slice Cal-1: sola lettura + gestione. `editable: false` — niente drag-drop né
-    create-by-click (Cal-2).
+    Slice Cal-2: interattivo per chi può gestire (canManageAppointments()) —
+    drag-drop per spostare (eventDrop → $wire.reschedule) e create-by-click su slot
+    vuoto (select → $wire.mountAction('create')). Il volontario (sola vista) ottiene un
+    calendario read-only: `editable`/`selectable` sono false. La durata dello slot è
+    fissa, quindi il resize è disattivato (eventDurationEditable: false).
 --}}
 <x-filament-panels::page>
     <div
@@ -65,9 +68,15 @@
                         // server combacia esattamente con la colonna, senza scarti al
                         // bordo per i client in fusi diversi.
                         timeZone: 'UTC',
-                        // Cal-1: sola lettura + gestione. Niente drag-drop/resize.
-                        editable: false,
-                        selectable: false,
+                        // Cal-2: interattivo SOLO per chi può gestire (gate server
+                        // canManageAppointments); il volontario resta read-only.
+                        editable: @js($this->canManageAppointments()),
+                        // Si può trascinare l'inizio dell'evento (sposta lo slot); la
+                        // DURATA è fissa (SLOT_MINUTES), quindi il resize è disattivato.
+                        eventStartEditable: @js($this->canManageAppointments()),
+                        eventDurationEditable: false,
+                        // Selezione di uno slot vuoto → creazione (stesso gate).
+                        selectable: @js($this->canManageAppointments()),
                         nowIndicator: true,
                         headerToolbar: {
                             left: 'prev,next today',
@@ -94,6 +103,22 @@
                         eventClick: (info) => {
                             info.jsEvent.preventDefault();
                             this.$wire.mountAction('manage', { id: info.event.id });
+                        },
+                        // Drag-drop → sposta l'appuntamento. Il server autorizza,
+                        // valida e delega a RescheduleAppointment; se rifiuta (false)
+                        // riportiamo l'evento all'orario precedente (revert). La durata
+                        // è fissa, quindi il solo movimento sposta l'inizio.
+                        eventDrop: async (info) => {
+                            const ok = await this.$wire.reschedule(info.event.id, info.event.startStr);
+                            if (! ok) {
+                                info.revert();
+                            }
+                        },
+                        // Selezione di uno slot vuoto → monta l'azione server `create`
+                        // con l'inizio selezionato (prefill di scheduled_at).
+                        select: (info) => {
+                            this.$wire.mountAction('create', { start: info.startStr });
+                            this.calendar.unselect();
                         },
                     });
 

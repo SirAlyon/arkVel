@@ -25,6 +25,19 @@ return [
         'database' => 'Il tuo appuntamento per :animal è confermato per il :when.',
     ],
 
+    // Notifica al richiedente quando l'ente sposta l'appuntamento a un nuovo orario.
+    'rescheduled' => [
+        'subject' => 'Appuntamento riprogrammato per :animal',
+        'greeting' => 'Ciao :name,',
+        'line' => 'Il tuo appuntamento per :animal è stato spostato dal :from al :to.',
+        'action' => 'Vai al mio account',
+        'salutation' => 'A presto, il team di ArkVel',
+        // Messaggio breve per la notifica in-app (canale database).
+        'database' => 'Il tuo appuntamento per :animal è stato spostato al :to.',
+        // Errore di dominio: si tenta di spostare un appuntamento non più attivo.
+        'terminal' => 'Un appuntamento :status non può essere riprogrammato.',
+    ],
+
     // Notifica alla controparte quando un appuntamento viene annullato.
     'cancelled' => [
         'subject' => 'Appuntamento annullato per :animal',
@@ -205,6 +218,26 @@ return [
         // Modale aperto al click su un evento.
         'manage_heading' => 'Dettaglio appuntamento',
         'close' => 'Chiudi',
+
+        // Creazione di un appuntamento dallo slot vuoto (click su calendario).
+        'create' => [
+            'heading' => 'Nuovo appuntamento',
+            'submit' => 'Crea appuntamento',
+            'animal' => 'Animale',
+            'requester' => 'Richiedente',
+            'requester_help' => 'Solo persone già in relazione con l\'ente (appuntamenti o richieste di adozione/affido).',
+            'type' => 'Tipo di incontro',
+            'notes' => 'Note (facoltative)',
+            'scheduled_at' => 'Data e ora',
+            'done' => 'Appuntamento creato.',
+            'failed' => 'Impossibile creare l\'appuntamento',
+        ],
+
+        // Spostamento (drag-drop) di un appuntamento.
+        'reschedule' => [
+            'done' => 'Appuntamento spostato.',
+            'failed' => 'Impossibile spostare l\'appuntamento',
+        ],
         // Etichette della toolbar del calendario (rese lato client).
         'toolbar' => [
             'today' => 'Oggi',
