@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Models\User;
 use App\Support\Contracts\ContractGenerator;
 use App\Support\Pdf\DompdfContractGenerator;
+use App\Support\Settings\PlatformSettings;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,6 +23,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(ContractGenerator::class, DompdfContractGenerator::class);
+
+        // Singleton per-request: lo store delle impostazioni di piattaforma tiene un
+        // memo in memoria; condividendo l'istanza, ogni consumatore (resolver Google,
+        // pagina admin) legge/invalida la stessa cache all'interno della request.
+        $this->app->singleton(PlatformSettings::class);
     }
 
     /**

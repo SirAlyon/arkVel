@@ -37,15 +37,23 @@ final class GoogleOAuth
     public const string SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 
     /**
+     * Le credenziali dell'app OAuth arrivano SEMPRE dal resolver, che dà precedenza ai
+     * valori salvati da UI (DB) sull'.env. Nessuna lettura diretta di config() qui.
+     */
+    public function __construct(private readonly GoogleCalendarConfig $config) {}
+
+    /**
      * Indica se Google Calendar è configurato (client_id e client_secret presenti). È il
      * predicato UNICO del config-gating: la UI lo usa per abilitare/disabilitare la
      * connessione, i metodi di rete per decidere se sollevare
      * {@see CalendarProviderNotConfigured}.
+     *
+     * Statico per i chiamanti che non hanno un'istanza (controller/provider/pagina);
+     * risolve il resolver dal container, così onora l'override DB→.env come le istanze.
      */
     public static function configured(): bool
     {
-        return filled(config('services.google_calendar.client_id'))
-            && filled(config('services.google_calendar.client_secret'));
+        return app(GoogleCalendarConfig::class)->configured();
     }
 
     /**
@@ -63,7 +71,7 @@ final class GoogleOAuth
         $this->ensureConfigured();
 
         $query = http_build_query([
-            'client_id' => (string) config('services.google_calendar.client_id'),
+            'client_id' => (string) $this->config->clientId(),
             'redirect_uri' => $this->redirectUri(),
             'response_type' => 'code',
             'scope' => self::SCOPE,
@@ -91,8 +99,8 @@ final class GoogleOAuth
             ->post(self::TOKEN_ENDPOINT, [
                 'grant_type' => 'authorization_code',
                 'code' => $code,
-                'client_id' => (string) config('services.google_calendar.client_id'),
-                'client_secret' => (string) config('services.google_calendar.client_secret'),
+                'client_id' => (string) $this->config->clientId(),
+                'client_secret' => (string) $this->config->clientSecret(),
                 'redirect_uri' => $this->redirectUri(),
             ])
             ->throw();
@@ -123,8 +131,8 @@ final class GoogleOAuth
             ->post(self::TOKEN_ENDPOINT, [
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $refreshToken,
-                'client_id' => (string) config('services.google_calendar.client_id'),
-                'client_secret' => (string) config('services.google_calendar.client_secret'),
+                'client_id' => (string) $this->config->clientId(),
+                'client_secret' => (string) $this->config->clientSecret(),
             ])
             ->throw();
 
@@ -157,7 +165,7 @@ final class GoogleOAuth
      */
     private function redirectUri(): string
     {
-        $configured = config('services.google_calendar.redirect');
+        $configured = $this->config->redirectUri();
 
         if (is_string($configured) && $configured !== '') {
             return $configured;
@@ -171,7 +179,7 @@ final class GoogleOAuth
      */
     private function ensureConfigured(): void
     {
-        if (! self::configured()) {
+        if (! $this->config->configured()) {
             throw CalendarProviderNotConfigured::google();
         }
     }
