@@ -70,12 +70,15 @@ GOOGLE_CALENDAR_REDIRECT_URI=https://<host>/calendar/google/callback
 Scope richiesto: `https://www.googleapis.com/auth/calendar.events` (offline, refresh
 token). Senza credenziali l'azione "Collega Google" è disabilitata (feature inerte).
 
-### 3.2 CalDAV (Proton, Fastmail, Nextcloud, iCloud)
-Collega un calendario CalDAV con **URL della collezione + username + app-password**
-(Proton via Bridge). Nessuna configurazione globale: ogni ente inserisce i propri dati,
+### 3.2 CalDAV (Fastmail, Nextcloud, iCloud, mailbox.org, …)
+Collega un calendario CalDAV con **URL della collezione + username + app-password**.
+Nessuna configurazione globale: ogni ente inserisce i propri dati,
 verificati (PROPFIND) prima di salvare. Push via `PUT`/`DELETE`, pull via `REPORT`
 sync-collection + `calendar-multiget`. Il parsing XML è **XXE-safe** (niente
 `LIBXML_NOENT`, DOCTYPE rifiutato): un server ostile non può leggere file locali.
+
+> **Proton Calendar NON espone CalDAV** (il Proton Bridge è solo mail, IMAP/SMTP).
+> Per Proton usa il **feed iCal in sottoscrizione** (§2), che Proton Calendar supporta.
 
 ---
 

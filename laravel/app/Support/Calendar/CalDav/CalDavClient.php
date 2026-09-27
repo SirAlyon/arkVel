@@ -16,9 +16,10 @@ use Illuminate\Support\Facades\Http;
  * Client CalDAV di basso livello, scritto a mano sul client {@see Http} di Laravel —
  * NESSUNA SDK, così ogni richiesta è interamente falsabile con `Http::fake()` nei test.
  *
- * Compatibile con qualsiasi server CalDAV standard: Proton (via Bridge), Fastmail,
- * Nextcloud, iCloud. Il {@see CalDavProvider} lo usa per il
- * push (PUT/DELETE) e per il pull di riconciliazione (REPORT sync-collection, Cal-7).
+ * Compatibile con qualsiasi server CalDAV standard: Fastmail, Nextcloud, iCloud,
+ * mailbox.org, ecc. (NB: Proton Calendar non espone CalDAV — per Proton si usa il feed
+ * iCal in sottoscrizione). Il {@see CalDavProvider} lo usa per il push (PUT/DELETE) e
+ * per il pull di riconciliazione (REPORT sync-collection, Cal-7).
  *
  * AUTENTICAZIONE: HTTP Basic (username + app-password) su OGNI richiesta, letta dal
  * campo cifrato `credentials` della connessione. L'header Authorization è impostato da
