@@ -88,6 +88,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::FosterApplicationManage,
                 PermissionName::AppointmentView,
                 PermissionName::AppointmentManage,
+                PermissionName::CalendarManage,
             ));
 
         $this->roleFor(RoleName::OrgVolunteer)

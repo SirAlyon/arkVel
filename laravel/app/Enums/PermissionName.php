@@ -30,6 +30,7 @@ enum PermissionName: string implements HasLabel
     case FosterApplicationManage = 'foster_application.manage';
     case AppointmentView = 'appointment.view';
     case AppointmentManage = 'appointment.manage';
+    case CalendarManage = 'calendar.manage';
 
     public function getLabel(): string
     {
@@ -50,6 +51,7 @@ enum PermissionName: string implements HasLabel
             self::FosterApplicationManage => 'Gestisci richieste di affido',
             self::AppointmentView => 'Visualizza appuntamenti',
             self::AppointmentManage => 'Gestisci appuntamenti',
+            self::CalendarManage => 'Gestisci sincronizzazione calendario',
         };
     }
 }

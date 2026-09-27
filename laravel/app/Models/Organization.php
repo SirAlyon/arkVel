@@ -121,6 +121,17 @@ class Organization extends Model
     }
 
     /**
+     * Connessioni a calendari esterni (Google/CalDAV) dell'ente. Filtra con lo scope
+     * {@see CalendarConnection::active()} per la pipeline di push.
+     *
+     * @return HasMany<CalendarConnection, $this>
+     */
+    public function calendarConnections(): HasMany
+    {
+        return $this->hasMany(CalendarConnection::class);
+    }
+
+    /**
      * Tutti i membri dell'ente (a qualunque titolo), con dati di membership.
      *
      * @return BelongsToMany<User, $this, OrganizationUser>
