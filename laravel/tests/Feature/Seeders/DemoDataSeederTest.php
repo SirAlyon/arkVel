@@ -2,11 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Enums\AnimalStatus;
+use App\Enums\AppointmentStatus;
+use App\Enums\FosterApplicationStatus;
+use App\Enums\FosterPlacementStatus;
 use App\Enums\MembershipRole;
 use App\Enums\OrganizationStatus;
 use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Models\Animal;
+use App\Models\Appointment;
+use App\Models\FosterApplication;
+use App\Models\FosterPlacement;
 use App\Models\MedicalRecord;
 use App\Models\Organization;
 use App\Models\User;
@@ -179,4 +186,87 @@ it('creates a known staff user who is a verified member of its organization', fu
 
     seederWithTeam($milano->getKey());
     expect($staff->fresh()->hasRole(RoleName::OrgStaff->value))->toBeTrue();
+});
+
+it('creates demo adopters with a complete adopter profile', function () {
+    $adopter = User::where('email', 'adopter+1@arkvel.test')->first();
+
+    expect($adopter)->not->toBeNull()
+        ->and($adopter->email_verified_at)->not->toBeNull()
+        ->and($adopter->hasCompleteAdopterProfile())->toBeTrue();
+
+    // Il ruolo Adopter (di piattaforma) è rilevato team-independent, come in
+    // EnsureAdopterRole: verifichiamo l'assegnazione col team sentinel.
+    seederWithTeam(RoleName::PLATFORM_TEAM_ID);
+    expect($adopter->fresh()->hasRole(RoleName::Adopter->value))->toBeTrue();
+});
+
+it('seeds foster applications across multiple states', function () {
+    $states = FosterApplication::query()
+        ->get()
+        ->map(fn (FosterApplication $application): FosterApplicationStatus => $application->statusEnum())
+        ->unique();
+
+    expect(FosterApplication::count())->toBeGreaterThan(0)
+        ->and($states->count())->toBeGreaterThanOrEqual(3);
+});
+
+it('seeds an active foster coupled to a Fostered animal with an active placement', function () {
+    $activePlacement = FosterPlacement::query()
+        ->where('status', FosterPlacementStatus::Active)
+        ->with(['animal', 'fosterApplication'])
+        ->first();
+
+    expect($activePlacement)->not->toBeNull()
+        ->and($activePlacement->animal->status)->toBe(AnimalStatus::Fostered)
+        ->and($activePlacement->fosterApplication)->not->toBeNull()
+        ->and($activePlacement->fosterApplication->statusEnum())->toBe(FosterApplicationStatus::Active);
+});
+
+it('seeds a completed foster with an ended placement and the animal back Available', function () {
+    $endedPlacement = FosterPlacement::query()
+        ->where('status', FosterPlacementStatus::Ended)
+        ->with(['fosterApplication', 'animal'])
+        ->first();
+
+    expect($endedPlacement)->not->toBeNull()
+        ->and($endedPlacement->end_date)->not->toBeNull()
+        ->and($endedPlacement->fosterApplication?->statusEnum())->toBe(FosterApplicationStatus::Completed)
+        // Rientro: l'animale del placement concluso NON resta bloccato in Fostered.
+        ->and($endedPlacement->animal->status)->not->toBe(AnimalStatus::Fostered);
+});
+
+it('never reuses the same (animal, carer) pair across foster applications', function () {
+    // Il seeder assegna un animale distinto per richiesta: il vincolo unique
+    // (animal_id, user_id) non deve mai essere a rischio.
+    $pairs = FosterApplication::query()
+        ->get()
+        ->map(fn (FosterApplication $application): string => $application->animal_id.'-'.$application->user_id);
+
+    expect($pairs->count())->toBe($pairs->unique()->count());
+});
+
+it('seeds appointments across types and states', function () {
+    $statuses = Appointment::query()
+        ->get()
+        ->pluck('status')
+        ->unique();
+
+    expect(Appointment::count())->toBeGreaterThan(0)
+        ->and($statuses->count())->toBeGreaterThanOrEqual(3);
+});
+
+it('seeds at least one confirmed appointment due for a reminder', function () {
+    // Un appuntamento confermato entro 24h con reminder_sent_at null: il comando
+    // arkvel:send-appointment-reminders deve avere qualcosa da inviare nel demo.
+    expect(Appointment::query()->dueForReminder(24)->exists())->toBeTrue();
+
+    $due = Appointment::query()->dueForReminder(24)->first();
+    expect($due?->status)->toBe(AppointmentStatus::Confirmed);
+});
+
+it('seeds medical records due for a reminder', function () {
+    // Voci con next_due_at nella finestra e reminder_sent_at null: lo scadenzario
+    // e arkvel:send-medical-reminders devono avere dati dimostrabili.
+    expect(MedicalRecord::query()->dueForReminder(7)->exists())->toBeTrue();
 });
