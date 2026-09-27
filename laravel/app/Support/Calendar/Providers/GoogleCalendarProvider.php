@@ -207,6 +207,49 @@ final class GoogleCalendarProvider implements ExternalCalendarProvider
     {
         $response = $this->request($connection)->post($this->eventsUrl($connection), $body);
 
+        // 409 Conflict: un evento con lo stesso iCalUID esiste GIÀ nel calendario. Capita
+        // quando ArkVel ha perso la mappatura ma l'evento è ancora su Google (es. dopo un
+        // migrate:fresh, o una riconnessione dell'ente). Non è fatale: recuperiamo
+        // l'evento esistente per iCalUID e lo AGGIORNIAMO — push idempotente/self-healing.
+        if ($response->status() === 409) {
+            return $this->updateByICalUid($connection, $body);
+        }
+
+        return $this->pushedFrom($this->ensureSuccessful($response));
+    }
+
+    /**
+     * Recupero dal 409: trova l'evento esistente per iCalUID e lo aggiorna (PATCH),
+     * riallineando la mappatura ArkVel all'evento reale su Google. iCalUID è di sola
+     * lettura in PATCH, quindi lo rimuoviamo dal body.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    private function updateByICalUid(CalendarConnection $connection, array $body): PushedEvent
+    {
+        $uid = is_string($body['iCalUID'] ?? null) ? $body['iCalUID'] : '';
+
+        $lookup = $this->request($connection)->get($this->eventsUrl($connection), [
+            'iCalUID' => $uid,
+            'showDeleted' => 'false',
+            'maxResults' => 1,
+        ]);
+
+        $items = $this->ensureSuccessful($lookup)->json('items');
+        $existingId = is_array($items) && is_string($items[0]['id'] ?? null) ? $items[0]['id'] : null;
+
+        if ($existingId === null) {
+            throw new RuntimeException(sprintf(
+                'Google Calendar 409 su iCalUID %s ma nessun evento trovato per il recupero.',
+                $uid,
+            ));
+        }
+
+        // iCalUID non è modificabile via PATCH: va rimosso per non incorrere in un 400.
+        unset($body['iCalUID']);
+
+        $response = $this->request($connection)->patch($this->eventUrl($connection, $existingId), $body);
+
         return $this->pushedFrom($this->ensureSuccessful($response));
     }
 

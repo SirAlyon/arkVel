@@ -133,6 +133,36 @@ it('falls back to insert (POST) when the existing event returns 404 on update', 
     Http::assertSentCount(2);
 });
 
+it('recovers from a 409 duplicate iCalUID by finding and updating the existing event', function () {
+    // Scenario reale: l'evento con quello iCalUID esiste già su Google (ArkVel ha perso
+    // la mappatura dopo un migrate:fresh). L'insert torna 409 → il provider trova
+    // l'evento per iCalUID e lo AGGIORNA, invece di fallire.
+    $sequence = Http::sequence()
+        ->push(['error' => ['code' => 409, 'message' => 'The requested identifier already exists']], 409) // POST insert
+        ->push(['items' => [['id' => 'existing-event-9', 'etag' => '"e9"']]], 200) // GET ?iCalUID=
+        ->push(['id' => 'existing-event-9', 'etag' => '"e10"'], 200); // PATCH update
+
+    Http::fake(['www.googleapis.com/calendar/v3/*' => $sequence]);
+
+    $connection = CalendarConnection::factory()->google()->create();
+
+    $pushed = app(GoogleCalendarProvider::class)
+        ->pushEvent($connection, googleEvent(), null, null);
+
+    expect($pushed->externalId)->toBe('existing-event-9');
+
+    // La PATCH di recupero NON deve reinviare iCalUID (di sola lettura su update).
+    Http::assertSent(function (Request $request): bool {
+        if ($request->method() !== 'PATCH') {
+            return false;
+        }
+
+        return ! array_key_exists('iCalUID', (array) $request->data());
+    });
+
+    Http::assertSentCount(3);
+});
+
 it('deletes an event (DELETE with If-Match), tolerating 404/410 as already gone', function () {
     Http::fake([
         'www.googleapis.com/calendar/v3/*' => Http::response(null, 204),
