@@ -60,20 +60,37 @@ it('lets the owner download their appointment ics as an attachment', function ()
         ->toContain('SUMMARY:');
 });
 
-it('lets verified tenant staff download an appointment ics', function () {
+it('lets verified tenant staff download an appointment ics without a pre-set team context', function () {
     $org = Organization::factory()->create();
     $appointment = icsAppointment($org);
 
     $staff = member($org, MembershipRole::Staff);
 
-    // Rotta web fuori dal pannello: allineiamo il team id spatie come fa il middleware.
-    $registrar = app(PermissionRegistrar::class);
-    $registrar->setPermissionsTeamId($org->getKey());
-    $registrar->forgetCachedPermissions();
+    // CONDIZIONE REALE: la rotta web NON passa dal pannello Filament, quindi nessun
+    // team di spatie/permission è impostato (a differenza di una request nel pannello).
+    // Il controller DEVE allinearlo da sé all'ente dell'appuntamento, altrimenti lo
+    // staff verrebbe respinto con 403 (era il bug). Qui azzeriamo esplicitamente il team.
+    app(PermissionRegistrar::class)->setPermissionsTeamId(null);
 
     $this->actingAs($staff)
         ->get(route('appointments.ics', $appointment))
         ->assertOk();
+});
+
+it('forbids staff of another organization from downloading the ics (tenant isolation)', function () {
+    $orgA = Organization::factory()->create();
+    $appointment = icsAppointment($orgA);
+
+    // Staff di un ALTRO ente: anche col team allineato ad A dal controller, non è
+    // membro verificato di A → la Policy nega.
+    $orgB = Organization::factory()->create();
+    $staffB = member($orgB, MembershipRole::Staff);
+
+    app(PermissionRegistrar::class)->setPermissionsTeamId(null);
+
+    $this->actingAs($staffB)
+        ->get(route('appointments.ics', $appointment))
+        ->assertForbidden();
 });
 
 it('forbids a stranger from downloading an appointment ics', function () {

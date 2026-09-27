@@ -8,6 +8,8 @@ use App\Models\Appointment;
 use App\Models\Organization;
 use App\Support\Calendar\AppointmentCalendarExport;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Espone gli appuntamenti come iCalendar (RFC-5545): il feed d'ente in
@@ -59,13 +61,20 @@ final class CalendarFeedController extends Controller
     /**
      * Download .ics del singolo appuntamento: GET /appointments/{appointment}/calendar.ics.
      *
-     * Dietro auth + Policy: la rotta è gated da ->can('view', $appointment), quindi
-     * solo il proprietario o lo staff verificato dell'ente arriva qui. Restituito
-     * come ALLEGATO (attachment) così il browser scarica il file e il client di
-     * calendario lo importa.
+     * Autorizzazione: proprietario (adottante) O staff verificato dell'ente, via
+     * AppointmentPolicy::view. IMPORTANTE: questa rotta vive FUORI dal pannello
+     * Filament, quindi il middleware che imposta il "team" di spatie/permission dal
+     * tenant NON gira. Senza team il permesso team-scoped AppointmentView risulterebbe
+     * assente e lo staff verrebbe respinto (403) pur essendo membro dell'ente. Allineiamo
+     * quindi il team all'ente dell'appuntamento PRIMA di autorizzare (l'ownership
+     * dell'adottante è comunque team-independent). Restituito come allegato.
      */
     public function appointment(Appointment $appointment): Response
     {
+        app(PermissionRegistrar::class)->setPermissionsTeamId($appointment->organization_id);
+
+        Gate::authorize('view', $appointment);
+
         $ics = $this->export->single($appointment);
 
         return response($ics, 200)

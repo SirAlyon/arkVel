@@ -71,7 +71,10 @@ Route::get('/calendar/{organization}/{token}', [CalendarFeedController::class, '
     ->middleware('throttle:20,1')
     ->name('calendar.feed');
 
+// L'autorizzazione (view) è fatta NEL controller, dopo aver impostato il team di
+// spatie/permission dall'ente dell'appuntamento: fuori dai pannelli Filament il team
+// non è impostato, quindi non possiamo usare ->can() a livello di rotta (respingerebbe
+// lo staff verificato con un 403). Vedi CalendarFeedController::appointment.
 Route::get('/appointments/{appointment}/calendar.ics', [CalendarFeedController::class, 'appointment'])
     ->middleware('auth')
-    ->can('view', 'appointment')
     ->name('appointments.ics');
