@@ -21,7 +21,7 @@ return [
 
         // Empty state.
         'empty_title' => 'No connected calendars',
-        'empty_body' => 'Connect an external calendar to mirror the organization\'s appointments there. For now the demo connection is available; Google and CalDAV are coming soon.',
+        'empty_body' => 'Connect an external calendar to mirror the organization\'s appointments there. You can connect CalDAV (Proton, Fastmail, Nextcloud, iCloud) or Google Calendar (if configured by the administrator).',
 
         // Action: connect (demo, log provider).
         'connect_demo' => 'Connect (demo)',
@@ -34,8 +34,6 @@ return [
         // Actions: real connections.
         'connect_google' => 'Connect Google Calendar',
         'connect_caldav' => 'Connect CalDAV',
-        'coming_soon' => 'Coming soon',
-        'coming_soon_notice' => 'CalDAV connections will be available in a future update.',
 
         // Google Calendar flow (Cal-5).
         'google' => [
@@ -43,6 +41,22 @@ return [
             'not_configured' => 'To enable Google Calendar, set the GOOGLE_CALENDAR_* variables in the server configuration.',
             'connected' => 'Google Calendar connected: appointments will be synced.',
             'error' => 'Could not complete the Google Calendar connection. Please try again.',
+        ],
+
+        // CalDAV flow (Cal-6): Proton (via Bridge), Fastmail, Nextcloud, iCloud.
+        'caldav' => [
+            'name' => 'CalDAV',
+            'heading' => 'Connect a CalDAV calendar',
+            'body' => 'Enter the calendar address (CalDAV collection) and credentials. Works with Proton (via Bridge), Fastmail, Nextcloud, iCloud and any standard CalDAV server. Use an app password, not your main password.',
+            'submit' => 'Connect',
+            'url' => 'Calendar address (collection URL)',
+            'url_help' => 'e.g. https://caldav.fastmail.com/dav/calendars/user/name@domain/calendar/',
+            'username' => 'Username',
+            'username_help' => 'The email address or username of the CalDAV account.',
+            'app_password' => 'App password',
+            'app_password_help' => 'Generate a dedicated password from your provider. It is stored encrypted and is no longer visible after saving.',
+            'verify_failed' => 'Could not reach the calendar with these details. Check the address, username and app password.',
+            'connected' => 'CalDAV calendar connected: appointments will be synced.',
         ],
 
         // Action: disconnect.

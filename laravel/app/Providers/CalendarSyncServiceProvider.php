@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Support\Calendar\CalendarProviderRegistry;
+use App\Support\Calendar\Providers\CalDavProvider;
 use App\Support\Calendar\Providers\GoogleCalendarProvider;
 use App\Support\Calendar\Providers\LogCalendarProvider;
 use Illuminate\Contracts\Foundation\Application;
@@ -17,8 +18,8 @@ use Illuminate\Support\ServiceProvider;
  * Punto di ESTENSIONE (Open/Closed / Dependency Inversion): la pipeline di push
  * dipende dal registry, non dai provider concreti. In Cal-4 è registrato SOLO il
  * {@see LogCalendarProvider} (fittizio, senza I/O), che rende la pipeline dimostrabile
- * e testabile end-to-end. I binding di Google (Cal-5) e CalDAV (Cal-6) si aggiungono
- * qui, senza toccare né il job né il registry.
+ * e testabile end-to-end. Google (Cal-5) e CalDAV (Cal-6) si aggiungono qui, senza
+ * toccare né il job né il registry (Open/Closed).
  */
 class CalendarSyncServiceProvider extends ServiceProvider
 {
@@ -37,7 +38,12 @@ class CalendarSyncServiceProvider extends ServiceProvider
             // dal registry e il config-gating vive nel provider, non qui.
             $registry->register($app->make(GoogleCalendarProvider::class));
 
-            // Cal-6: $registry->register($app->make(CalDavCalendarProvider::class));
+            // CalDAV (Cal-6): registrato SEMPRE e sempre attivo. A differenza di Google
+            // NON c'è config-gating globale: CalDAV è per-connessione (ogni ente inserisce
+            // il proprio server url + username + app-password), quindi non esiste una
+            // configurazione d'installazione da controllare. Se le credenziali sono errate,
+            // è il singolo push a fallire e la connessione passa a Error (gestito dal job).
+            $registry->register($app->make(CalDavProvider::class));
 
             return $registry;
         });

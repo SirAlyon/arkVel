@@ -78,6 +78,27 @@ class CalendarConnectionFactory extends Factory
         ]);
     }
 
+    /**
+     * Connessione CalDAV con credenziali cifrate pronte all'uso: url della collezione,
+     * username e app-password. L'`external_calendar_id` coincide con l'url della
+     * collezione (dove vivono i singoli eventi `{uid}.ics`). I test possono sovrascrivere
+     * `credentials`/`sync_token`/`external_calendar_id` per esercitare push e pull.
+     */
+    public function calDav(): static
+    {
+        $collectionUrl = 'https://caldav.example.test/dav/calendars/user/agent@example.test/work/';
+
+        return $this->provider(CalendarProvider::CalDav)->state(fn (array $attributes): array => [
+            'name' => 'CalDAV',
+            'external_calendar_id' => $collectionUrl,
+            'credentials' => [
+                'url' => $collectionUrl,
+                'username' => 'agent@example.test',
+                'app_password' => 'app-secret-password',
+            ],
+        ]);
+    }
+
     public function active(): static
     {
         return $this->state(fn (array $attributes): array => [

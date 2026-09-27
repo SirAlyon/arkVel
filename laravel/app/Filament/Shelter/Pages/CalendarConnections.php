@@ -11,10 +11,12 @@ use App\Models\CalendarConnection;
 use App\Models\Organization;
 use App\Models\User;
 use App\Policies\CalendarConnectionPolicy;
+use App\Support\Calendar\CalDav\CalDavClient;
 use App\Support\Calendar\Google\GoogleOAuth;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -30,8 +32,9 @@ use Illuminate\Support\Facades\Auth;
  * SCOPE (Cal-4): elenca le connessioni del TENANT corrente, permette la
  * disconnessione (cancellazione + cascade delle mappature) e la creazione di una
  * connessione DIMOSTRATIVA (provider "log") — l'unica utilizzabile senza credenziali,
- * che rende la pipeline di push dimostrabile subito. I flussi reali (Google/CalDAV)
- * arrivano in Cal-5/6: qui sono placeholder DISABILITATI, con avviso.
+ * che rende la pipeline di push dimostrabile subito. Google (Cal-5) si collega via OAuth
+ * quando configurato; CalDAV (Cal-6) via form (url + username + app-password) sempre
+ * abilitato, per-connessione, con verifica preventiva della raggiungibilità.
  *
  * Pagina SOTTILE: interroga tenant-scoped e autorizza; nessuna business logic (la
  * pipeline di push vive nel job + observer). Isolamento: la tabella filtra sempre per
@@ -165,8 +168,8 @@ class CalendarConnections extends Page implements HasTable
     }
 
     /**
-     * Azioni di intestazione: connessione demo (attiva) e i placeholder disabilitati
-     * dei provider reali (Google/CalDAV, Cal-5/6).
+     * Azioni di intestazione: connessione demo (attiva), Google (OAuth, config-gated) e
+     * CalDAV (form con verifica, sempre abilitato).
      *
      * @return array<Action>
      */
@@ -233,16 +236,46 @@ class CalendarConnections extends Page implements HasTable
     }
 
     /**
-     * Placeholder del flusso CalDAV (Cal-6): visibile ma DISABILITATO, con avviso.
+     * Connessione CalDAV (Cal-6): azione con form SEMPRE abilitata (nessun config-gating:
+     * CalDAV è per-connessione, ogni ente inserisce il proprio server). Raccoglie url della
+     * collezione + username + app-password; al submit VERIFICA la raggiungibilità con le
+     * credenziali (PROPFIND) e, solo se ok, crea/aggiorna una connessione CalDAV cifrata
+     * per il tenant corrente. Se la verifica fallisce → notifica danger, nessuna
+     * connessione. Gated dalla policy (create) + tenant risolto.
      */
     private function connectCalDavAction(): Action
     {
         return Action::make('connectCalDav')
             ->label(__('calendar.connections.connect_caldav'))
             ->icon(Heroicon::OutlinedCalendarDays)
-            ->color('gray')
-            ->disabled()
-            ->tooltip(__('calendar.connections.coming_soon'));
+            ->color('primary')
+            ->authorize(fn (): bool => Auth::user()?->can('create', CalendarConnection::class) === true)
+            ->modalHeading(__('calendar.connections.caldav.heading'))
+            ->modalDescription(__('calendar.connections.caldav.body'))
+            ->modalSubmitActionLabel(__('calendar.connections.caldav.submit'))
+            ->schema([
+                TextInput::make('url')
+                    ->label(__('calendar.connections.caldav.url'))
+                    ->helperText(__('calendar.connections.caldav.url_help'))
+                    ->url()
+                    ->required()
+                    ->maxLength(2048),
+                TextInput::make('username')
+                    ->label(__('calendar.connections.caldav.username'))
+                    ->helperText(__('calendar.connections.caldav.username_help'))
+                    ->required()
+                    ->maxLength(255),
+                TextInput::make('app_password')
+                    ->label(__('calendar.connections.caldav.app_password'))
+                    ->helperText(__('calendar.connections.caldav.app_password_help'))
+                    ->password()
+                    ->revealable()
+                    ->required()
+                    ->maxLength(255),
+            ])
+            ->action(function (array $data): void {
+                $this->connectCalDav($data);
+            });
     }
 
     /**
@@ -299,6 +332,71 @@ class CalendarConnections extends Page implements HasTable
         Notification::make()
             ->success()
             ->title(__('calendar.connections.connect_demo_done'))
+            ->send();
+    }
+
+    /**
+     * Crea/aggiorna una connessione CalDAV per il tenant corrente dopo aver VERIFICATO
+     * url + credenziali. Ri-verifica lato server la capacità di creazione (la UI non è il
+     * confine) e la presenza del tenant. La verifica di raggiungibilità (PROPFIND con le
+     * credenziali date) fallita → notifica danger, nessuna scrittura: mai persistere
+     * credenziali non validate.
+     *
+     * Su successo: `updateOrCreate` per (tenant, CalDAV) — una sola connessione CalDAV per
+     * ente, riconfigurabile — con `credentials` cifrato {url, username, app_password},
+     * `external_calendar_id` = url della collezione, status Active, direzione Both. L'ente è
+     * SEMPRE il tenant risolto: nessuna connessione può essere creata per un altro ente.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function connectCalDav(array $data): void
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant instanceof Organization
+            || Auth::user()?->can('create', CalendarConnection::class) !== true) {
+            return;
+        }
+
+        $url = is_string($data['url'] ?? null) ? trim($data['url']) : '';
+        $username = is_string($data['username'] ?? null) ? trim($data['username']) : '';
+        $appPassword = is_string($data['app_password'] ?? null) ? $data['app_password'] : '';
+
+        // Verifica di raggiungibilità con le credenziali fornite PRIMA di persistere:
+        // niente credenziali non validate nel DB.
+        if (! app(CalDavClient::class)->verify($url, $username, $appPassword)) {
+            Notification::make()
+                ->danger()
+                ->title(__('calendar.connections.caldav.verify_failed'))
+                ->send();
+
+            return;
+        }
+
+        CalendarConnection::query()->updateOrCreate(
+            [
+                'organization_id' => $tenant->getKey(),
+                'provider' => CalendarProvider::CalDav,
+            ],
+            [
+                'name' => __('calendar.connections.caldav.name'),
+                'external_calendar_id' => $url,
+                // Cifrato at-rest (cast encrypted:array): l'app-password non compare mai in
+                // chiaro nel DB.
+                'credentials' => [
+                    'url' => $url,
+                    'username' => $username,
+                    'app_password' => $appPassword,
+                ],
+                'direction' => CalendarSyncDirection::Both,
+                'status' => CalendarConnectionStatus::Active,
+                'last_error' => null,
+            ],
+        );
+
+        Notification::make()
+            ->success()
+            ->title(__('calendar.connections.caldav.connected'))
             ->send();
     }
 }

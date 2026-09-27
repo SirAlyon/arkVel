@@ -106,26 +106,13 @@ final class AppointmentCalendarExport
             start: $event->start,
             end: $event->end,
             summary: $event->summary,
-            status: $this->icsStatus($event->status),
+            status: IcsStatus::fromNeutral($event->status),
             location: $event->location,
             description: $event->description,
             // SEQUENCE monotòno = updated_at (dal VO): a ogni modifica cresce, così i
             // client rigorosi accettano l'aggiornamento dello stesso UID.
             sequence: $event->sequence,
         );
-    }
-
-    /**
-     * Proietta lo stato NEUTRO del VO ('confirmed'|'tentative'|'cancelled') sui valori
-     * STATUS di iCalendar (RFC-5545 §3.8.1.11): CONFIRMED / TENTATIVE / CANCELLED.
-     */
-    private function icsStatus(string $neutralStatus): string
-    {
-        return match ($neutralStatus) {
-            'tentative' => 'TENTATIVE',
-            'cancelled' => 'CANCELLED',
-            default => 'CONFIRMED',
-        };
     }
 
     /**

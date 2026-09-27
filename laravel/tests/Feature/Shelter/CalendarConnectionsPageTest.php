@@ -112,14 +112,15 @@ it('denies a volunteer authorization to manage a connection (policy)', function 
         ->and($volunteer->can('delete', $connection))->toBeFalse();
 });
 
-it('disables the Google connect action when unconfigured and CalDAV as a placeholder', function () {
+it('disables the Google connect action when unconfigured but enables CalDAV', function () {
     // In test GOOGLE_CALENDAR_* è assente: l'azione Google è disabilitata perché non
-    // configurata (config-gating). CalDAV è ancora un placeholder (arriva in Cal-6).
+    // configurata (config-gating). CalDAV (Cal-6) è per-connessione, senza config-gating:
+    // la sua azione di connessione è SEMPRE abilitata.
     $org = Organization::factory()->verified()->create();
     $staff = member($org, MembershipRole::Staff);
     actAsInTenant($staff, $org);
 
     Livewire::test(CalendarConnections::class)
         ->assertActionDisabled('connectGoogle')
-        ->assertActionDisabled('connectCalDav');
+        ->assertActionEnabled('connectCalDav');
 });

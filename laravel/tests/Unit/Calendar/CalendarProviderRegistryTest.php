@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\CalendarProvider;
 use App\Exceptions\UnregisteredCalendarProvider;
 use App\Support\Calendar\CalendarProviderRegistry;
+use App\Support\Calendar\Providers\CalDavProvider;
 use App\Support\Calendar\Providers\ExternalCalendarProvider;
 use App\Support\Calendar\Providers\LogCalendarProvider;
 
@@ -17,6 +18,17 @@ it('resolves the log provider from the container binding', function () {
         ->and($provider)->toBeInstanceOf(ExternalCalendarProvider::class)
         ->and($provider->provider())->toBe(CalendarProvider::Log)
         ->and($registry->has(CalendarProvider::Log))->toBeTrue();
+});
+
+it('resolves the CalDAV provider from the container binding', function () {
+    $registry = app(CalendarProviderRegistry::class);
+
+    $provider = $registry->for(CalendarProvider::CalDav);
+
+    expect($provider)->toBeInstanceOf(CalDavProvider::class)
+        ->and($provider)->toBeInstanceOf(ExternalCalendarProvider::class)
+        ->and($provider->provider())->toBe(CalendarProvider::CalDav)
+        ->and($registry->has(CalendarProvider::CalDav))->toBeTrue();
 });
 
 it('throws a clear exception for an unregistered provider', function () {
