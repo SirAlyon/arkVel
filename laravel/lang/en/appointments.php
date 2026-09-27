@@ -58,4 +58,115 @@ return [
         // Short message for the in-app (database channel) notification.
         'database' => 'You were marked as absent for the appointment for :animal.',
     ],
+
+    // Booking CTA on the public animal page.
+    'booking' => [
+        'cta_title' => 'Book a visit',
+        'cta_body' => 'Want to meet :name in person? Pick a type and time and book a meeting with the organization.',
+        'type' => 'Meeting type',
+        'scheduled_at' => 'Date and time',
+        'notes' => 'Notes (optional)',
+        'notes_placeholder' => 'Add anything useful for the organization…',
+        'submit' => 'Book',
+        'submitting' => 'Booking…',
+        'my_appointments' => 'My appointments',
+        'flash_success' => 'Appointment requested: the organization will confirm the time.',
+        // Validation / domain-error messages shown in place.
+        'validation' => [
+            'type_required' => 'Choose the meeting type.',
+            'type_invalid' => 'The selected meeting type is not valid.',
+            'scheduled_at_required' => 'Enter the appointment date and time.',
+            'scheduled_at_invalid' => 'The date and time entered are not valid.',
+        ],
+        'slot_in_past' => 'Choose a date and time in the future.',
+        'slot_unavailable' => 'That slot is unavailable: try another time.',
+    ],
+
+    // "My appointments" page of the adopter panel.
+    'my' => [
+        'title' => 'My appointments',
+        'animal' => 'Animal',
+        'organization' => 'Organization',
+        'type' => 'Type',
+        'status' => 'Status',
+        'scheduled_at' => 'Date and time',
+        'cancel' => 'Cancel',
+        'cancel_confirm_heading' => 'Cancel the appointment?',
+        'cancel_confirm_body' => 'The appointment will be cancelled and the organization will be notified. Do you want to proceed?',
+        'cancel_confirm_submit' => 'Cancel the appointment',
+        'cancel_done' => 'Appointment cancelled.',
+        'cancel_failed' => 'Could not cancel the appointment',
+        'empty_title' => 'No appointments',
+        'empty_body' => 'You have not booked any appointments yet. Browse the catalog and book a visit for the animal you are interested in.',
+    ],
+
+    // Appointment management on the organization side (shelter panel).
+    'shelter' => [
+        'nav_group' => 'Appointments',
+        'label' => 'Appointment',
+        'plural_label' => 'Appointments',
+        'nav_label' => 'Appointments',
+
+        // Columns / fields.
+        'scheduled_at' => 'Date and time',
+        'animal' => 'Animal',
+        'requester' => 'Requester',
+        'email' => 'Email',
+        'type' => 'Type',
+        'status' => 'Status',
+        'organization' => 'Organization',
+        'notes' => 'Notes',
+
+        // Table filters.
+        'filter_status' => 'Status',
+        'filter_type' => 'Type',
+        'filter_from' => 'From',
+        'filter_to' => 'To',
+        'filter_upcoming' => 'Upcoming only',
+
+        // Board tabs (by lifecycle stage).
+        'tabs' => [
+            'all' => 'All',
+            'to_confirm' => 'To confirm',
+            'confirmed' => 'Confirmed',
+            'closed' => 'Closed',
+        ],
+
+        // View / infolist sections.
+        'section_appointment' => 'Appointment',
+        'section_requester' => 'Requester',
+
+        // Staff management actions.
+        'confirm' => 'Confirm',
+        'confirm_heading' => 'Confirm the appointment?',
+        'confirm_body' => 'The requester will receive the time confirmation.',
+        'confirm_submit' => 'Confirm',
+        'confirm_done' => 'Appointment confirmed.',
+        'confirm_failed' => 'Could not confirm the appointment',
+
+        'complete' => 'Complete',
+        'complete_heading' => 'Mark the appointment as completed?',
+        'complete_body' => 'The meeting will be recorded as held.',
+        'complete_submit' => 'Complete',
+        'complete_done' => 'Appointment completed.',
+        'complete_failed' => 'Could not complete the appointment',
+
+        'no_show' => 'No-show',
+        'no_show_heading' => 'Record the requester as absent?',
+        'no_show_body' => 'The appointment will be recorded as not honored.',
+        'no_show_submit' => 'Record no-show',
+        'no_show_done' => 'No-show recorded.',
+        'no_show_failed' => 'Could not record the no-show',
+
+        'cancel' => 'Cancel',
+        'cancel_heading' => 'Cancel the appointment?',
+        'cancel_submit' => 'Cancel the appointment',
+        'cancel_reason' => 'Reason (optional)',
+        'cancel_reason_help' => 'Shared with the requester in the cancellation notice.',
+        'cancel_done' => 'Appointment cancelled.',
+        'cancel_failed' => 'Could not cancel the appointment',
+
+        'empty_title' => 'No appointments',
+        'empty_body' => 'When someone books a visit for one of your animals, the appointment will appear here.',
+    ],
 ];

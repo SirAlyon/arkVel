@@ -5,17 +5,24 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Actions\Applications\SubmitApplication;
+use App\Actions\Appointments\RequestAppointment;
 use App\Actions\Fostering\SubmitFosterApplication;
+use App\Enums\AppointmentType;
+use App\Exceptions\AppointmentSlotUnavailable;
 use App\Exceptions\DuplicateApplication;
 use App\Exceptions\DuplicateFosterApplication;
 use App\Exceptions\IncompleteAdopterProfile;
+use App\Exceptions\InvalidAppointmentSlot;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
+use App\Models\Appointment;
 use App\Models\FosterApplication;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View as ViewFacade;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -35,10 +42,47 @@ use Livewire\Component;
  * CTA "richiedi affido" (Fase 3, slice 4): specchio della CTA di adozione, delega
  * all'Action {@see SubmitFosterApplication}. Stessi rami e stessa guardia di
  * screening (profilo/consenso completo, riusata anche per l'affido).
+ *
+ * CTA "prenota una visita" (Fase 3, slice 6): a differenza di candidatura/affido,
+ * la prenotazione richiede input (tipo + data/ora), quindi ha un piccolo form
+ * validato. Delega all'Action {@see RequestAppointment}. Non c'è guardia di profilo
+ * (un appuntamento non richiede lo screening d'adozione, solo l'autenticazione):
+ * ospite → login adottante; autenticato → validazione + delega, con le eccezioni
+ * di dominio (slot passato / slot occupato) tradotte in feedback in-place. Nessuna
+ * business logic qui.
  */
 class AnimalDetail extends Component
 {
     public Animal $animal;
+
+    /**
+     * Tipo di incontro scelto nel form di prenotazione (value dell'enum
+     * {@see AppointmentType}). Validato via regola `in` sui value dei case
+     * (vedi {@see self::rules()}).
+     */
+    public string $appointmentType = '';
+
+    /**
+     * Data/ora scelta nel form di prenotazione, come stringa `datetime-local`
+     * (Y-m-d\TH:i). Il parsing verso Carbon e la guardia "slot nel futuro" vivono
+     * nell'Action; qui validiamo solo presenza e formato (vedi {@see self::rules()}).
+     */
+    public string $appointmentScheduledAt = '';
+
+    /**
+     * Note facoltative del richiedente, passate all'Action.
+     */
+    public string $appointmentNotes = '';
+
+    /**
+     * Feedback in-place del ramo prenotazione (successo o errore "amichevole"),
+     * mostrato accanto al form. Le redirezioni (ospite) usano il flash di sessione.
+     */
+    #[Locked]
+    public ?string $bookingMessage = null;
+
+    #[Locked]
+    public bool $bookingMessageIsError = false;
 
     /**
      * L'utente corrente ha già una candidatura per questo animale. Calcolato al
@@ -199,10 +243,100 @@ class AnimalDetail extends Component
         return null;
     }
 
+    /**
+     * Prenota un appuntamento (visita/colloquio/controllo domiciliare) per questo
+     * animale a nome dell'utente corrente.
+     *
+     * A differenza di candidatura/affido, la prenotazione richiede input, quindi:
+     *  - OSPITE          → redirect alla login adottante (intended = questa scheda).
+     *  - AUTENTICATO     → validazione del form + delega a RequestAppointment. Le
+     *                      guardie di dominio (slot nel passato, slot occupato) sono
+     *                      tradotte in feedback in-place, senza creare righe.
+     *
+     * Non c'è guardia di profilo: un appuntamento non richiede lo screening
+     * d'adozione. La logica vive nell'Action; qui si autorizza (policy `create`), si
+     * valida l'input e si traducono le eccezioni di dominio in feedback UI.
+     */
+    public function book(RequestAppointment $requestAppointment): mixed
+    {
+        $user = Auth::user();
+
+        // OSPITE: instrada alla login del pannello adottante, memorizzando questa
+        // scheda come intended-URL per tornarci dopo l'autenticazione.
+        if (! $user instanceof User) {
+            session()->put('url.intended', route('animals.show', $this->animal));
+
+            return $this->redirectRoute('filament.adopter.auth.login', navigate: false);
+        }
+
+        // Autorizzazione: chiunque autenticato può prenotare (RequestAppointment
+        // impone le guardie di dominio). Manteniamo il gancio alla policy.
+        $this->authorize('create', Appointment::class);
+
+        $validated = $this->validate();
+
+        try {
+            $requestAppointment->handle(
+                requester: $user,
+                animal: $this->animal,
+                type: AppointmentType::from($validated['appointmentType']),
+                scheduledAt: Carbon::parse($validated['appointmentScheduledAt']),
+                notes: $validated['appointmentNotes'] !== '' ? $validated['appointmentNotes'] : null,
+            );
+
+            // Reset del form e feedback di successo in-place.
+            $this->reset('appointmentType', 'appointmentScheduledAt', 'appointmentNotes');
+            $this->bookingMessageIsError = false;
+            $this->bookingMessage = __('appointments.booking.flash_success');
+        } catch (InvalidAppointmentSlot) {
+            // SLOT NEL PASSATO: nessuna riga creata; feedback amichevole in-place.
+            $this->bookingMessageIsError = true;
+            $this->bookingMessage = __('appointments.booking.slot_in_past');
+        } catch (AppointmentSlotUnavailable) {
+            // SLOT OCCUPATO (overlap animale/richiedente): nessuna riga creata.
+            $this->bookingMessageIsError = true;
+            $this->bookingMessage = __('appointments.booking.slot_unavailable');
+        }
+
+        return null;
+    }
+
+    /**
+     * Regole di validazione del form di prenotazione. Il tipo è ristretto ai value
+     * dell'enum {@see AppointmentType}; la data/ora deve solo essere presente e
+     * parsabile (la guardia "nel futuro" e l'overlap vivono nell'Action).
+     *
+     * @return array<string, mixed>
+     */
+    protected function rules(): array
+    {
+        return [
+            'appointmentType' => ['required', Rule::in(array_column(AppointmentType::cases(), 'value'))],
+            'appointmentScheduledAt' => ['required', 'date'],
+            'appointmentNotes' => ['nullable', 'string', 'max:2000'],
+        ];
+    }
+
+    /**
+     * Messaggi di validazione localizzati per il form di prenotazione.
+     *
+     * @return array<string, string>
+     */
+    protected function messages(): array
+    {
+        return [
+            'appointmentType.required' => __('appointments.booking.validation.type_required'),
+            'appointmentType.in' => __('appointments.booking.validation.type_invalid'),
+            'appointmentScheduledAt.required' => __('appointments.booking.validation.scheduled_at_required'),
+            'appointmentScheduledAt.date' => __('appointments.booking.validation.scheduled_at_invalid'),
+        ];
+    }
+
     public function render(): View
     {
         $view = ViewFacade::make('livewire.animal-detail', [
             'photos' => $this->animal->getMedia('photos'),
+            'appointmentTypes' => AppointmentType::cases(),
         ]);
 
         // `title()` è una macro di Livewire sulla View (full-page component):
