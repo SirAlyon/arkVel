@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Actions\Applications\SubmitApplication;
+use App\Actions\Fostering\SubmitFosterApplication;
 use App\Exceptions\DuplicateApplication;
+use App\Exceptions\DuplicateFosterApplication;
 use App\Exceptions\IncompleteAdopterProfile;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
+use App\Models\FosterApplication;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +31,10 @@ use Livewire\Component;
  * {@see SubmitApplication}. Il componente resta sottile — decide solo il ramo
  * (ospite / profilo incompleto / candidabile / già candidato) e traduce le
  * eccezioni di dominio in feedback UI. Nessuna business logic qui.
+ *
+ * CTA "richiedi affido" (Fase 3, slice 4): specchio della CTA di adozione, delega
+ * all'Action {@see SubmitFosterApplication}. Stessi rami e stessa guardia di
+ * screening (profilo/consenso completo, riusata anche per l'affido).
  */
 class AnimalDetail extends Component
 {
@@ -52,6 +59,25 @@ class AnimalDetail extends Component
     #[Locked]
     public bool $applyMessageIsError = false;
 
+    /**
+     * L'utente corrente ha già una richiesta di affido per questo animale.
+     * Specchio di {@see self::$hasApplied} per il ramo affido: calcolato al mount
+     * e aggiornato in-place dopo un invio riuscito (o su DuplicateFosterApplication).
+     */
+    #[Locked]
+    public bool $hasRequestedFoster = false;
+
+    /**
+     * Messaggio di feedback in-place per il ramo affido, mostrato accanto alla CTA
+     * di affido. Le redirezioni (ospite / profilo incompleto) usano il flash di
+     * sessione, condiviso col ramo adozione.
+     */
+    #[Locked]
+    public ?string $fosterMessage = null;
+
+    #[Locked]
+    public bool $fosterMessageIsError = false;
+
     public function mount(Animal $animal): void
     {
         abort_unless(
@@ -64,6 +90,7 @@ class AnimalDetail extends Component
         $this->animal = $animal;
 
         $this->hasApplied = $this->currentUserHasApplied();
+        $this->hasRequestedFoster = $this->currentUserHasRequestedFoster();
     }
 
     /**
@@ -120,6 +147,58 @@ class AnimalDetail extends Component
         return null;
     }
 
+    /**
+     * Invia la richiesta di affido dell'utente corrente per questo animale.
+     *
+     * Specchio esatto di {@see self::apply()} per il ramo affido: stessa macchina
+     * di rami (ospite / profilo incompleto / richiedibile / già richiesto), stessa
+     * guardia di screening (profilo/consenso completo, riusata anche per l'affido).
+     * La logica vive nell'Action {@see SubmitFosterApplication}: qui si autorizza
+     * (policy `create`), si sceglie il ramo e si traducono le eccezioni di dominio
+     * in feedback UI. Nessuna business logic qui.
+     */
+    public function requestFoster(SubmitFosterApplication $submitFosterApplication): mixed
+    {
+        $user = Auth::user();
+
+        // OSPITE: instrada alla login del pannello adottante, memorizzando questa
+        // scheda come intended-URL per tornarci dopo l'autenticazione.
+        if (! $user instanceof User) {
+            session()->put('url.intended', route('animals.show', $this->animal));
+
+            return $this->redirectRoute('filament.adopter.auth.login', navigate: false);
+        }
+
+        // Autorizzazione: chiunque può richiedere l'affido (SubmitFosterApplication
+        // impone le guardie di dominio). Manteniamo il gancio alla policy.
+        $this->authorize('create', FosterApplication::class);
+
+        // PROFILO INCOMPLETO: nessuna riga viene creata; instradiamo l'utente al
+        // completamento del profilo con un messaggio esplicito.
+        if (! $user->hasCompleteAdopterProfile()) {
+            return $this->redirectToProfile();
+        }
+
+        try {
+            $submitFosterApplication->handle($user, $this->animal);
+
+            $this->hasRequestedFoster = true;
+            $this->fosterMessageIsError = false;
+            $this->fosterMessage = __('fostering.request.flash_success');
+        } catch (DuplicateFosterApplication) {
+            // GIÀ RICHIESTO: la CTA riflette lo stato "inviata"; messaggio amichevole.
+            $this->hasRequestedFoster = true;
+            $this->fosterMessageIsError = false;
+            $this->fosterMessage = __('fostering.request.flash_duplicate');
+        } catch (IncompleteAdopterProfile) {
+            // Difensivo: il predicato sopra dovrebbe già aver deviato, ma se il
+            // profilo è diventato incompleto tra i due controlli, instradiamo.
+            return $this->redirectToProfile();
+        }
+
+        return null;
+    }
+
     public function render(): View
     {
         $view = ViewFacade::make('livewire.animal-detail', [
@@ -157,6 +236,25 @@ class AnimalDetail extends Component
         }
 
         return $user->applications()
+            ->where('animal_id', $this->animal->getKey())
+            ->exists();
+    }
+
+    /**
+     * L'utente autenticato ha già una richiesta di affido per questo animale.
+     * Specchio di {@see self::currentUserHasApplied()}: predicato di sola lettura
+     * sulla relazione self-owned (user_id), nessuna business logic.
+     */
+    private function currentUserHasRequestedFoster(): bool
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        return FosterApplication::query()
+            ->where('user_id', $user->getKey())
             ->where('animal_id', $this->animal->getKey())
             ->exists();
     }
