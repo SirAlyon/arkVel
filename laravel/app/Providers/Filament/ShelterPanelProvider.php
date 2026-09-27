@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Filament\Shelter\Pages\Tenancy\RegisterOrganization;
+use App\Filament\Shelter\Widgets\UpcomingAppointmentsWidget;
+use App\Filament\Shelter\Widgets\UpcomingMedicalRemindersWidget;
 use App\Http\Middleware\SetPermissionsTeamFromTenant;
 use App\Models\Organization;
 use Filament\Http\Middleware\Authenticate;
@@ -75,6 +77,9 @@ class ShelterPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Shelter/Widgets'), for: 'App\Filament\Shelter\Widgets')
             ->widgets([
                 AccountWidget::class,
+                // Scadenzario e promemoria in dashboard, entrambi tenant-scoped.
+                UpcomingMedicalRemindersWidget::class,
+                UpcomingAppointmentsWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

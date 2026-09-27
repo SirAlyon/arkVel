@@ -59,6 +59,32 @@ return [
         'database' => 'You were marked as absent for the appointment for :animal.',
     ],
 
+    // Reminder to the requester about an upcoming confirmed appointment.
+    'reminder' => [
+        'subject' => 'Reminder: appointment for :animal',
+        'greeting' => 'Hi :name,',
+        'line' => 'A reminder about your appointment (:type) for :animal on :when.',
+        'action' => 'Go to my account',
+        'salutation' => 'See you soon, the ArkVel team',
+        // Short message for the in-app (database channel) notification.
+        'database' => 'Reminder: appointment (:type) for :animal on :when.',
+        // Summary printed by the arkvel:send-appointment-reminders command.
+        'command_summary' => 'Appointment reminders sent: :count.',
+    ],
+
+    // "Upcoming appointments" widget on the shelter dashboard.
+    'widget' => [
+        'heading' => 'Upcoming appointments',
+        'description' => 'Active appointments still to be held, in chronological order.',
+        'scheduled_at' => 'Date and time',
+        'animal' => 'Animal',
+        'requester' => 'Requester',
+        'type' => 'Type',
+        'status' => 'Status',
+        'empty_title' => 'No upcoming appointments',
+        'empty_body' => 'There are no active appointments scheduled.',
+    ],
+
     // Booking CTA on the public animal page.
     'booking' => [
         'cta_title' => 'Book a visit',

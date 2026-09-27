@@ -59,6 +59,32 @@ return [
         'database' => 'Risulti assente all\'appuntamento per :animal.',
     ],
 
+    // Promemoria al richiedente per un appuntamento confermato imminente.
+    'reminder' => [
+        'subject' => 'Promemoria: appuntamento per :animal',
+        'greeting' => 'Ciao :name,',
+        'line' => 'Ti ricordiamo l\'appuntamento (:type) per :animal del :when.',
+        'action' => 'Vai al mio account',
+        'salutation' => 'A presto, il team di ArkVel',
+        // Messaggio breve per la notifica in-app (canale database).
+        'database' => 'Promemoria: appuntamento (:type) per :animal del :when.',
+        // Riepilogo stampato dal comando arkvel:send-appointment-reminders.
+        'command_summary' => 'Promemoria appuntamenti inviati: :count.',
+    ],
+
+    // Widget "Prossimi appuntamenti" della dashboard shelter.
+    'widget' => [
+        'heading' => 'Prossimi appuntamenti',
+        'description' => 'Appuntamenti attivi ancora da tenersi, in ordine cronologico.',
+        'scheduled_at' => 'Data e ora',
+        'animal' => 'Animale',
+        'requester' => 'Richiedente',
+        'type' => 'Tipo',
+        'status' => 'Stato',
+        'empty_title' => 'Nessun appuntamento in arrivo',
+        'empty_body' => 'Non ci sono appuntamenti attivi in programma.',
+    ],
+
     // CTA di prenotazione sulla scheda pubblica dell'animale.
     'booking' => [
         'cta_title' => 'Prenota una visita',

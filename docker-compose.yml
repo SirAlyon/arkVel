@@ -44,6 +44,24 @@ services:
       redis:
         condition: service_started
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arkvel-scheduler
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    volumes:
+      - ./laravel/:/var/www/html/arkvel
+    working_dir: /var/www/html/arkvel
+    networks:
+      - arkvel
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
   nginx:
     build:
       context: ./nginx/

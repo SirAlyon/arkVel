@@ -32,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property AppointmentType $type
  * @property AppointmentStatus $status
  * @property string|null $notes
+ * @property Carbon|null $reminder_sent_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Animal $animal
@@ -61,6 +62,7 @@ class Appointment extends Model
         'type',
         'status',
         'notes',
+        'reminder_sent_at',
     ];
 
     /**
@@ -72,6 +74,7 @@ class Appointment extends Model
             'scheduled_at' => 'datetime',
             'type' => AppointmentType::class,
             'status' => AppointmentStatus::class,
+            'reminder_sent_at' => 'datetime',
         ];
     }
 
@@ -130,5 +133,24 @@ class Appointment extends Model
     protected function upcoming(Builder $query): void
     {
         $query->active()->where('scheduled_at', '>=', now());
+    }
+
+    /**
+     * Appuntamenti da promemorizzare: SOLO quelli Confermati, non ancora
+     * promemorizzati (reminder_sent_at null), la cui data cade nella finestra
+     * [now(), now()+N ore]. È il predicato di arkvel:send-appointment-reminders; la
+     * nullità di reminder_sent_at garantisce l'idempotenza (un promemoria per
+     * appuntamento). Escludiamo di proposito i Richiesti (non ancora confermati) e
+     * gli stati terminali.
+     *
+     * @param  Builder<Appointment>  $query
+     */
+    #[Scope]
+    protected function dueForReminder(Builder $query, int $withinHours): void
+    {
+        $query
+            ->where('status', AppointmentStatus::Confirmed)
+            ->whereNull('reminder_sent_at')
+            ->whereBetween('scheduled_at', [now(), now()->addHours($withinHours)]);
     }
 }
