@@ -4,20 +4,23 @@ declare(strict_types=1);
 
 namespace App\Support\Calendar\Providers;
 
+use App\Support\Calendar\CalendarReconciler;
+
 /**
  * Insieme delle modifiche estratte da un provider esterno durante un pull
- * incrementale (Cal-7). In Cal-4 esiste solo per definire il contratto del provider:
- * il Log provider restituisce sempre un insieme vuoto ({@see empty()}).
+ * incrementale (Cal-7). Il Log provider restituisce sempre un insieme vuoto
+ * ({@see empty()}).
  *
- * La forma degli elementi di `$changed` è deliberatamente lasciata "opaca" (mixed):
- * il tipo concreto dell'evento remoto dipende dal provider (Google/CalDAV) e verrà
- * normalizzato dai rispettivi adattatori in Cal-5/6/7. Qui il contratto fissa solo
- * la struttura di trasporto.
+ * Gli elementi di `$changed` sono {@see PulledEvent} NORMALIZZATI: ogni provider
+ * (Google/CalDAV, dialetti diversi) traduce il proprio formato grezzo in questo VO
+ * comune, così il {@see CalendarReconciler} riconcilia senza
+ * conoscere le peculiarità del provider. `$deletedExternalIds` porta gli id/href degli
+ * eventi RIMOSSI a monte (equivalenti a un annullamento).
  */
 final readonly class PulledChanges
 {
     /**
-     * @param  list<mixed>  $changed  Eventi remoti creati/modificati dall'ultimo sync.
+     * @param  list<PulledEvent>  $changed  Eventi remoti creati/modificati dall'ultimo sync.
      * @param  list<string>  $deletedExternalIds  Id esterni degli eventi rimossi.
      * @param  string|null  $newSyncToken  Nuovo token incrementale (syncToken/ctag).
      */

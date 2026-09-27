@@ -7,6 +7,7 @@ use App\Models\CalendarConnection;
 use App\Support\Calendar\CalendarEventData;
 use App\Support\Calendar\Providers\GoogleCalendarProvider;
 use App\Support\Calendar\Providers\PulledChanges;
+use App\Support\Calendar\Providers\PulledEvent;
 use App\Support\Calendar\Providers\PushedEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -188,8 +189,9 @@ it('pulls changes parsing changed, deleted and the next sync token', function ()
 
     expect($changes)->toBeInstanceOf(PulledChanges::class)
         ->and($changes->changed)->toHaveCount(1)
-        ->and($changes->changed[0]['external_id'])->toBe('evt-changed')
-        ->and($changes->changed[0]['appointment_id'])->toBe(77)
+        ->and($changes->changed[0])->toBeInstanceOf(PulledEvent::class)
+        ->and($changes->changed[0]->externalId)->toBe('evt-changed')
+        ->and($changes->changed[0]->appointmentId)->toBe(77)
         ->and($changes->deletedExternalIds)->toBe(['evt-deleted'])
         ->and($changes->newSyncToken)->toBe('sync-token-next');
 

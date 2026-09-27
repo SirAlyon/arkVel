@@ -29,3 +29,10 @@ it('registers both reminder commands in the schedule', function () {
     expect($hasMedical)->toBeTrue()
         ->and($hasAppointment)->toBeTrue();
 });
+
+it('registers the two-way calendar sync command in the schedule', function () {
+    $commands = scheduledCommands();
+
+    expect(collect($commands)->contains(fn (string $c): bool => str_contains($c, 'arkvel:sync-calendars')))
+        ->toBeTrue();
+});

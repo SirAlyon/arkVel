@@ -66,4 +66,10 @@ return [
         'disconnect_submit' => 'Disconnetti',
         'disconnect_done' => 'Calendario disconnesso.',
     ],
+
+    // Riconciliazione pull (Cal-7): modifiche dai calendari esterni riportate in ArkVel.
+    'reconcile' => [
+        'cancelled_externally' => 'Appuntamento annullato dal calendario esterno.',
+        'command_summary' => 'Sync calendari: :connections connessioni, :rescheduled riprogrammati, :cancelled annullati.',
+    ],
 ];

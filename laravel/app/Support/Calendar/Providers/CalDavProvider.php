@@ -108,30 +108,47 @@ final class CalDavProvider implements ExternalCalendarProvider
     }
 
     /**
-     * Pull incrementale via sync-collection (Cal-7 lo consuma). Mappa il risultato del
-     * client in {@see PulledChanges}:
-     *  - `changed`: gli href delle risorse create/modificate (l'href È l'external id; l'UID
-     *    è ricavabile come `{uid}.ics` per la riconciliazione);
-     *  - `deletedExternalIds`: gli href delle risorse rimosse;
+     * Pull incrementale via sync-collection (Cal-7 lo consuma). Due passi:
+     *  1. `syncCollection` → href+etag delle risorse cambiate + href cancellati + token;
+     *  2. `multiget` degli href cambiati (UN solo REPORT) → DTSTART/STATUS/UID di ciascuno.
+     *
+     * Mappa il risultato in {@see PulledChanges} di {@see PulledEvent} NORMALIZZATI:
+     *  - `changed`: un PulledEvent per href (external id = href; start UTC e status neutro
+     *    dal VEVENT; appointment id ricavato dall'UID del corpo o, in fallback, dall'href
+     *    `{uid}.ics`; etag dalla sync-collection);
+     *  - `deletedExternalIds`: gli href delle risorse rimosse (propagati tali e quali);
      *  - `newSyncToken`: il nuovo sync-token da persistere.
      *
-     * Se il server non supporta sync-collection, il client degrada a insieme vuoto col
-     * token preservato: qui lo propaghiamo tale e quale.
+     * DEGRADAZIONE: se il multiget non è supportato/fallisce, il client restituisce una
+     * mappa vuota; emettiamo comunque un PulledEvent per href con start null (solo
+     * cancellazioni/uid riconciliano). Se il server non supporta neppure la sync-collection,
+     * il client degrada a insieme vuoto col token preservato. Mai un'eccezione.
      */
     public function pullChanges(CalendarConnection $connection): PulledChanges
     {
         $result = $this->client->syncCollection($connection);
 
+        $hrefs = array_map(static fn (array $entry): string => $entry['href'], $result['changed']);
+
+        // Un solo REPORT per leggere start/status/uid di TUTTI gli href cambiati.
+        $details = $this->client->multiget($connection, $hrefs);
+
         $changed = [];
 
         foreach ($result['changed'] as $entry) {
-            $changed[] = [
-                'external_id' => $entry['href'],
-                'etag' => $entry['etag'],
-                // L'UID è embeddato nell'href come "{uid}.ics": lo estraiamo per la
-                // riconciliazione (Cal-7), null se l'href non segue la convenzione.
-                'uid' => $this->uidFromHref($entry['href']),
-            ];
+            $href = $entry['href'];
+            $detail = $details[$href] ?? null;
+
+            // UID dal corpo del VEVENT (via multiget) o, in fallback, dall'href {uid}.ics.
+            $uid = $detail['uid'] ?? $this->uidFromHref($href);
+
+            $changed[] = new PulledEvent(
+                externalId: $href,
+                appointmentId: AppointmentUid::toAppointmentId($uid),
+                start: $detail['start'] ?? null,
+                status: $detail['status'] ?? 'confirmed',
+                etag: $entry['etag'],
+            );
         }
 
         return new PulledChanges($changed, $result['deleted'], $result['syncToken']);

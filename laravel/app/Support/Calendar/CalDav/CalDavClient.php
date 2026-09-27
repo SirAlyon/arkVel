@@ -9,6 +9,7 @@ use App\Models\CalendarConnection;
 use App\Support\Calendar\Providers\CalDavProvider;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -41,6 +42,12 @@ final class CalDavClient
      * l'elemento <sync-token> della sync-collection (RFC-6578).
      */
     private const string NS_DAV = 'DAV:';
+
+    /**
+     * Namespace XML CalDAV (RFC-4791): usato per <calendar-multiget> e per l'elemento
+     * <calendar-data> che trasporta il corpo iCalendar (VEVENT) nelle risposte.
+     */
+    private const string NS_CALDAV = 'urn:ietf:params:xml:ns:caldav';
 
     /**
      * Carica (create-or-update) un evento all'href assoluto dato.
@@ -199,6 +206,49 @@ final class CalDavClient
     }
 
     /**
+     * Recupera in UN SOLO REPORT `calendar-multiget` (RFC-4791) il corpo iCalendar delle
+     * risorse agli href dati — consumato dal pull di riconciliazione (Cal-7) per leggere
+     * DTSTART/STATUS/UID degli eventi cambiati, che il sync-collection (solo href+etag) non
+     * porta. Un singolo round-trip invece di un GET per href.
+     *
+     * Parsa il 207 multistatus in modo DIFENSIVO (loadXml XXE-safe) estraendo per ogni
+     * <response> l'href e il <calendar-data>, poi ricava dal VEVENT:
+     *  - `start`: {@see Carbon} UTC da DTSTART (con TZID/UTC/floating), null se non parsabile;
+     *  - `status`: stato NEUTRO ('confirmed'|'tentative'|'cancelled') da STATUS, default 'confirmed';
+     *  - `uid`: UID del VEVENT (per ricavare l'appuntamento ArkVel).
+     *
+     * DEGRADAZIONE: input vuoto, server che non supporta il multiget (status ≠ 207) o corpo
+     * non parsabile → mappa VUOTA, MAI un'eccezione. Il chiamante emetterà eventi con start
+     * null (solo cancellazioni/uid riconciliano): la bidirezionalità resta best-effort.
+     *
+     * @param  list<string>  $hrefs
+     * @return array<string, array{start: ?Carbon, status: string, uid: ?string}>
+     */
+    public function multiget(CalendarConnection $connection, array $hrefs): array
+    {
+        if ($hrefs === []) {
+            return [];
+        }
+
+        $collectionUrl = $this->collectionUrl($connection);
+
+        try {
+            $response = $this->request($connection)
+                ->withHeaders(['Depth' => '1'])
+                ->withBody($this->multigetBody($hrefs), 'application/xml; charset=utf-8')
+                ->send('REPORT', $collectionUrl);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if ($response->status() !== 207) {
+            return [];
+        }
+
+        return $this->parseMultiget($response->body());
+    }
+
+    /**
      * Richiesta base autenticata verso il server CalDAV: HTTP Basic (username +
      * app-password dal campo cifrato `credentials`). L'header Authorization è impostato
      * da withBasicAuth e non viene mai loggato né esposto.
@@ -304,6 +354,164 @@ final class CalDavClient
         $newToken = $this->firstTagValueFromRoot($document, 'sync-token') ?? $currentToken;
 
         return ['changed' => $changed, 'deleted' => $deleted, 'syncToken' => $newToken];
+    }
+
+    /**
+     * Corpo XML del REPORT calendar-multiget (RFC-4791): chiede getetag + calendar-data
+     * per l'elenco di href dato. Ogni href è escapato (può contenere caratteri speciali).
+     *
+     * @param  list<string>  $hrefs
+     */
+    private function multigetBody(array $hrefs): string
+    {
+        $hrefElements = '';
+
+        foreach ($hrefs as $href) {
+            $hrefElements .= '<d:href>'.$this->escapeXml($href).'</d:href>';
+        }
+
+        return '<?xml version="1.0" encoding="utf-8"?>'
+            .'<cal:calendar-multiget xmlns:d="DAV:" xmlns:cal="'.self::NS_CALDAV.'">'
+            .'<d:prop><d:getetag/><cal:calendar-data/></d:prop>'
+            .$hrefElements
+            .'</cal:calendar-multiget>';
+    }
+
+    /**
+     * Parsa il 207 di un calendar-multiget: per ogni <response> mappa href → dettagli
+     * (start UTC, status neutro, uid) letti dal VEVENT nel <calendar-data>. Difensivo:
+     * XML non parsabile o senza calendar-data → salta la voce.
+     *
+     * @return array<string, array{start: ?Carbon, status: string, uid: ?string}>
+     */
+    private function parseMultiget(string $xml): array
+    {
+        $document = $this->loadXml($xml);
+
+        if ($document === null) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($document->getElementsByTagNameNS(self::NS_DAV, 'response') as $node) {
+            $href = $this->firstTagValue($node, 'href');
+
+            if ($href === null || $href === '') {
+                continue;
+            }
+
+            $calendarData = $node->getElementsByTagNameNS(self::NS_CALDAV, 'calendar-data')->item(0);
+
+            if (! $calendarData instanceof \DOMNode) {
+                continue;
+            }
+
+            $result[$href] = $this->parseVEvent($calendarData->textContent);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Parse MINIMALE di un corpo iCalendar (VEVENT): legge DTSTART, STATUS e UID riga per
+     * riga (l'ICS è un formato a righe `NAME[;params]:value`). Non è un parser iCalendar
+     * completo: bastano i tre campi che la riconciliazione usa.
+     *
+     * @return array{start: ?Carbon, status: string, uid: ?string}
+     */
+    private function parseVEvent(string $ics): array
+    {
+        $start = null;
+        $status = 'confirmed';
+        $uid = null;
+
+        // Unfolding: le righe iCalendar lunghe si spezzano con CRLF + spazio/tab iniziale.
+        $unfolded = (string) preg_replace('/\r\n[ \t]/', '', str_replace("\n", "\r\n", str_replace("\r\n", "\n", $ics)));
+
+        foreach (preg_split('/\r\n|\n/', $unfolded) ?: [] as $line) {
+            if ($line === '') {
+                continue;
+            }
+
+            $colon = strpos($line, ':');
+
+            if ($colon === false) {
+                continue;
+            }
+
+            $left = substr($line, 0, $colon);
+            $value = substr($line, $colon + 1);
+            // Il nome della proprietà è prima dell'eventuale `;params` (es. DTSTART;TZID=…).
+            $name = strtoupper(explode(';', $left, 2)[0]);
+
+            if ($name === 'DTSTART') {
+                $start = $this->parseDateTime($value, $left);
+            } elseif ($name === 'STATUS') {
+                $status = $this->neutralStatus($value);
+            } elseif ($name === 'UID') {
+                $uid = trim($value);
+            }
+        }
+
+        return ['start' => $start, 'status' => $status, 'uid' => $uid];
+    }
+
+    /**
+     * Parsa un valore DTSTART iCalendar in {@see Carbon} UTC. Gestisce le tre forme:
+     *  - UTC (`20260115T080000Z`);
+     *  - con TZID (`DTSTART;TZID=Europe/Rome:20260115T090000`);
+     *  - floating/locale (senza suffisso, interpretato nel timezone dell'app → UTC).
+     * Null quando il valore è vuoto o non parsabile (es. all-day `VALUE=DATE`): senza
+     * un'ora precisa non riprogrammiamo.
+     */
+    private function parseDateTime(string $value, string $left): ?Carbon
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $timezone = $this->tzidFrom($left);
+
+        try {
+            if (str_ends_with($value, 'Z')) {
+                return Carbon::createFromFormat('Ymd\THis\Z', $value, 'UTC')?->utc();
+            }
+
+            $parsed = Carbon::createFromFormat('Ymd\THis', $value, $timezone);
+
+            return $parsed instanceof Carbon ? $parsed->utc() : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Estrae il TZID dai parametri della proprietà (`DTSTART;TZID=Europe/Rome`). Assente →
+     * timezone dell'app (interpretazione del floating time coerente col resto del dominio).
+     */
+    private function tzidFrom(string $left): string
+    {
+        if (preg_match('/TZID=([^;:]+)/i', $left, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return config()->string('app.timezone', 'UTC');
+    }
+
+    /**
+     * Proietta lo STATUS iCalendar (CONFIRMED/TENTATIVE/CANCELLED) sul dialetto NEUTRO.
+     * Qualsiasi valore inatteso ricade su 'confirmed' (evento presente e non annullato).
+     */
+    private function neutralStatus(string $value): string
+    {
+        return match (strtoupper(trim($value))) {
+            'CANCELLED' => 'cancelled',
+            'TENTATIVE' => 'tentative',
+            default => 'confirmed',
+        };
     }
 
     /**

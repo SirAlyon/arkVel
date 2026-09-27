@@ -129,9 +129,16 @@ final class GoogleCalendarProvider implements ExternalCalendarProvider
      * Pull incrementale (Cal-7 lo consuma). Usa il `syncToken` salvato sulla connessione
      * quando presente (per ottenere SOLO le modifiche dall'ultimo sync), altrimenti una
      * finestra temporale limitata (`timeMin`). Impagina su `pageToken` e raccoglie:
-     *  - `changed`: eventi creati/modificati (id, arkvel_appointment_id, status, etag);
-     *  - `deletedExternalIds`: eventi con status=cancelled.
+     *  - `changed`: {@see PulledEvent} normalizzati (external id, appointment id dalla
+     *    extended property, start UTC parsato da start.dateTime, status neutro, etag);
+     *  - `deletedExternalIds`: id degli eventi con status=cancelled.
      * L'ultima pagina porta il `nextSyncToken` da persistere per il prossimo giro.
+     *
+     * SCELTA (coerenza col contratto): gli eventi Google `status=cancelled` finiscono in
+     * `deletedExternalIds` (come già faceva Cal-5) invece che fra i `changed` con
+     * status='cancelled'. La riconciliazione tratta entrambe le vie come "annulla
+     * l'appuntamento se ancora attivo", quindi il risultato è identico; teniamo la via
+     * unica (deleted) per non duplicare la stessa cancellazione.
      *
      * Un 410 GONE (syncToken invalido/troppo vecchio) → insieme VUOTO con token null,
      * così il chiamante (Cal-7) potrà fare un resync completo.
@@ -175,12 +182,13 @@ final class GoogleCalendarProvider implements ExternalCalendarProvider
                     continue;
                 }
 
-                $changed[] = [
-                    'external_id' => $externalId,
-                    'etag' => is_string($item['etag'] ?? null) ? $item['etag'] : null,
-                    'status' => is_string($item['status'] ?? null) ? $item['status'] : null,
-                    'appointment_id' => $this->appointmentIdFrom($item),
-                ];
+                $changed[] = new PulledEvent(
+                    externalId: $externalId,
+                    appointmentId: $this->appointmentIdFrom($item),
+                    start: $this->startFrom($item),
+                    status: $this->neutralStatus($item),
+                    etag: is_string($item['etag'] ?? null) ? $item['etag'] : null,
+                );
             }
 
             $pageToken = is_string($data['nextPageToken'] ?? null) ? $data['nextPageToken'] : null;
@@ -266,6 +274,48 @@ final class GoogleCalendarProvider implements ExternalCalendarProvider
         }
 
         return new PushedEvent($id, $etag !== '' ? $etag : null);
+    }
+
+    /**
+     * Istante d'inizio dell'evento remoto in UTC, parsato da `start.dateTime` (RFC-3339).
+     * Null quando l'evento è un all-day (`start.date`, senza ora) o quando il campo è
+     * assente/non parsabile: senza un'ora precisa non riprogrammiamo (evita orari sballati).
+     *
+     * @param  array<string, mixed>  $item
+     */
+    private function startFrom(array $item): ?Carbon
+    {
+        $start = $item['start'] ?? null;
+
+        if (! is_array($start)) {
+            return null;
+        }
+
+        $dateTime = $start['dateTime'] ?? null;
+
+        if (! is_string($dateTime) || $dateTime === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($dateTime)->utc();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Proietta lo `status` Google sul dialetto NEUTRO ('confirmed'|'tentative'|'cancelled').
+     * Google usa già queste stringhe; qualsiasi valore inatteso ricade su 'confirmed'
+     * (interpretazione conservativa: un evento presente e non annullato è confermato).
+     *
+     * @param  array<string, mixed>  $item
+     */
+    private function neutralStatus(array $item): string
+    {
+        $status = is_string($item['status'] ?? null) ? $item['status'] : null;
+
+        return in_array($status, ['confirmed', 'tentative', 'cancelled'], true) ? $status : 'confirmed';
     }
 
     /**

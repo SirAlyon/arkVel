@@ -7,6 +7,7 @@ use App\Models\CalendarConnection;
 use App\Support\Calendar\CalendarEventData;
 use App\Support\Calendar\Providers\CalDavProvider;
 use App\Support\Calendar\Providers\PulledChanges;
+use App\Support\Calendar\Providers\PulledEvent;
 use App\Support\Calendar\Providers\PushedEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -254,9 +255,11 @@ it('pulls changes parsing a 207 multistatus (changed + deleted + sync token)', f
 
     expect($changes)->toBeInstanceOf(PulledChanges::class)
         ->and($changes->changed)->toHaveCount(1)
-        ->and($changes->changed[0]['external_id'])->toContain('appointment-77@arkvel.test.ics')
-        ->and($changes->changed[0]['etag'])->toBe('"changed-etag"')
-        ->and($changes->changed[0]['uid'])->toBe('appointment-77@arkvel.test')
+        ->and($changes->changed[0])->toBeInstanceOf(PulledEvent::class)
+        ->and($changes->changed[0]->externalId)->toContain('appointment-77@arkvel.test.ics')
+        ->and($changes->changed[0]->etag)->toBe('"changed-etag"')
+        // appointmentId ricavato dall'UID (via href {uid}.ics quando il multiget non porta corpo).
+        ->and($changes->changed[0]->appointmentId)->toBe(77)
         ->and($changes->deletedExternalIds)->toHaveCount(1)
         ->and($changes->deletedExternalIds[0])->toContain('appointment-88@arkvel.test.ics')
         ->and($changes->newSyncToken)->toBe('https://caldav.example.test/sync/2');
@@ -264,6 +267,52 @@ it('pulls changes parsing a 207 multistatus (changed + deleted + sync token)', f
     // Il REPORT è partito col metodo giusto e le credenziali Basic.
     Http::assertSent(fn (Request $request): bool => $request->method() === 'REPORT'
         && $request->hasHeader('Authorization', 'Basic '.base64_encode('agent@example.test:app-secret-password')));
+});
+
+it('reads start, status and appointment id from the calendar-multiget body', function () {
+    $href = '/dav/calendars/user/agent@example.test/work/appointment-99@arkvel.test.ics';
+
+    $syncCollection = <<<XML
+    <?xml version="1.0" encoding="utf-8"?>
+    <d:multistatus xmlns:d="DAV:">
+      <d:response>
+        <d:href>{$href}</d:href>
+        <d:propstat><d:prop><d:getetag>"e99"</d:getetag></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+      </d:response>
+      <d:sync-token>https://caldav.example.test/sync/9</d:sync-token>
+    </d:multistatus>
+    XML;
+
+    // Il secondo REPORT (calendar-multiget) porta il corpo VEVENT: start/status/uid.
+    $multiget = <<<XML
+    <?xml version="1.0" encoding="utf-8"?>
+    <d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
+      <d:response>
+        <d:href>{$href}</d:href>
+        <d:propstat><d:prop>
+          <d:getetag>"e99"</d:getetag>
+          <cal:calendar-data>BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:appointment-99@arkvel.test\r\nDTSTART:20260115T140000Z\r\nSTATUS:CONFIRMED\r\nEND:VEVENT\r\nEND:VCALENDAR</cal:calendar-data>
+        </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+      </d:response>
+    </d:multistatus>
+    XML;
+
+    Http::fake([
+        'caldav.example.test/*' => Http::sequence()
+            ->push($syncCollection, 207)
+            ->push($multiget, 207),
+    ]);
+
+    $connection = CalendarConnection::factory()->calDav()->create(['sync_token' => 'prev']);
+
+    $changes = app(CalDavProvider::class)->pullChanges($connection);
+
+    expect($changes->changed)->toHaveCount(1)
+        ->and($changes->changed[0]->appointmentId)->toBe(99)
+        ->and($changes->changed[0]->status)->toBe('confirmed')
+        ->and($changes->changed[0]->start)->not->toBeNull()
+        ->and($changes->changed[0]->start->equalTo(Carbon::parse('2026-01-15 14:00:00', 'UTC')))->toBeTrue()
+        ->and($changes->newSyncToken)->toBe('https://caldav.example.test/sync/9');
 });
 
 it('sends the saved sync-token in the sync-collection REPORT body', function () {

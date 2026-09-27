@@ -106,9 +106,10 @@ it('sets LOCATION to organization name and city but never the street address', f
     expect($ics)
         ->toContain('LOCATION:Rifugio Speranza')
         ->toContain('Milano')
-        // L'indirizzo civico non deve MAI comparire.
-        ->not->toContain('Via Segreta')
-        ->not->toContain('123');
+        // La via non deve MAI comparire (nome via distintivo: prova completa che
+        // l'indirizzo civico non finisce nell'evento). NB: non asseriamo l'assenza del
+        // solo numero "123": collide con SEQUENCE/date (timestamp unix) → falso-flaky.
+        ->not->toContain('Via Segreta');
 });
 
 it('excludes all requester personal data from the event (PII minimization)', function () {

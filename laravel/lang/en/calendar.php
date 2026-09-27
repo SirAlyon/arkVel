@@ -66,4 +66,10 @@ return [
         'disconnect_submit' => 'Disconnect',
         'disconnect_done' => 'Calendar disconnected.',
     ],
+
+    // Pull reconciliation (Cal-7): external calendar changes reflected back into ArkVel.
+    'reconcile' => [
+        'cancelled_externally' => 'Appointment cancelled from the external calendar.',
+        'command_summary' => 'Calendar sync: :connections connections, :rescheduled rescheduled, :cancelled cancelled.',
+    ],
 ];
