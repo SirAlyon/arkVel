@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Auth;
 
 /**
  * Azioni di gestione degli appuntamenti offerte allo STAFF dell'ente nell'UI
- * (table + header della view). Specchio di StaffFosterTransitions/FosterApplicationsTable.
+ * (table + header della view + calendario). Specchio di StaffFosterTransitions.
  *
  * Ogni azione è DISCRETA e nominata (Conferma / Completa / Assenza / Annulla),
  * NON un Select generico: il grafo dell'appuntamento è piccolo e le transizioni
@@ -40,6 +40,11 @@ use Illuminate\Support\Facades\Auth;
  * viene comunque ri-valutata nell'Action; se scatta a runtime,
  * InvalidAppointmentTransition è intercettata e mostrata come notifica danger,
  * senza propagare (nessun 500, stato invariato).
+ *
+ * RIUSO — le quattro *closure* di delega (perform*) e l'handling delle eccezioni
+ * sono estratte in helper statici, così tanto la table quanto il calendario
+ * (dove le stesse azioni sono annidate in un modale) condividono l'unica logica di
+ * transizione, senza duplicarla.
  */
 final class StaffAppointmentActions
 {
@@ -59,17 +64,7 @@ final class StaffAppointmentActions
             ->modalSubmitActionLabel(__('appointments.shelter.confirm_submit'))
             ->authorize('update')
             ->visible(fn (Appointment $record): bool => $record->status->canTransitionTo(AppointmentStatus::Confirmed))
-            ->action(function (Appointment $record): void {
-                try {
-                    app(ConfirmAppointment::class)->handle($record, self::actor());
-                } catch (InvalidAppointmentTransition $exception) {
-                    self::notifyFailure(__('appointments.shelter.confirm_failed'), $exception->getMessage());
-
-                    return;
-                }
-
-                self::notifySuccess(__('appointments.shelter.confirm_done'));
-            });
+            ->action(fn (Appointment $record) => self::performConfirm($record));
     }
 
     /**
@@ -88,17 +83,7 @@ final class StaffAppointmentActions
             ->modalSubmitActionLabel(__('appointments.shelter.complete_submit'))
             ->authorize('update')
             ->visible(fn (Appointment $record): bool => $record->status->canTransitionTo(AppointmentStatus::Completed))
-            ->action(function (Appointment $record): void {
-                try {
-                    app(CompleteAppointment::class)->handle($record, self::actor());
-                } catch (InvalidAppointmentTransition $exception) {
-                    self::notifyFailure(__('appointments.shelter.complete_failed'), $exception->getMessage());
-
-                    return;
-                }
-
-                self::notifySuccess(__('appointments.shelter.complete_done'));
-            });
+            ->action(fn (Appointment $record) => self::performComplete($record));
     }
 
     /**
@@ -117,17 +102,7 @@ final class StaffAppointmentActions
             ->modalSubmitActionLabel(__('appointments.shelter.no_show_submit'))
             ->authorize('update')
             ->visible(fn (Appointment $record): bool => $record->status->canTransitionTo(AppointmentStatus::NoShow))
-            ->action(function (Appointment $record): void {
-                try {
-                    app(MarkAppointmentNoShow::class)->handle($record, self::actor());
-                } catch (InvalidAppointmentTransition $exception) {
-                    self::notifyFailure(__('appointments.shelter.no_show_failed'), $exception->getMessage());
-
-                    return;
-                }
-
-                self::notifySuccess(__('appointments.shelter.no_show_done'));
-            });
+            ->action(fn (Appointment $record) => self::performNoShow($record));
     }
 
     /**
@@ -152,21 +127,78 @@ final class StaffAppointmentActions
                     ->rows(3)
                     ->maxLength(2000),
             ])
-            ->action(function (Appointment $record, array $data): void {
-                $reason = ($data['reason'] ?? null) !== null && $data['reason'] !== ''
-                    ? (string) $data['reason']
-                    : null;
+            ->action(fn (Appointment $record, array $data) => self::performCancel($record, $data));
+    }
 
-                try {
-                    app(CancelAppointment::class)->handle($record, self::actor(), $reason);
-                } catch (InvalidAppointmentTransition $exception) {
-                    self::notifyFailure(__('appointments.shelter.cancel_failed'), $exception->getMessage());
+    /**
+     * Delega a ConfirmAppointment, intercettando la transizione illegale come
+     * notifica danger (nessun 500, stato invariato).
+     */
+    public static function performConfirm(Appointment $record): void
+    {
+        try {
+            app(ConfirmAppointment::class)->handle($record, self::actor());
+        } catch (InvalidAppointmentTransition $exception) {
+            self::notifyFailure(__('appointments.shelter.confirm_failed'), $exception->getMessage());
 
-                    return;
-                }
+            return;
+        }
 
-                self::notifySuccess(__('appointments.shelter.cancel_done'));
-            });
+        self::notifySuccess(__('appointments.shelter.confirm_done'));
+    }
+
+    /**
+     * Delega a CompleteAppointment (con la stessa protezione della confirm).
+     */
+    public static function performComplete(Appointment $record): void
+    {
+        try {
+            app(CompleteAppointment::class)->handle($record, self::actor());
+        } catch (InvalidAppointmentTransition $exception) {
+            self::notifyFailure(__('appointments.shelter.complete_failed'), $exception->getMessage());
+
+            return;
+        }
+
+        self::notifySuccess(__('appointments.shelter.complete_done'));
+    }
+
+    /**
+     * Delega a MarkAppointmentNoShow (con la stessa protezione della confirm).
+     */
+    public static function performNoShow(Appointment $record): void
+    {
+        try {
+            app(MarkAppointmentNoShow::class)->handle($record, self::actor());
+        } catch (InvalidAppointmentTransition $exception) {
+            self::notifyFailure(__('appointments.shelter.no_show_failed'), $exception->getMessage());
+
+            return;
+        }
+
+        self::notifySuccess(__('appointments.shelter.no_show_done'));
+    }
+
+    /**
+     * Delega a CancelAppointment con la motivazione facoltativa raccolta dal modale.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function performCancel(Appointment $record, array $data): void
+    {
+        $reason = ($data['reason'] ?? null) !== null && $data['reason'] !== ''
+            ? (string) $data['reason']
+            : null;
+
+        try {
+            app(CancelAppointment::class)->handle($record, self::actor(), $reason);
+        } catch (InvalidAppointmentTransition $exception) {
+            self::notifyFailure(__('appointments.shelter.cancel_failed'), $exception->getMessage());
+
+            return;
+        }
+
+        self::notifySuccess(__('appointments.shelter.cancel_done'));
     }
 
     /**

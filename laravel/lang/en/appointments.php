@@ -195,4 +195,30 @@ return [
         'empty_title' => 'No appointments',
         'empty_body' => 'When someone books a visit for one of your animals, the appointment will appear here.',
     ],
+
+    // Appointments calendar on the organization panel (primary agenda view).
+    'calendar' => [
+        'nav' => 'Calendar',
+        'title' => 'Appointments calendar',
+        // Calendar event title: "{type}: {animal}".
+        'event_title' => ':type: :animal',
+        // Modal opened when clicking an event.
+        'manage_heading' => 'Appointment details',
+        'close' => 'Close',
+        // Calendar toolbar labels (rendered client-side).
+        'toolbar' => [
+            'today' => 'Today',
+            'month' => 'Month',
+            'week' => 'Week',
+            'day' => 'Day',
+        ],
+        // Colour legend by status.
+        'legend' => [
+            'requested' => 'Requested',
+            'confirmed' => 'Confirmed',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled',
+            'no_show' => 'No-show',
+        ],
+    ],
 ];

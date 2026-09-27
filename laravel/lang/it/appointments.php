@@ -195,4 +195,30 @@ return [
         'empty_title' => 'Nessun appuntamento',
         'empty_body' => 'Quando qualcuno prenota una visita per uno dei tuoi animali, l\'appuntamento comparirà qui.',
     ],
+
+    // Calendario appuntamenti del pannello ente (vista primaria dell'agenda).
+    'calendar' => [
+        'nav' => 'Calendario',
+        'title' => 'Calendario appuntamenti',
+        // Titolo dell'evento nel calendario: "{tipo}: {animale}".
+        'event_title' => ':type: :animal',
+        // Modale aperto al click su un evento.
+        'manage_heading' => 'Dettaglio appuntamento',
+        'close' => 'Chiudi',
+        // Etichette della toolbar del calendario (rese lato client).
+        'toolbar' => [
+            'today' => 'Oggi',
+            'month' => 'Mese',
+            'week' => 'Settimana',
+            'day' => 'Giorno',
+        ],
+        // Legenda dei colori per stato.
+        'legend' => [
+            'requested' => 'Richiesto',
+            'confirmed' => 'Confermato',
+            'completed' => 'Completato',
+            'cancelled' => 'Annullato',
+            'no_show' => 'Assente',
+        ],
+    ],
 ];
