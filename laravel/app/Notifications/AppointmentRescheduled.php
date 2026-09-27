@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\Appointment;
+use App\Support\Calendar\AppointmentCalendarExport;
 use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -57,6 +58,13 @@ final class AppointmentRescheduled extends Notification implements ShouldQueue
             ->action(
                 __('appointments.rescheduled.action'),
                 url('/account'),
+            )
+            // Allega il singolo evento .ics aggiornato (nuovo orario, PII minimizzata):
+            // l'UID stabile fa sì che il client AGGIORNI l'evento invece di duplicarlo.
+            ->attachData(
+                app(AppointmentCalendarExport::class)->single($this->appointment),
+                'appointment.ics',
+                ['mime' => 'text/calendar'],
             )
             ->salutation(__('appointments.rescheduled.salutation'));
     }

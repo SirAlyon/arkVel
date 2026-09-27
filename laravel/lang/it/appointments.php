@@ -254,4 +254,31 @@ return [
             'no_show' => 'Assente',
         ],
     ],
+
+    // Contenuto dell'evento iCalendar (.ics) — minimizzato per privacy: niente
+    // contatti del richiedente, niente indirizzo civico dell'ente.
+    'ics' => [
+        // Titolo dell'evento: "{tipo}: {animale}" — es. "Visita: Rex".
+        'summary' => ':type: :animal',
+        // Descrizione minimale: tipo + animale, nessun dato personale.
+        'description' => 'Appuntamento :type per :animal.',
+        // Etichetta del pulsante di download del singolo evento.
+        'download' => 'Aggiungi al calendario',
+    ],
+
+    // Feed iCal d'ente in sottoscrizione (pannello ente).
+    'feed' => [
+        'action' => 'Feed iCal',
+        'heading' => 'Sottoscrivi il calendario',
+        'description' => 'Copia questo indirizzo e incollalo nel tuo calendario (Google, Apple, Proton, Outlook) come "iscrizione a un URL". Gli appuntamenti dell\'ente compariranno e resteranno aggiornati.',
+        'url_label' => 'Indirizzo di sottoscrizione (segreto)',
+        'secret_notice' => 'Tratta questo indirizzo come una password: chi lo possiede può vedere gli appuntamenti dell\'ente. Non condividerlo pubblicamente.',
+        'close' => 'Chiudi',
+        // Rigenerazione/revoca del token.
+        'regenerate' => 'Rigenera / Revoca',
+        'regenerate_heading' => 'Rigenerare l\'indirizzo del feed?',
+        'regenerate_body' => 'Verrà creato un nuovo indirizzo e quello attuale smetterà di funzionare: dovrai aggiornare la sottoscrizione ovunque l\'hai inserito.',
+        'regenerate_submit' => 'Rigenera',
+        'regenerate_done' => 'Nuovo indirizzo del feed generato: quello precedente è stato revocato.',
+    ],
 ];

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\Appointment;
+use App\Support\Calendar\AppointmentCalendarExport;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -52,6 +53,14 @@ final class AppointmentConfirmed extends Notification implements ShouldQueue
             ->action(
                 __('appointments.confirmed.action'),
                 url('/account'),
+            )
+            // Allega il singolo evento .ics (PII minimizzata): i client di calendario
+            // lo rilevano e offrono "aggiungi al calendario". Il mapping/minimizzazione
+            // vive tutto in AppointmentCalendarExport.
+            ->attachData(
+                app(AppointmentCalendarExport::class)->single($this->appointment),
+                'appointment.ics',
+                ['mime' => 'text/calendar'],
             )
             ->salutation(__('appointments.confirmed.salutation'));
     }

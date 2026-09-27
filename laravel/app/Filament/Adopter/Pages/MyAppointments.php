@@ -104,6 +104,16 @@ class MyAppointments extends Page implements HasTable
                     ->sortable(),
             ])
             ->recordActions([
+                // Download .ics del singolo appuntamento (proprietario). Link alla
+                // rotta gated da Policy (view): l'utente è il proprietario, quindi
+                // autorizzato. Apre in nuova scheda: il browser scarica il file e il
+                // client di calendario lo importa.
+                Action::make('ics')
+                    ->label(__('appointments.ics.download'))
+                    ->icon(Heroicon::OutlinedCalendarDays)
+                    ->color('gray')
+                    ->url(fn (Appointment $record): string => route('appointments.ics', $record))
+                    ->openUrlInNewTab(),
                 Action::make('cancel')
                     ->label(__('appointments.my.cancel'))
                     ->icon(Heroicon::OutlinedXCircle)

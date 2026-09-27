@@ -254,4 +254,31 @@ return [
             'no_show' => 'No-show',
         ],
     ],
+
+    // iCalendar (.ics) event content — privacy-minimized: no requester contacts,
+    // no organization street address.
+    'ics' => [
+        // Event title: "{type}: {animal}" — e.g. "Visit: Rex".
+        'summary' => ':type: :animal',
+        // Minimal description: type + animal, no personal data.
+        'description' => ':type appointment for :animal.',
+        // Single-event download button label.
+        'download' => 'Add to calendar',
+    ],
+
+    // Organization iCal subscription feed (shelter panel).
+    'feed' => [
+        'action' => 'iCal feed',
+        'heading' => 'Subscribe to the calendar',
+        'description' => 'Copy this address and paste it into your calendar (Google, Apple, Proton, Outlook) as "subscribe to a URL". The organization\'s appointments will appear and stay up to date.',
+        'url_label' => 'Subscription address (secret)',
+        'secret_notice' => 'Treat this address like a password: anyone who has it can see the organization\'s appointments. Do not share it publicly.',
+        'close' => 'Close',
+        // Token regeneration/revocation.
+        'regenerate' => 'Regenerate / Revoke',
+        'regenerate_heading' => 'Regenerate the feed address?',
+        'regenerate_body' => 'A new address will be created and the current one will stop working: you will need to update the subscription wherever you added it.',
+        'regenerate_submit' => 'Regenerate',
+        'regenerate_done' => 'New feed address generated: the previous one has been revoked.',
+    ],
 ];

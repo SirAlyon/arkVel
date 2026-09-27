@@ -27,6 +27,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
@@ -146,6 +147,103 @@ class AppointmentCalendar extends Page
 
         return $user->can(PermissionName::AppointmentManage->value)
             && $user->isVerifiedMemberOf($tenant);
+    }
+
+    /**
+     * Azioni di intestazione della pagina: gestione del feed iCal in sottoscrizione.
+     * Visibili SOLO a chi può gestire ({@see canManageAppointments()}) — il volontario
+     * (sola vista) non espone né rigenera il segreto del feed.
+     *
+     * @return array<Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        if (! $this->canManageAppointments()) {
+            return [];
+        }
+
+        return [
+            $this->feedAction(),
+        ];
+    }
+
+    /**
+     * Mostra l'URL di sottoscrizione del feed iCal (sola lettura, copiabile) con la
+     * spiegazione, e offre la rigenerazione/revoca del token come footer del modale.
+     *
+     * Il token è GENERATO ALLA PRIMA APERTURA ({@see Organization::ensureCalendarFeedToken()}):
+     * il segreto nasce solo quando lo staff ne ha davvero bisogno. Autorizzata sulla
+     * capacità di gestione (ri-verificata anche in getHeaderActions).
+     */
+    private function feedAction(): Action
+    {
+        return Action::make('calendarFeed')
+            ->label(__('appointments.feed.action'))
+            ->icon(Heroicon::OutlinedRss)
+            ->authorize(fn (): bool => $this->canManageAppointments())
+            ->modalHeading(__('appointments.feed.heading'))
+            ->modalDescription(__('appointments.feed.description'))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('appointments.feed.close'))
+            ->fillForm(fn (): array => ['feed_url' => $this->currentFeedUrl()])
+            ->schema([
+                TextInput::make('feed_url')
+                    ->label(__('appointments.feed.url_label'))
+                    ->readOnly()
+                    ->helperText(__('appointments.feed.secret_notice')),
+            ])
+            ->extraModalFooterActions([
+                Action::make('regenerateCalendarFeed')
+                    ->label(__('appointments.feed.regenerate'))
+                    ->color('danger')
+                    ->icon(Heroicon::OutlinedArrowPath)
+                    ->requiresConfirmation()
+                    ->modalHeading(__('appointments.feed.regenerate_heading'))
+                    ->modalDescription(__('appointments.feed.regenerate_body'))
+                    ->modalSubmitActionLabel(__('appointments.feed.regenerate_submit'))
+                    ->authorize(fn (): bool => $this->canManageAppointments())
+                    ->action(function (): void {
+                        $this->regenerateFeed();
+                    }),
+            ]);
+    }
+
+    /**
+     * URL del feed del tenant corrente, generando il token alla prima richiesta.
+     * Ritorna stringa vuota se manca il tenant (non dovrebbe accadere: la pagina è
+     * gated su membership verificata).
+     */
+    private function currentFeedUrl(): string
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant instanceof Organization) {
+            return '';
+        }
+
+        $tenant->ensureCalendarFeedToken();
+
+        return $tenant->calendarFeedUrl() ?? '';
+    }
+
+    /**
+     * Rigenera il token del feed del tenant corrente (revoca il vecchio URL) e
+     * notifica. Ricontrolla la capacità di gestione lato server prima di mutare.
+     */
+    private function regenerateFeed(): void
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant instanceof Organization || ! $this->canManageAppointments()) {
+            return;
+        }
+
+        $tenant->regenerateCalendarFeedToken();
+
+        Notification::make()
+            ->title(__('appointments.feed.regenerate_done'))
+            ->success()
+            ->send();
     }
 
     /**
@@ -528,7 +626,7 @@ class AppointmentCalendar extends Page
 
         $appointment = $this->resolveTenantAppointment($arguments);
 
-        return array_map(
+        $transitions = array_map(
             fn (Action $action): Action => $action
                 ->record($appointment)
                 ->after(fn () => $this->dispatch('calendar-refresh')),
@@ -539,6 +637,18 @@ class AppointmentCalendar extends Page
                 StaffAppointmentActions::cancelAction()->name('cancelAppointment'),
             ],
         );
+
+        // Download .ics del singolo appuntamento: link alla rotta gated da Policy
+        // (view) — lo staff verificato del tenant è autorizzato. Apre in nuova scheda
+        // (download del file), non una transizione: nessun after-refresh.
+        $transitions[] = Action::make('icsDownload')
+            ->label(__('appointments.ics.download'))
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->color('gray')
+            ->url(route('appointments.ics', $appointment))
+            ->openUrlInNewTab();
+
+        return $transitions;
     }
 
     /**
