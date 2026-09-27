@@ -20,9 +20,11 @@ it('resolves the log provider from the container binding', function () {
 });
 
 it('throws a clear exception for an unregistered provider', function () {
-    $registry = app(CalendarProviderRegistry::class);
+    // Registro VUOTO: verifichiamo il comportamento del registro in sé, a prescindere
+    // da quali provider siano legati nel container (Google/CalDAV vengono registrati
+    // dai rispettivi slice). Un provider non registrato deve sollevare un errore chiaro.
+    $registry = new CalendarProviderRegistry;
 
-    // Google non è ancora registrato in Cal-4.
     expect($registry->has(CalendarProvider::Google))->toBeFalse();
 
     $registry->for(CalendarProvider::Google);

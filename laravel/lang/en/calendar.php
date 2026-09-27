@@ -31,11 +31,19 @@ return [
         'connect_demo_name' => 'Demo calendar',
         'connect_demo_done' => 'Demo connection created: appointments will be synced.',
 
-        // Actions: real connections not available yet (placeholders).
+        // Actions: real connections.
         'connect_google' => 'Connect Google Calendar',
         'connect_caldav' => 'Connect CalDAV',
         'coming_soon' => 'Coming soon',
-        'coming_soon_notice' => 'Google Calendar and CalDAV connections will be available in a future update.',
+        'coming_soon_notice' => 'CalDAV connections will be available in a future update.',
+
+        // Google Calendar flow (Cal-5).
+        'google' => [
+            'name' => 'Google Calendar',
+            'not_configured' => 'To enable Google Calendar, set the GOOGLE_CALENDAR_* variables in the server configuration.',
+            'connected' => 'Google Calendar connected: appointments will be synced.',
+            'error' => 'Could not complete the Google Calendar connection. Please try again.',
+        ],
 
         // Action: disconnect.
         'disconnect' => 'Disconnect',

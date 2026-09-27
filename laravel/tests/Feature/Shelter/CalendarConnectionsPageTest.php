@@ -112,7 +112,9 @@ it('denies a volunteer authorization to manage a connection (policy)', function 
         ->and($volunteer->can('delete', $connection))->toBeFalse();
 });
 
-it('exposes the real provider connect actions as disabled placeholders', function () {
+it('disables the Google connect action when unconfigured and CalDAV as a placeholder', function () {
+    // In test GOOGLE_CALENDAR_* è assente: l'azione Google è disabilitata perché non
+    // configurata (config-gating). CalDAV è ancora un placeholder (arriva in Cal-6).
     $org = Organization::factory()->verified()->create();
     $staff = member($org, MembershipRole::Staff);
     actAsInTenant($staff, $org);

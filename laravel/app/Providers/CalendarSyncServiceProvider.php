@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Support\Calendar\CalendarProviderRegistry;
+use App\Support\Calendar\Providers\GoogleCalendarProvider;
 use App\Support\Calendar\Providers\LogCalendarProvider;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -30,7 +31,12 @@ class CalendarSyncServiceProvider extends ServiceProvider
             // Provider demo/log: unico realmente utilizzabile senza credenziali (Cal-4).
             $registry->register($app->make(LogCalendarProvider::class));
 
-            // Cal-5: $registry->register($app->make(GoogleCalendarProvider::class));
+            // Google Calendar (Cal-5): registrato SEMPRE, ma inerte finché non configurato
+            // (i suoi metodi di rete sollevano CalendarProviderNotConfigured e la UI
+            // disabilita la connessione). Così una connessione Google esistente è risolta
+            // dal registry e il config-gating vive nel provider, non qui.
+            $registry->register($app->make(GoogleCalendarProvider::class));
+
             // Cal-6: $registry->register($app->make(CalDavCalendarProvider::class));
 
             return $registry;

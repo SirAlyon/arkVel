@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\CalendarFeedController;
+use App\Http\Controllers\GoogleCalendarConnectController;
 use App\Livewire\AnimalCatalog;
 use App\Livewire\AnimalDetail;
 use App\Livewire\Home;
@@ -34,18 +35,35 @@ Route::get('/enti', OrganizationIndex::class)->name('organizations.index');
 Route::get('/enti/{organization:slug}', OrganizationPage::class)->name('organizations.show');
 
 /*
+ | Connessione OAuth a Google Calendar (Cal-5).
+ |
+ |  - /calendar/google/redirect   avvia il consenso OAuth (autorizza sul tenant,
+ |                                salva state+tenant in sessione, → Google)
+ |  - /calendar/google/callback   riceve il code, crea/aggiorna la connessione Google
+ |
+ | Entrambe dietro `auth`. Girano FUORI dal contesto URL del pannello: il tenant è
+ | risolto dalla sessione/parametro, MAI dall'URL, e `calendar.manage` è ri-verificato
+ | con il team id allineato al tenant (nessun collegamento a un ente altrui).
+ | Config-gated: senza credenziali OAuth la redirect risponde 404.
+ |
+ | IMPORTANTE: queste rotte specifiche vanno DICHIARATE PRIMA del feed wildcard
+ | `/calendar/{organization}/{token}`, altrimenti quest'ultimo cattura
+ | `/calendar/google/redirect` (organization=google, token=redirect).
+ */
+Route::middleware('auth')->group(function (): void {
+    Route::get('/calendar/google/redirect', [GoogleCalendarConnectController::class, 'redirect'])
+        ->name('calendar.google.redirect');
+
+    Route::get('/calendar/google/callback', [GoogleCalendarConnectController::class, 'callback'])
+        ->name('calendar.google.callback');
+});
+
+/*
  | Export iCalendar (Cal-3).
- |
- |  - /calendar/{organization}/{token}          feed d'ente in sottoscrizione
- |    Pubblico ma protetto da un SEGRETO nell'URL (confronto a tempo costante nel
- |    controller); rate-limited. L'ente è risolto per slug o id nel controller
- |    (niente model binding: il 404 su token errato deve restare indistinguibile).
- |  - /appointments/{appointment}/calendar.ics  download .ics del singolo evento
- |    Dietro auth + Policy (view): proprietario o staff verificato dell'ente.
- |
- | Entrambe delegano a CalendarFeedController → AppointmentCalendarExport (PII
- | minimizzata). La rotta del singolo evento è "calendar.ics" per usare route()
- | dalle pagine/notifiche; il feed è "calendar.feed".
+ |  - feed d'ente in sottoscrizione: pubblico ma protetto da un SEGRETO nell'URL
+ |    (confronto a tempo costante nel controller); rate-limited; ente risolto per
+ |    slug/id nel controller (niente model binding: 404 su token errato indistinguibile).
+ |  - download .ics del singolo evento: dietro auth + Policy view.
  */
 Route::get('/calendar/{organization}/{token}', [CalendarFeedController::class, 'feed'])
     // I client di calendario fanno polling ogni 15-60 min: 20 richieste/minuto per IP

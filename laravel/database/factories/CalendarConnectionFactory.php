@@ -58,6 +58,26 @@ class CalendarConnectionFactory extends Factory
         return $this->provider(CalendarProvider::Log);
     }
 
+    /**
+     * Connessione Google con credenziali cifrate pronte all'uso: access token FRESCO
+     * (scadenza futura), refresh token e calendario 'primary'. I test possono comunque
+     * sovrascrivere `credentials`/`sync_token` per esercitare refresh e pull.
+     */
+    public function google(): static
+    {
+        return $this->provider(CalendarProvider::Google)->state(fn (array $attributes): array => [
+            'name' => 'Google Calendar',
+            'external_calendar_id' => 'primary',
+            'credentials' => [
+                'access_token' => 'fresh-access-token',
+                'refresh_token' => 'refresh-token',
+                'expires_at' => now()->addHour()->toIso8601String(),
+                'scope' => 'https://www.googleapis.com/auth/calendar.events',
+                'token_type' => 'Bearer',
+            ],
+        ]);
+    }
+
     public function active(): static
     {
         return $this->state(fn (array $attributes): array => [

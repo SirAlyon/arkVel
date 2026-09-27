@@ -11,6 +11,7 @@ use App\Models\CalendarConnection;
 use App\Models\Organization;
 use App\Models\User;
 use App\Policies\CalendarConnectionPolicy;
+use App\Support\Calendar\Google\GoogleOAuth;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -71,6 +72,25 @@ class CalendarConnections extends Page implements HasTable
     public function getSubheading(): ?string
     {
         return __('calendar.connections.subheading');
+    }
+
+    /**
+     * Traduce i flash del callback OAuth ({@see GoogleCalendarConnectController}) in
+     * notifiche Filament: l'utente torna qui dal consenso Google e vede l'esito.
+     */
+    public function mount(): void
+    {
+        $success = session('calendar_success');
+
+        if (is_string($success)) {
+            Notification::make()->success()->title($success)->send();
+        }
+
+        $error = session('calendar_error');
+
+        if (is_string($error)) {
+            Notification::make()->danger()->title($error)->send();
+        }
     }
 
     /**
@@ -180,16 +200,36 @@ class CalendarConnections extends Page implements HasTable
     }
 
     /**
-     * Placeholder del flusso Google (Cal-5): visibile ma DISABILITATO, con avviso.
+     * Connessione Google Calendar (Cal-5): avvia il flusso OAuth quando l'installazione è
+     * configurata ({@see GoogleOAuth::configured()}); altrimenti resta DISABILITATA con un
+     * avviso localizzato che invita a impostare le variabili GOOGLE_CALENDAR_*. Gated
+     * comunque dalla policy (create) + tenant risolto.
      */
     private function connectGoogleAction(): Action
     {
-        return Action::make('connectGoogle')
+        $configured = GoogleOAuth::configured();
+
+        $action = Action::make('connectGoogle')
             ->label(__('calendar.connections.connect_google'))
             ->icon(Heroicon::OutlinedCalendarDays)
-            ->color('gray')
-            ->disabled()
-            ->tooltip(__('calendar.connections.coming_soon'));
+            ->authorize(fn (): bool => Auth::user()?->can('create', CalendarConnection::class) === true);
+
+        if (! $configured) {
+            return $action
+                ->color('gray')
+                ->disabled()
+                ->tooltip(__('calendar.connections.google.not_configured'));
+        }
+
+        return $action
+            ->color('primary')
+            ->url(function (): ?string {
+                $tenant = Filament::getTenant();
+
+                return $tenant instanceof Organization
+                    ? route('calendar.google.redirect', ['tenant' => $tenant->slug])
+                    : null;
+            });
     }
 
     /**

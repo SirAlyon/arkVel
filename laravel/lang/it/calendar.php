@@ -31,11 +31,19 @@ return [
         'connect_demo_name' => 'Calendario dimostrativo',
         'connect_demo_done' => 'Connessione dimostrativa creata: gli appuntamenti verranno sincronizzati.',
 
-        // Azioni: connessioni reali non ancora disponibili (placeholder).
+        // Azioni: connessioni reali.
         'connect_google' => 'Connetti Google Calendar',
         'connect_caldav' => 'Connetti CalDAV',
         'coming_soon' => 'Disponibile a breve',
-        'coming_soon_notice' => 'La connessione con Google Calendar e CalDAV sarà disponibile in un aggiornamento successivo.',
+        'coming_soon_notice' => 'La connessione con CalDAV sarà disponibile in un aggiornamento successivo.',
+
+        // Flusso Google Calendar (Cal-5).
+        'google' => [
+            'name' => 'Google Calendar',
+            'not_configured' => 'Per abilitare Google Calendar imposta le variabili GOOGLE_CALENDAR_* nella configurazione del server.',
+            'connected' => 'Google Calendar collegato: gli appuntamenti verranno sincronizzati.',
+            'error' => 'Impossibile completare il collegamento a Google Calendar. Riprova.',
+        ],
 
         // Azione: disconnetti.
         'disconnect' => 'Disconnetti',

@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    /*
+    | Google Calendar (Cal-5). Config-gated: senza client_id/client_secret la
+    | funzione di connessione resta INERTE (UI disabilitata, provider che solleva
+    | CalendarProviderNotConfigured). Nessun segreto nel repo: solo env.
+    | `redirect` è la callback OAuth registrata in Google Cloud Console; il default
+    | punta alla rotta nominata `calendar.google.callback` risolta a runtime quando
+    | l'app URL è disponibile (config statica → il fallback resta null qui, la rotta
+    | viene risolta nel controller).
+    */
+    'google_calendar' => [
+        'client_id' => env('GOOGLE_CALENDAR_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CALENDAR_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_CALENDAR_REDIRECT_URI'),
+    ],
+
 ];
