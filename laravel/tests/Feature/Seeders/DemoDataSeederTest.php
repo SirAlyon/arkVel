@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\AnimalStatus;
 use App\Enums\AppointmentStatus;
+use App\Enums\CalendarProvider;
 use App\Enums\FosterApplicationStatus;
 use App\Enums\FosterPlacementStatus;
 use App\Enums\MembershipRole;
@@ -12,6 +13,7 @@ use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Models\Animal;
 use App\Models\Appointment;
+use App\Models\CalendarConnection;
 use App\Models\FosterApplication;
 use App\Models\FosterPlacement;
 use App\Models\MedicalRecord;
@@ -269,4 +271,12 @@ it('seeds medical records due for a reminder', function () {
     // Voci con next_due_at nella finestra e reminder_sent_at null: lo scadenzario
     // e arkvel:send-medical-reminders devono avere dati dimostrabili.
     expect(MedicalRecord::query()->dueForReminder(7)->exists())->toBeTrue();
+});
+
+it('seeds a demo (log) calendar connection so the sync UI is demonstrable', function () {
+    // Ogni ente demo ha una connessione calendario Log attiva: la pagina /manage
+    // "Connessioni calendario" e la pipeline di sync sono dimostrabili senza credenziali.
+    expect(CalendarConnection::query()->where('provider', CalendarProvider::Log)->count())
+        ->toBeGreaterThanOrEqual(3)
+        ->and(CalendarConnection::query()->active()->exists())->toBeTrue();
 });

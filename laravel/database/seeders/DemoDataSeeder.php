@@ -7,6 +7,9 @@ namespace Database\Seeders;
 use App\Actions\Organizations\AddOrganizationMember;
 use App\Enums\AnimalStatus;
 use App\Enums\AppointmentType;
+use App\Enums\CalendarConnectionStatus;
+use App\Enums\CalendarProvider;
+use App\Enums\CalendarSyncDirection;
 use App\Enums\FosterPlacementType;
 use App\Enums\MedicalRecordType;
 use App\Enums\MembershipRole;
@@ -16,6 +19,7 @@ use App\Enums\Species;
 use App\Models\AdopterProfile;
 use App\Models\Animal;
 use App\Models\Appointment;
+use App\Models\CalendarConnection;
 use App\Models\FosterApplication;
 use App\Models\FosterPlacement;
 use App\Models\MedicalRecord;
@@ -536,6 +540,30 @@ class DemoDataSeeder extends Seeder
         $this->seedFosterData($organization, $animals, $adopterList);
         $this->seedAppointments($organization, $animals, $adopterList);
         $this->seedMedicalDueDates($animals);
+        $this->seedCalendarConnection($organization);
+    }
+
+    /**
+     * Una connessione calendario DEMO (provider Log) per l'ente, così la pagina
+     * /manage "Connessioni calendario" e la pipeline di sync sono dimostrabili senza
+     * credenziali esterne (il provider Log registra i push nei log invece di chiamare
+     * un servizio reale). Google/CalDAV reali richiedono le credenziali dell'ente.
+     * Creata DOPO gli appuntamenti: le mutazioni successive la useranno, senza un
+     * flood di push in fase di seed. Idempotente (firstOrCreate).
+     */
+    private function seedCalendarConnection(Organization $organization): void
+    {
+        CalendarConnection::query()->firstOrCreate(
+            [
+                'organization_id' => $organization->getKey(),
+                'provider' => CalendarProvider::Log,
+            ],
+            [
+                'name' => 'Calendario demo (log)',
+                'direction' => CalendarSyncDirection::Both,
+                'status' => CalendarConnectionStatus::Active,
+            ],
+        );
     }
 
     /**
