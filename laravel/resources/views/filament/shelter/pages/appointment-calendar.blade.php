@@ -18,6 +18,73 @@
     fissa, quindi il resize è disattivato (eventDurationEditable: false).
 --}}
 <x-filament-panels::page>
+    {{--
+        FullCalendar v6 inietta un CSS a tema CHIARO (sfondi bianchi, testo scuro, bordi
+        chiari) che in dark mode "buca" il tema di Filament. Qui rimappiamo le sue CSS
+        custom properties (--fc-*) e i colori di testo/bottoni sotto `.dark` (classe che
+        Filament mette su <html>), così il calendario segue il tema. Il tema chiaro resta
+        quello di default. Scoping su `.fc`: tocca solo il calendario.
+    --}}
+    <style>
+        .dark .fc {
+            --fc-border-color: rgba(255, 255, 255, 0.10);
+            --fc-page-bg-color: transparent;
+            --fc-neutral-bg-color: rgba(255, 255, 255, 0.05);
+            --fc-neutral-text-color: rgb(209 213 219);
+            --fc-today-bg-color: rgba(245, 158, 11, 0.12);
+            --fc-highlight-color: rgba(255, 255, 255, 0.08);
+            --fc-list-event-hover-bg-color: rgba(255, 255, 255, 0.06);
+            --fc-event-text-color: #fff;
+            color: rgb(229 231 235);
+        }
+
+        .dark .fc a {
+            color: inherit;
+        }
+
+        .dark .fc .fc-col-header-cell-cushion,
+        .dark .fc .fc-daygrid-day-number,
+        .dark .fc .fc-timegrid-slot-label-cushion,
+        .dark .fc .fc-timegrid-axis-cushion,
+        .dark .fc .fc-list-day-text,
+        .dark .fc .fc-list-day-side-text,
+        .dark .fc .fc-toolbar-title {
+            color: rgb(243 244 246);
+        }
+
+        .dark .fc-theme-standard .fc-list-day-cushion {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .dark .fc .fc-list-empty {
+            background-color: transparent;
+        }
+
+        /* Bottoni della toolbar: neutri e leggibili sul fondo scuro. */
+        .dark .fc .fc-button-primary {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.14);
+            color: rgb(229 231 235);
+        }
+
+        .dark .fc .fc-button-primary:hover {
+            background-color: rgba(255, 255, 255, 0.14);
+        }
+
+        .dark .fc .fc-button-primary:disabled {
+            background-color: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.40);
+        }
+
+        .dark .fc .fc-button-primary:not(:disabled).fc-button-active,
+        .dark .fc .fc-button-primary:not(:disabled):active {
+            background-color: rgba(255, 255, 255, 0.20);
+            border-color: rgba(255, 255, 255, 0.28);
+            color: #fff;
+        }
+    </style>
+
     <div
         x-data="appointmentCalendar()"
         x-on:calendar-refresh.window="refresh()"
