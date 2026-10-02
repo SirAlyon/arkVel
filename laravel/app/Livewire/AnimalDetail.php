@@ -7,6 +7,8 @@ namespace App\Livewire;
 use App\Actions\Applications\SubmitApplication;
 use App\Actions\Appointments\RequestAppointment;
 use App\Actions\Fostering\SubmitFosterApplication;
+use App\Actions\Messaging\PostMessage;
+use App\Actions\Messaging\StartMessageThread;
 use App\Enums\AppointmentType;
 use App\Exceptions\AppointmentSlotUnavailable;
 use App\Exceptions\DuplicateApplication;
@@ -17,6 +19,7 @@ use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\Appointment;
 use App\Models\FosterApplication;
+use App\Models\MessageThread;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
@@ -121,6 +124,23 @@ class AnimalDetail extends Component
 
     #[Locked]
     public bool $fosterMessageIsError = false;
+
+    /**
+     * Corpo del primo messaggio del form "Contatta l'ente". Validato (presenza +
+     * lunghezza) prima di delegare all'Action; la guardia "corpo non vuoto" vive
+     * comunque anche nell'Action.
+     */
+    public string $contactBody = '';
+
+    /**
+     * Feedback in-place del ramo "Contatta l'ente" (successo o errore amichevole),
+     * mostrato accanto al form. Le redirezioni (ospite) usano il flash di sessione.
+     */
+    #[Locked]
+    public ?string $contactMessage = null;
+
+    #[Locked]
+    public bool $contactMessageIsError = false;
 
     public function mount(Animal $animal): void
     {
@@ -302,9 +322,75 @@ class AnimalDetail extends Component
     }
 
     /**
+     * Contatta l'ente che si prende cura di questo animale, scrivendo un primo
+     * messaggio. Specchio di {@see self::book()} (ramo con input):
+     *  - OSPITE       → redirect alla login adottante (intended = questa scheda).
+     *  - AUTENTICATO  → validazione del corpo + delega all'Action. Se esiste GIÀ una
+     *                   conversazione per (adottante, ente, animale) vi si POSTA il
+     *                   messaggio (PostMessage) invece di duplicarla; altrimenti se ne
+     *                   avvia una nuova (StartMessageThread). In entrambi i casi la
+     *                   controparte (staff dell'ente) viene notificata dall'Action.
+     *
+     * Non c'è guardia di profilo: contattare l'ente non richiede lo screening
+     * d'adozione, solo l'autenticazione. Componente sottile: autorizza (policy
+     * `create` sul thread), valida e delega; nessuna business logic qui.
+     */
+    public function contact(StartMessageThread $startMessageThread, PostMessage $postMessage): mixed
+    {
+        $user = Auth::user();
+
+        // OSPITE: instrada alla login del pannello adottante, memorizzando questa
+        // scheda come intended-URL per tornarci dopo l'autenticazione.
+        if (! $user instanceof User) {
+            session()->put('url.intended', route('animals.show', $this->animal));
+
+            return $this->redirectRoute('filament.adopter.auth.login', navigate: false);
+        }
+
+        // Autorizzazione: chiunque autenticato può avviare una conversazione (le
+        // guardie di dominio vivono nelle Action). Manteniamo il gancio alla policy.
+        $this->authorize('create', MessageThread::class);
+
+        // Validazione MIRATA del solo corpo: non usiamo $this->validate() (che
+        // valuterebbe anche le regole del form di prenotazione, un ramo diverso).
+        $validated = $this->validate(
+            ['contactBody' => ['required', 'string', 'max:5000']],
+            ['contactBody.required' => __('messaging.contact.empty')],
+        );
+        $body = (string) $validated['contactBody'];
+
+        // RIUSO: una conversazione per (adottante, ente, animale) non si duplica.
+        // Se esiste, vi si posta il nuovo messaggio; altrimenti se ne avvia una.
+        $existing = $this->existingThreadForContact($user);
+
+        if ($existing !== null) {
+            $postMessage->handle($existing, $user, $body);
+            $this->contactMessageIsError = false;
+            $this->contactMessage = __('messaging.contact.flash_appended');
+        } else {
+            $startMessageThread->handle(
+                author: $user,
+                organization: $this->animal->organization,
+                adopter: $user,
+                body: $body,
+                animal: $this->animal,
+            );
+            $this->contactMessageIsError = false;
+            $this->contactMessage = __('messaging.contact.flash_success');
+        }
+
+        $this->reset('contactBody');
+
+        return null;
+    }
+
+    /**
      * Regole di validazione del form di prenotazione. Il tipo è ristretto ai value
      * dell'enum {@see AppointmentType}; la data/ora deve solo essere presente e
-     * parsabile (la guardia "nel futuro" e l'overlap vivono nell'Action).
+     * parsabile (la guardia "nel futuro" e l'overlap vivono nell'Action). Il corpo
+     * del form "Contatta l'ente" è validato INLINE in {@see self::contact()} (ramo
+     * distinto), non qui: così $this->validate() in {@see self::book()} resta mirato
+     * al solo form di prenotazione.
      *
      * @return array<string, mixed>
      */
@@ -391,5 +477,20 @@ class AnimalDetail extends Component
             ->where('user_id', $user->getKey())
             ->where('animal_id', $this->animal->getKey())
             ->exists();
+    }
+
+    /**
+     * La conversazione già esistente per questa terna (adottante, ente, animale), o
+     * null. È il criterio di RIUSO del thread al ricontatto: nessun duplicato per la
+     * stessa pratica. Ownership-scoped per user_id: nessuna fuga cross-utente.
+     */
+    private function existingThreadForContact(User $user): ?MessageThread
+    {
+        return MessageThread::query()
+            ->where('user_id', $user->getKey())
+            ->where('organization_id', $this->animal->organization_id)
+            ->where('animal_id', $this->animal->getKey())
+            ->latest('last_message_at')
+            ->first();
     }
 }

@@ -156,6 +156,28 @@ class MessageThread extends Model
     }
 
     /**
+     * Thread con almeno un messaggio NON letto lato ENTE: esiste un messaggio
+     * dell'adottante (user_id = thread.user_id) creato dopo org_last_read_at (o con
+     * org_last_read_at nullo = mai letto). Query DB-side (EXISTS correlato) per il badge
+     * di navigazione: niente idratazione di tutti i thread+messaggi in memoria.
+     *
+     * @param  Builder<MessageThread>  $query
+     */
+    #[Scope]
+    protected function unreadForOrg(Builder $query): void
+    {
+        $query->whereHas('messages', function (Builder $messages): void {
+            $messages
+                ->whereColumn('messages.user_id', 'message_threads.user_id')
+                ->where(function (Builder $inner): void {
+                    $inner
+                        ->whereNull('message_threads.org_last_read_at')
+                        ->orWhereColumn('messages.created_at', '>', 'message_threads.org_last_read_at');
+                });
+        });
+    }
+
+    /**
      * Messaggi non letti per l'ADOTTANTE: inviati dall'ente (mittente diverso
      * dall'adottante) dopo l'ultima lettura dell'adottante. Semplice helper di
      * lettura, nessuna business logic.

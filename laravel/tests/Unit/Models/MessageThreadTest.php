@@ -148,3 +148,30 @@ it('does not count a side own messages as unread for that side', function () {
     expect($thread->unreadCountForAdopter())->toBe(0)
         ->and($thread->unreadCountForOrg())->toBe(2);
 });
+
+it('scopes unreadForOrg to threads with adopter messages after the org read marker', function () {
+    $org = Organization::factory()->create();
+    $adopter = User::factory()->create();
+    $staff = User::factory()->create();
+
+    // Thread A: messaggio dell'adottante mai letto dall'ente → NON letto.
+    $threadA = MessageThread::factory()->forOrganization($org)->forAdopter($adopter)
+        ->create(['org_last_read_at' => null]);
+    Message::factory()->forThread($threadA)->fromUser($adopter)->create();
+
+    // Thread B: ultimo messaggio dell'adottante PRIMA dell'ultima lettura ente → letto.
+    $threadB = MessageThread::factory()->forOrganization($org)->forAdopter($adopter)
+        ->create(['org_last_read_at' => now()]);
+    Message::factory()->forThread($threadB)->fromUser($adopter)->create(['created_at' => now()->subDay()]);
+
+    // Thread C: solo messaggi dello staff → non conta come non-letto per l'ente.
+    $threadC = MessageThread::factory()->forOrganization($org)->forAdopter($adopter)
+        ->create(['org_last_read_at' => null]);
+    Message::factory()->forThread($threadC)->fromUser($staff)->create();
+
+    $ids = MessageThread::query()->forOrganization($org)->unreadForOrg()->pluck('id');
+
+    expect($ids)->toContain($threadA->getKey())
+        ->not->toContain($threadB->getKey())
+        ->not->toContain($threadC->getKey());
+});
