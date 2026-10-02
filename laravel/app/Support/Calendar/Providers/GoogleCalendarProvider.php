@@ -96,6 +96,15 @@ final class GoogleCalendarProvider implements ExternalCalendarProvider
             return $this->insert($connection, $body);
         }
 
+        // 412 Precondition Failed: l'If-Match (etag) è stale perché l'evento è cambiato a
+        // monte. ArkVel è AUTORITATIVO sul push: riproviamo la PATCH SENZA If-Match per
+        // imporre la nostra versione, invece di far fallire (e marcare in errore) la
+        // connessione per un etag disallineato.
+        if ($response->status() === 412) {
+            $response = $this->request($connection)
+                ->patch($this->eventUrl($connection, $existingExternalId), $body);
+        }
+
         return $this->pushedFrom($this->ensureSuccessful($response));
     }
 
@@ -229,25 +238,32 @@ final class GoogleCalendarProvider implements ExternalCalendarProvider
     {
         $uid = is_string($body['iCalUID'] ?? null) ? $body['iCalUID'] : '';
 
+        // showDeleted=true è ESSENZIALE: un evento CANCELLATO con quello iCalUID provoca
+        // comunque il 409 sull'insert ma NON comparirebbe con showDeleted=false — era la
+        // causa del "nessun evento trovato" che mandava in errore la connessione.
         $lookup = $this->request($connection)->get($this->eventsUrl($connection), [
             'iCalUID' => $uid,
-            'showDeleted' => 'false',
+            'showDeleted' => 'true',
             'maxResults' => 1,
         ]);
 
         $items = $this->ensureSuccessful($lookup)->json('items');
         $existingId = is_array($items) && is_string($items[0]['id'] ?? null) ? $items[0]['id'] : null;
 
-        if ($existingId === null) {
-            throw new RuntimeException(sprintf(
-                'Google Calendar 409 su iCalUID %s ma nessun evento trovato per il recupero.',
-                $uid,
-            ));
-        }
-
-        // iCalUID non è modificabile via PATCH: va rimosso per non incorrere in un 400.
+        // iCalUID non è modificabile via PATCH/insert di recupero: va rimosso.
         unset($body['iCalUID']);
 
+        if ($existingId === null) {
+            // Nessun evento recuperabile (raro: purgato ma ancora in conflitto). Non
+            // facciamo fallire la connessione: inseriamo SENZA iCalUID — la
+            // riconciliazione (pull) resta possibile via extendedProperties.arkvel_appointment_id.
+            $response = $this->request($connection)->post($this->eventsUrl($connection), $body);
+
+            return $this->pushedFrom($this->ensureSuccessful($response));
+        }
+
+        // Evento esistente (anche se cancellato): lo AGGIORNIAMO, riportandolo allo stato
+        // corrente (un evento cancellato torna confirmed/tentative secondo il body).
         $response = $this->request($connection)->patch($this->eventUrl($connection, $existingId), $body);
 
         return $this->pushedFrom($this->ensureSuccessful($response));

@@ -111,4 +111,18 @@ class CalendarConnection extends Model
     {
         $query->where('status', CalendarConnectionStatus::Active);
     }
+
+    /**
+     * Connessioni SINCRONIZZABILI dal push: Active + Error. Le Error vengono RIPROVATE
+     * (un errore transitorio — etag stale, 409 recuperabile, rete — non deve disabilitare
+     * la connessione per sempre): al primo push riuscito tornano Active. Solo Disconnected
+     * (scelta esplicita dell'utente) resta fuori.
+     *
+     * @param  Builder<CalendarConnection>  $query
+     */
+    #[Scope]
+    protected function syncable(Builder $query): void
+    {
+        $query->whereIn('status', [CalendarConnectionStatus::Active, CalendarConnectionStatus::Error]);
+    }
 }

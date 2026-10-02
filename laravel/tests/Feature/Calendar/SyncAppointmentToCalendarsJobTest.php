@@ -80,6 +80,35 @@ it('pushes an appointment to an active connection and records the mapping', func
         ->and($connection->last_synced_at)->not->toBeNull();
 });
 
+it('retries an ERRORED connection and flips it back to active on success (self-healing)', function () {
+    $org = Organization::factory()->create();
+    $connection = CalendarConnection::factory()->log()->errored()->forOrganization($org)
+        ->create(['last_error' => 'errore transitorio precedente']);
+    $appointment = jobAppointment($org);
+
+    runSync($appointment, SyncAppointmentToCalendarsJob::OP_UPSERT);
+
+    // La connessione in errore è stata RIPROVATA (mappatura creata) e, riuscendo il push,
+    // torna Active con last_error azzerato — niente connessione "morta per sempre".
+    assertDatabaseHas('appointment_external_events', [
+        'appointment_id' => $appointment->getKey(),
+        'calendar_connection_id' => $connection->getKey(),
+    ]);
+    $connection->refresh();
+    expect($connection->status)->toBe(CalendarConnectionStatus::Active)
+        ->and($connection->last_error)->toBeNull();
+});
+
+it('does NOT push to a disconnected connection', function () {
+    $org = Organization::factory()->create();
+    CalendarConnection::factory()->log()->disconnected()->forOrganization($org)->create();
+    $appointment = jobAppointment($org);
+
+    runSync($appointment, SyncAppointmentToCalendarsJob::OP_UPSERT);
+
+    assertDatabaseCount('appointment_external_events', 0);
+});
+
 it('is idempotent: a second upsert updates the same mapping without duplicating', function () {
     $org = Organization::factory()->create();
     $connection = CalendarConnection::factory()->log()->active()->forOrganization($org)->create();

@@ -163,6 +163,78 @@ it('recovers from a 409 duplicate iCalUID by finding and updating the existing e
     Http::assertSentCount(3);
 });
 
+it('looks up the duplicate with showDeleted=true (finds cancelled events)', function () {
+    $sequence = Http::sequence()
+        ->push(['error' => ['code' => 409]], 409) // POST insert
+        ->push(['items' => [['id' => 'cancelled-evt', 'status' => 'cancelled']]], 200) // GET
+        ->push(['id' => 'cancelled-evt', 'etag' => '"revived"'], 200); // PATCH (revive)
+
+    Http::fake(['www.googleapis.com/calendar/v3/*' => $sequence]);
+
+    $connection = CalendarConnection::factory()->google()->create();
+
+    $pushed = app(GoogleCalendarProvider::class)->pushEvent($connection, googleEvent(), null, null);
+
+    expect($pushed->externalId)->toBe('cancelled-evt');
+
+    // Il lookup deve passare showDeleted=true (altrimenti un evento cancellato non emerge).
+    Http::assertSent(fn (Request $request): bool => $request->method() === 'GET'
+        && str_contains($request->url(), 'showDeleted=true'));
+});
+
+it('does NOT hard-fail on 409 when no event is recoverable: inserts without iCalUID', function () {
+    $sequence = Http::sequence()
+        ->push(['error' => ['code' => 409]], 409) // POST insert con iCalUID
+        ->push(['items' => []], 200) // GET: nessun evento recuperabile
+        ->push(['id' => 'new-without-uid', 'etag' => '"e"'], 200); // POST insert SENZA iCalUID
+
+    Http::fake(['www.googleapis.com/calendar/v3/*' => $sequence]);
+
+    $connection = CalendarConnection::factory()->google()->create();
+
+    $pushed = app(GoogleCalendarProvider::class)->pushEvent($connection, googleEvent(), null, null);
+
+    expect($pushed->externalId)->toBe('new-without-uid');
+
+    // L'ultimo POST (insert di fallback) NON porta iCalUID + conserva la extended property
+    // per la riconciliazione.
+    Http::assertSent(function (Request $request): bool {
+        if ($request->method() !== 'POST') {
+            return false;
+        }
+        $data = (array) $request->data();
+
+        return ! array_key_exists('iCalUID', $data)
+            && ($data['extendedProperties']['private']['arkvel_appointment_id'] ?? null) === '42';
+    });
+});
+
+it('retries the update without If-Match on a 412 precondition failure', function () {
+    $sequence = Http::sequence()
+        ->push(['error' => ['code' => 412, 'message' => 'Precondition check failed.']], 412) // PATCH con If-Match stale
+        ->push(['id' => 'evt-1', 'etag' => '"fresh"'], 200); // PATCH senza If-Match
+
+    Http::fake(['www.googleapis.com/calendar/v3/*' => $sequence]);
+
+    $connection = CalendarConnection::factory()->google()->create();
+
+    $pushed = app(GoogleCalendarProvider::class)
+        ->pushEvent($connection, googleEvent(), 'evt-1', '"stale-etag"');
+
+    expect($pushed->externalId)->toBe('evt-1');
+
+    Http::assertSentCount(2);
+    // La seconda PATCH (retry) NON deve portare If-Match.
+    $patches = 0;
+    Http::assertSent(function (Request $request) use (&$patches): bool {
+        if ($request->method() === 'PATCH' && ! $request->hasHeader('If-Match')) {
+            $patches++;
+        }
+
+        return $patches >= 1;
+    });
+});
+
 it('deletes an event (DELETE with If-Match), tolerating 404/410 as already gone', function () {
     Http::fake([
         'www.googleapis.com/calendar/v3/*' => Http::response(null, 204),

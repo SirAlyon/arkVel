@@ -91,9 +91,12 @@ class SyncAppointmentToCalendarsJob implements ShouldQueue
             return;
         }
 
+        // syncable() = Active + Error: una connessione in errore transitorio viene
+        // RIPROVATA e, se il push riesce, torna Active (self-healing). Solo le
+        // Disconnected restano escluse.
         $connections = $appointment->organization
             ->calendarConnections()
-            ->active()
+            ->syncable()
             ->get();
 
         foreach ($connections as $connection) {
