@@ -31,6 +31,8 @@ enum PermissionName: string implements HasLabel
     case AppointmentView = 'appointment.view';
     case AppointmentManage = 'appointment.manage';
     case CalendarManage = 'calendar.manage';
+    case MessageView = 'message.view';
+    case MessageManage = 'message.manage';
 
     public function getLabel(): string
     {
@@ -52,6 +54,8 @@ enum PermissionName: string implements HasLabel
             self::AppointmentView => 'Visualizza appuntamenti',
             self::AppointmentManage => 'Gestisci appuntamenti',
             self::CalendarManage => 'Gestisci sincronizzazione calendario',
+            self::MessageView => 'Visualizza messaggi',
+            self::MessageManage => 'Gestisci messaggi',
         };
     }
 }

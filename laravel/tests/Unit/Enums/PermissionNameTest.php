@@ -21,11 +21,13 @@ it('is backed by the expected string values', function () {
         ->and(PermissionName::FosterApplicationManage->value)->toBe('foster_application.manage')
         ->and(PermissionName::AppointmentView->value)->toBe('appointment.view')
         ->and(PermissionName::AppointmentManage->value)->toBe('appointment.manage')
-        ->and(PermissionName::CalendarManage->value)->toBe('calendar.manage');
+        ->and(PermissionName::CalendarManage->value)->toBe('calendar.manage')
+        ->and(PermissionName::MessageView->value)->toBe('message.view')
+        ->and(PermissionName::MessageManage->value)->toBe('message.manage');
 });
 
-it('defines exactly seventeen permissions', function () {
-    expect(PermissionName::cases())->toHaveCount(17);
+it('defines exactly nineteen permissions', function () {
+    expect(PermissionName::cases())->toHaveCount(19);
 });
 
 it('exposes a non-empty italian label for every case', function () {

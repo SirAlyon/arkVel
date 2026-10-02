@@ -42,7 +42,7 @@ it('maps role permissions correctly', function () {
     $superAdmin = Role::where('name', RoleName::SuperAdmin->value)->firstOrFail();
 
     expect($owner->permissions)->toHaveCount(count(PermissionName::cases()))
-        ->and($staff->permissions)->toHaveCount(15)
+        ->and($staff->permissions)->toHaveCount(17)
         ->and($staff->permissions->pluck('name'))
         ->not->toContain(PermissionName::OrganizationUpdate->value)
         ->and($staff->permissions->pluck('name'))
@@ -54,9 +54,13 @@ it('maps role permissions correctly', function () {
             PermissionName::AppointmentView->value,
             PermissionName::AppointmentManage->value,
             PermissionName::CalendarManage->value,
+            PermissionName::MessageView->value,
+            PermissionName::MessageManage->value,
         )
         ->and($volunteer->permissions->pluck('name'))
         ->not->toContain(PermissionName::CalendarManage->value)
+        ->and($volunteer->permissions->pluck('name'))
+        ->not->toContain(PermissionName::MessageManage->value)
         ->and($volunteer->permissions->pluck('name')->sort()->values()->all())
         ->toBe([
             PermissionName::AnimalView->value,
@@ -64,6 +68,7 @@ it('maps role permissions correctly', function () {
             PermissionName::AppointmentView->value,
             PermissionName::FosterApplicationView->value,
             PermissionName::MedicalRecordView->value,
+            PermissionName::MessageView->value,
         ])
         ->and($adopter->permissions)->toHaveCount(0)
         ->and($superAdmin->permissions)->toHaveCount(0);
