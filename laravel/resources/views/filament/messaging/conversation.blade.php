@@ -10,7 +10,11 @@
     @var \App\Models\MessageThread $thread
     @var bool $viewerIsAdopter   true se il lettore è l'adottante partecipante
 --}}
-<div class="fi-messaging-thread space-y-3 max-h-96 overflow-y-auto pr-1" wire:key="thread-{{ $thread->getKey() }}">
+<div
+    class="fi-messaging-thread space-y-3 max-h-96 overflow-y-auto pr-1"
+    wire:key="thread-{{ $thread->getKey() }}"
+    x-data="messagingThread({{ $thread->getKey() }})"
+>
     @forelse ($thread->messages as $message)
         @php
             // Il messaggio è "mio" se il mittente coincide col lato del lettore:

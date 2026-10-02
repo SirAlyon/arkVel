@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Messaging;
 
+use App\Events\MessageSent;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\Message;
@@ -83,6 +84,11 @@ final class StartMessageThread
                 ->performedOn($thread)
                 ->causedBy($author)
                 ->log('message_thread.started');
+
+            // Realtime: rinfresca la conversazione aperta dei partecipanti. Payload
+            // senza PII; l'evento è ShouldDispatchAfterCommit, quindi il broadcast
+            // parte solo dopo il commit (nessun broadcast di un thread non persistito).
+            broadcast(new MessageSent($thread, $message));
 
             $this->notifyCounterpart($thread, $message, $authorIsAdopter);
 

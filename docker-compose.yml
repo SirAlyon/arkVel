@@ -63,6 +63,29 @@ services:
       redis:
         condition: service_started
 
+  # Server WebSocket Laravel Reverb per il realtime (messaggi live + campanella
+  # notifiche). Self-hosted, nessun account esterno. In ascolto su 0.0.0.0:8080 nel
+  # container; il browser si connette a localhost:8080 (VITE_REVERB_PORT=8080).
+  reverb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arkvel-reverb
+    restart: unless-stopped
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./laravel/:/var/www/html/arkvel
+    working_dir: /var/www/html/arkvel
+    networks:
+      - arkvel
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
   nginx:
     build:
       context: ./nginx/

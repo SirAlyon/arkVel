@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Listeners\BroadcastDatabaseNotificationSent;
 use App\Models\User;
 use App\Support\Contracts\ContractGenerator;
 use App\Support\Pdf\DompdfContractGenerator;
 use App\Support\Settings\PlatformSettings;
+use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -36,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerSuperAdminBypass();
+
+        // Campanella Filament LIVE: ogni notifica Laravel salvata su `database`
+        // ri-emette DatabaseNotificationsSent verso l'utente, così il badge si
+        // aggiorna via websocket senza reload (polling resta come fallback).
+        Event::listen(NotificationSent::class, BroadcastDatabaseNotificationSent::class);
     }
 
     /**

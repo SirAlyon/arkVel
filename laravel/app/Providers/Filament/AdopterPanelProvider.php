@@ -12,12 +12,15 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
+use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\View as ViewFacade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
@@ -62,6 +65,12 @@ class AdopterPanelProvider extends PanelProvider
             // adozione. Polling ogni 30s per l'aggiornamento del badge senza reload.
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
+            // Carica Echo (Reverb) nel pannello: la campanella va live via websocket
+            // (evento `database-notifications.sent`), col polling 30s come fallback.
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): View => ViewFacade::make('filament.realtime-assets'),
+            )
             ->discoverResources(in: app_path('Filament/Adopter/Resources'), for: 'App\Filament\Adopter\Resources')
             ->discoverPages(in: app_path('Filament/Adopter/Pages'), for: 'App\Filament\Adopter\Pages')
             ->discoverWidgets(in: app_path('Filament/Adopter/Widgets'), for: 'App\Filament\Adopter\Widgets')
