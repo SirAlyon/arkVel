@@ -39,5 +39,13 @@
         <env name="GOOGLE_CALENDAR_CLIENT_ID" value=""/>
         <env name="GOOGLE_CALENDAR_CLIENT_SECRET" value=""/>
         <env name="GOOGLE_CALENDAR_REDIRECT_URI" value=""/>
+        <!-- Stripe/Cashier "non configurato" di default nei test: la suite NON eredita
+             eventuali chiavi reali dell'.env dello sviluppatore e non tocca mai Stripe.
+             I test che vogliono simulare la configurazione impostano le config a mano
+             (config()->set('cashier.key', ...)) o usano PlatformSettings. -->
+        <env name="STRIPE_KEY" value=""/>
+        <env name="STRIPE_SECRET" value=""/>
+        <env name="STRIPE_WEBHOOK_SECRET" value=""/>
+        <env name="CASHIER_CURRENCY" value="eur"/>
     </php>
 </phpunit>

@@ -132,6 +132,17 @@ class Organization extends Model
     }
 
     /**
+     * Donazioni ricevute dall'ente. Filtra con lo scope {@see Donation::completed()}
+     * per i KPI di raccolta (solo le donazioni incassate).
+     *
+     * @return HasMany<Donation, $this>
+     */
+    public function donations(): HasMany
+    {
+        return $this->hasMany(Donation::class);
+    }
+
+    /**
      * Tutti i membri dell'ente (a qualunque titolo), con dati di membership.
      *
      * @return BelongsToMany<User, $this, OrganizationUser>

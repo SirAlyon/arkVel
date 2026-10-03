@@ -91,6 +91,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::CalendarManage,
                 PermissionName::MessageView,
                 PermissionName::MessageManage,
+                PermissionName::DonationView,
+                PermissionName::DonationManage,
             ));
 
         $this->roleFor(RoleName::OrgVolunteer)
@@ -101,6 +103,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::FosterApplicationView,
                 PermissionName::AppointmentView,
                 PermissionName::MessageView,
+                PermissionName::DonationView,
             ));
 
         // Adopter e SuperAdmin non hanno permessi d'ente espliciti.

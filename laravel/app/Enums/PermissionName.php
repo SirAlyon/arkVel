@@ -33,6 +33,8 @@ enum PermissionName: string implements HasLabel
     case CalendarManage = 'calendar.manage';
     case MessageView = 'message.view';
     case MessageManage = 'message.manage';
+    case DonationView = 'donation.view';
+    case DonationManage = 'donation.manage';
 
     public function getLabel(): string
     {
@@ -56,6 +58,8 @@ enum PermissionName: string implements HasLabel
             self::CalendarManage => 'Gestisci sincronizzazione calendario',
             self::MessageView => 'Visualizza messaggi',
             self::MessageManage => 'Gestisci messaggi',
+            self::DonationView => 'Visualizza donazioni',
+            self::DonationManage => 'Gestisci donazioni',
         };
     }
 }
