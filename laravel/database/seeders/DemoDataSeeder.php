@@ -6,31 +6,54 @@ namespace Database\Seeders;
 
 use App\Actions\Organizations\AddOrganizationMember;
 use App\Enums\AnimalStatus;
+use App\Enums\AppointmentType;
+use App\Enums\CalendarConnectionStatus;
+use App\Enums\CalendarProvider;
+use App\Enums\CalendarSyncDirection;
+use App\Enums\DonationStatus;
+use App\Enums\DonationType;
+use App\Enums\FosterPlacementType;
 use App\Enums\MedicalRecordType;
 use App\Enums\MembershipRole;
 use App\Enums\OrganizationType;
+use App\Enums\RecurringDonationStatus;
 use App\Enums\RoleName;
 use App\Enums\Species;
+use App\Models\AdopterProfile;
 use App\Models\Animal;
+use App\Models\Appointment;
+use App\Models\CalendarConnection;
+use App\Models\Donation;
+use App\Models\FosterApplication;
+use App\Models\FosterPlacement;
 use App\Models\MedicalRecord;
 use App\Models\Organization;
+use App\Models\RecurringDonation;
 use App\Models\User;
 use Database\Seeders\Support\PlaceholderImageFactory;
+use Database\Seeders\Support\RemoteAnimalPhotoFetcher;
 use Faker\Generator;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * Popola un dataset dimostrativo REALISTICO e OFFLINE (Faker it_IT, foto
- * generate con GD, nessuna chiamata di rete):
+ * Popola un dataset dimostrativo REALISTICO (Faker it_IT):
  *
  *   - 1 Super Admin a credenziali note (login demo del pannello admin);
  *   - 3 enti verificati, ciascuno con Owner/Staff/Volunteer a credenziali note;
  *   - 6–10 animali per ente con mix di specie/stato/comportamento realistico,
- *     ognuno con 1 avatar + 1–3 foto placeholder;
- *   - alcune cartelle sanitarie coerenti per una parte degli animali.
+ *     ognuno con 1 avatar + 1–3 foto REALI species-appropriate (cani da
+ *     placedog.net, gatti da cataas.com, altri da picsum; vedi
+ *     {@see RemoteAnimalPhotoFetcher}); se la rete non è disponibile si ricade su
+ *     placeholder GD offline, senza mai abortire il seeding;
+ *   - alcune cartelle sanitarie coerenti per una parte degli animali;
+ *   - dati operativi di Fase 3 (affidi, appuntamenti, scadenze) e, di Fase 4,
+ *     donazioni demo (una tantum completate + una ricorrente mensile attiva con
+ *     storico addebiti) scritte a DB senza mai toccare Stripe.
  *
  * Idempotenza: gli utenti a credenziali note usano firstOrCreate (rieseguibile
  * senza errori); enti/animali sono pensati per `migrate:fresh --seed` (DB pulito).
@@ -46,11 +69,11 @@ class DemoDataSeeder extends Seeder
     private const string SUPER_ADMIN_EMAIL = 'admin@arkvel.test';
 
     /**
-     * Team sentinel per il ruolo di piattaforma Super Admin: neutro, non
-     * coincide con nessuna Organization reale (le PK partono da 1). Il valore
-     * è irrilevante perché il rilevamento del Super Admin ignora il team.
+     * Team sentinel per i ruoli di piattaforma (non org-scoped): unica fonte di
+     * verità su RoleName. Neutro, non coincide con nessuna Organization reale (le
+     * PK partono da 1); irrilevante perché il rilevamento ignora il team.
      */
-    private const int PLATFORM_TEAM_ID = 0;
+    private const int PLATFORM_TEAM_ID = RoleName::PLATFORM_TEAM_ID;
 
     /**
      * Definizione dei 3 enti demo: chiave slug corta (per le email staff),
@@ -81,6 +104,7 @@ class DemoDataSeeder extends Seeder
     public function __construct(
         private readonly AddOrganizationMember $addOrganizationMember,
         private readonly PlaceholderImageFactory $placeholderImages,
+        private readonly RemoteAnimalPhotoFetcher $remotePhotos,
         private readonly PermissionRegistrar $permissionRegistrar,
     ) {
         $this->faker = fake('it_IT');
@@ -101,6 +125,11 @@ class DemoDataSeeder extends Seeder
 
         $superAdmin = $this->createSuperAdmin();
 
+        // Adottanti/affidatari demo (con profilo completo): richiedono
+        // adozioni/affidi e prenotano appuntamenti. Creati una sola volta e
+        // riusati fra tutti gli enti.
+        $adopters = $this->createAdopters();
+
         $firstOwnerEmail = null;
 
         foreach (self::ORGANIZATIONS as $definition) {
@@ -109,11 +138,12 @@ class DemoDataSeeder extends Seeder
             $ownerEmail = $this->createStaff($organization, $definition['key']);
             $firstOwnerEmail ??= $ownerEmail;
 
-            // Gli animali si seminano solo per gli enti appena creati: su un
-            // DB non fresco (re-run di db:seed) evitiamo di gonfiare il catalogo
-            // con duplicati. Il target è comunque `migrate:fresh --seed`.
+            // Gli animali (e i dati operativi di Fase 3) si seminano solo per gli
+            // enti appena creati: su un DB non fresco (re-run di db:seed) evitiamo
+            // di gonfiare i dati con duplicati. Il target è `migrate:fresh --seed`.
             if ($isNew) {
                 $this->createAnimals($organization);
+                $this->createOperationalData($organization, $adopters);
             }
         }
 
@@ -226,7 +256,8 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * 6–10 animali per ente con mix realistico di specie/stato e foto offline.
+     * 6–10 animali per ente con mix realistico di specie/stato e foto reali
+     * species-appropriate (fallback offline se la rete non è disponibile).
      */
     private function createAnimals(Organization $organization): void
     {
@@ -274,11 +305,67 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * Attacca 1 avatar + 1–3 foto placeholder generate con GD, poi rimuove i
-     * file temporanei. addMedia copia il file nel disk media, quindi possiamo
-     * cancellare la sorgente subito dopo.
+     * Attacca 1–3 foto REALI (species-appropriate) all'animale, con la prima
+     * anche come avatar, così il catalogo demo risulta credibile.
+     *
+     * Idempotenza: se l'animale ha GIÀ foto (collection `photos`), non fa nulla —
+     * un re-run non duplica le immagini.
+     *
+     * Sorgente: {@see RemoteAnimalPhotoFetcher} (per-specie: cani placedog.net,
+     * gatti cataas.com, altri picsum; URL deterministico per specie/id). Ogni
+     * download e ogni attach sono resilienti: se falliscono (offline/timeout/file
+     * corrotto) si logga e si prosegue. Se NESSUNA foto reale è stata attaccata,
+     * ricadiamo sul placeholder GD offline così l'animale ha comunque almeno
+     * un'immagine (e un avatar) anche senza rete.
      */
     private function attachPhotos(Animal $animal, int $paletteSeed): void
+    {
+        // Idempotente: mai duplicare le foto su un re-run del seeder.
+        if ($animal->hasMedia('photos')) {
+            return;
+        }
+
+        $photoCount = $this->faker->numberBetween(1, 3);
+        $attached = 0;
+
+        for ($variant = 0; $variant < $photoCount; $variant++) {
+            $path = $this->remotePhotos->fetch($animal->species, $animal->getKey(), $variant);
+
+            if ($path === null) {
+                continue; // download fallito (già loggato): salta questo slot.
+            }
+
+            // Attach resiliente: se il file remoto è corrotto/inutilizzabile
+            // (attach fallito, già loggato) saltiamo lo slot senza abortire.
+            if (! $this->attachAndCleanup($animal, $path, 'photos', "{$animal->slug}-foto-".($variant + 1).'.jpg')) {
+                continue;
+            }
+
+            // La PRIMA foto attaccata con successo diventa anche l'avatar
+            // (single-file collection): riscarichiamo un file distinto da attaccare.
+            if ($attached === 0) {
+                $avatarPath = $this->remotePhotos->fetch($animal->species, $animal->getKey(), $variant);
+
+                if ($avatarPath !== null) {
+                    $this->attachAndCleanup($animal, $avatarPath, 'avatar', "{$animal->slug}-avatar.jpg");
+                }
+            }
+
+            $attached++;
+        }
+
+        // Rete non disponibile: nessuna foto reale ottenuta → placeholder GD
+        // offline (avatar + una foto) così il demo non resta muto.
+        if ($attached === 0) {
+            $this->attachOfflinePlaceholders($animal, $paletteSeed);
+        }
+    }
+
+    /**
+     * Fallback offline: 1 avatar + 1 foto placeholder GD (nessuna rete), usato
+     * solo quando il download delle foto reali non è andato a buon fine.
+     */
+    private function attachOfflinePlaceholders(Animal $animal, int $paletteSeed): void
     {
         $avatarPath = $this->placeholderImages->create(
             label: $animal->name,
@@ -288,25 +375,39 @@ class DemoDataSeeder extends Seeder
 
         $this->attachAndCleanup($animal, $avatarPath, 'avatar', "{$animal->slug}-avatar.jpg");
 
-        $photoCount = $this->faker->numberBetween(1, 3);
+        $photoPath = $this->placeholderImages->create(
+            label: $animal->name,
+            subtitle: 'foto 1',
+            paletteIndex: $paletteSeed + 1,
+        );
 
-        for ($p = 1; $p <= $photoCount; $p++) {
-            $photoPath = $this->placeholderImages->create(
-                label: $animal->name,
-                subtitle: "foto {$p}",
-                paletteIndex: $paletteSeed + $p,
-            );
-
-            $this->attachAndCleanup($animal, $photoPath, 'photos', "{$animal->slug}-foto-{$p}.jpg");
-        }
+        $this->attachAndCleanup($animal, $photoPath, 'photos', "{$animal->slug}-foto-1.jpg");
     }
 
-    private function attachAndCleanup(Animal $animal, string $path, string $collection, string $fileName): void
+    /**
+     * Attacca un file al media dell'animale e ripulisce la sorgente temporanea.
+     *
+     * Resiliente: un file remoto corrotto/troncato/scomparso (o una conversione
+     * fallita) NON deve abortire l'intero seeding demo. Qualunque errore di
+     * medialibrary viene loggato e assorbito; l'esito booleano dice al chiamante
+     * se l'attach è andato a buon fine (per decidere avatar/fallback).
+     */
+    private function attachAndCleanup(Animal $animal, string $path, string $collection, string $fileName): bool
     {
         try {
             $animal->addMedia($path)
                 ->usingFileName($fileName)
                 ->toMediaCollection($collection);
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::warning('DemoDataSeeder: attach media fallito, salto.', [
+                'animal' => $animal->slug,
+                'collection' => $collection,
+                'reason' => $exception->getMessage(),
+            ]);
+
+            return false;
         } finally {
             if (is_file($path)) {
                 @unlink($path);
@@ -354,6 +455,406 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
+     * Crea alcuni ADOTTANTI/AFFIDATARI demo a credenziali note, ciascuno con un
+     * profilo adottante COMPLETO (consenso GDPR incluso) così da poter inviare
+     * richieste di adozione/affido, e col ruolo Adopter assegnato come per il
+     * Super Admin (team sentinel di piattaforma: Adopter non è org-scoped).
+     * Idempotente su email/profilo.
+     *
+     * @return Collection<int, User>
+     */
+    private function createAdopters(): Collection
+    {
+        /** @var array<string, string> $definitions email => nome */
+        $definitions = [
+            'adopter+1@arkvel.test' => 'Giulia Bianchi',
+            'adopter+2@arkvel.test' => 'Marco Rossi',
+            'adopter+3@arkvel.test' => 'Sofia Esposito',
+            'adopter+4@arkvel.test' => 'Luca Ferrari',
+        ];
+
+        /** @var Collection<int, User> $adopters */
+        $adopters = collect();
+
+        foreach ($definitions as $email => $name) {
+            $user = User::firstOrCreate(
+                ['email' => $email],
+                [
+                    'name' => $name,
+                    'password' => Hash::make(self::DEMO_PASSWORD),
+                    'email_verified_at' => now(),
+                ],
+            );
+
+            // Profilo completo idempotente: crealo solo se assente.
+            if (! $user->adopterProfile()->exists()) {
+                AdopterProfile::factory()->forUser($user)->complete()->create();
+            }
+
+            $this->assignAdopterRole($user);
+
+            $adopters->push($user);
+        }
+
+        return $adopters;
+    }
+
+    /**
+     * Assegna il ruolo Adopter (di piattaforma, non org-scoped) usando il team
+     * sentinel neutro, esattamente come createSuperAdmin() ed EnsureAdopterRole.
+     */
+    private function assignAdopterRole(User $user): void
+    {
+        $previousTeamId = $this->permissionRegistrar->getPermissionsTeamId();
+        $this->permissionRegistrar->setPermissionsTeamId(self::PLATFORM_TEAM_ID);
+
+        try {
+            if (! $user->hasRole(RoleName::Adopter->value)) {
+                $user->assignRole(RoleName::Adopter->value);
+            }
+        } finally {
+            $this->permissionRegistrar->setPermissionsTeamId($previousTeamId);
+        }
+    }
+
+    /**
+     * Semina i dati operativi della Fase 3 per un ente APPENA creato: richieste e
+     * collocamenti di affido (con accoppiamento animale corretto), appuntamenti in
+     * vari stati/tipi e voci sanitarie in scadenza — così UI e reminder sono
+     * dimostrabili. Usa le factory (stati finali) senza invocare le Action, per
+     * evitare notifiche accodate e restare deterministico.
+     *
+     * @param  Collection<int, User>  $adopters
+     */
+    private function createOperationalData(Organization $organization, Collection $adopters): void
+    {
+        /** @var list<User> $adopterList */
+        $adopterList = $adopters->values()->all();
+
+        if ($adopterList === []) {
+            return;
+        }
+
+        /** @var list<Animal> $animals */
+        $animals = $organization->animals()
+            ->where('status', AnimalStatus::Available)
+            ->get()
+            ->all();
+
+        if ($animals === []) {
+            return;
+        }
+
+        $this->seedFosterData($organization, $animals, $adopterList);
+        $this->seedAppointments($organization, $animals, $adopterList);
+        $this->seedMedicalDueDates($animals);
+        $this->seedCalendarConnection($organization);
+        $this->seedDonations($organization, $adopterList);
+    }
+
+    /**
+     * Donazioni DEMO per l'ente (Fase 4), scritte direttamente a DB: NON toccano mai
+     * Stripe (il seeder gira anche senza chiavi configurate). Mostrano la lista d'ente
+     * read-only in /manage e la pagina "Le mie donazioni" dell'adottante:
+     *  - alcune UNA TANTUM completate (donatori autenticati + un'ospite anonima);
+     *  - una RICORRENTE mensile ATTIVA con qualche addebito storico nel registro.
+     *
+     * @param  list<User>  $adopters
+     */
+    private function seedDonations(Organization $organization, array $adopters): void
+    {
+        $presetCents = [500, 1000, 2500, 5000];
+
+        // Una tantum da donatori autenticati (i primi adottanti), più una da ospite.
+        foreach (array_slice($adopters, 0, 2) as $index => $adopter) {
+            Donation::factory()->create([
+                'organization_id' => $organization->getKey(),
+                'donor_user_id' => $adopter->getKey(),
+                'donor_name' => $adopter->name,
+                'donor_email' => $adopter->email,
+                'amount' => $presetCents[$index % count($presetCents)],
+                'currency' => 'eur',
+                'type' => DonationType::OneOff,
+                'status' => DonationStatus::Completed,
+                'provider' => 'stripe',
+                'provider_ref' => 'cs_demo_'.Str::lower(Str::random(16)),
+                'message' => $this->faker->boolean(60) ? $this->faker->sentence() : null,
+                'paid_at' => now()->subDays($this->faker->numberBetween(1, 40)),
+            ]);
+        }
+
+        Donation::factory()->create([
+            'organization_id' => $organization->getKey(),
+            'donor_user_id' => null,
+            'donor_name' => $this->faker->name(),
+            'donor_email' => $this->faker->safeEmail(),
+            'amount' => 1500,
+            'currency' => 'eur',
+            'type' => DonationType::OneOff,
+            'status' => DonationStatus::Completed,
+            'provider' => 'stripe',
+            'provider_ref' => 'cs_demo_'.Str::lower(Str::random(16)),
+            'message' => null,
+            'paid_at' => now()->subDays($this->faker->numberBetween(1, 40)),
+        ]);
+
+        // Una ricorrente mensile ATTIVA del primo adottante, con 3 addebiti storici nel
+        // registro (uno per mese) collegati via recurring_donation_id.
+        $donor = $adopters[0];
+        $monthlyCents = 1000;
+        $startedAt = now()->subMonths(3)->startOfMonth();
+
+        $recurring = RecurringDonation::factory()->create([
+            'user_id' => $donor->getKey(),
+            'organization_id' => $organization->getKey(),
+            'amount' => $monthlyCents,
+            'currency' => 'eur',
+            'interval' => 'monthly',
+            'stripe_subscription_id' => 'sub_demo_'.Str::lower(Str::random(14)),
+            'status' => RecurringDonationStatus::Active,
+            'started_at' => $startedAt,
+        ]);
+
+        for ($month = 0; $month < 3; $month++) {
+            Donation::factory()->create([
+                'organization_id' => $organization->getKey(),
+                'recurring_donation_id' => $recurring->getKey(),
+                'donor_user_id' => $donor->getKey(),
+                'donor_name' => $donor->name,
+                'donor_email' => $donor->email,
+                'amount' => $monthlyCents,
+                'currency' => 'eur',
+                'type' => DonationType::Recurring,
+                'status' => DonationStatus::Completed,
+                'provider' => 'stripe',
+                'provider_ref' => 'in_demo_'.Str::lower(Str::random(16)),
+                'message' => null,
+                'paid_at' => (clone $startedAt)->addMonths($month),
+            ]);
+        }
+    }
+
+    /**
+     * Una connessione calendario DEMO (provider Log) per l'ente, così la pagina
+     * /manage "Connessioni calendario" e la pipeline di sync sono dimostrabili senza
+     * credenziali esterne (il provider Log registra i push nei log invece di chiamare
+     * un servizio reale). Google/CalDAV reali richiedono le credenziali dell'ente.
+     * Creata DOPO gli appuntamenti: le mutazioni successive la useranno, senza un
+     * flood di push in fase di seed. Idempotente (firstOrCreate).
+     */
+    private function seedCalendarConnection(Organization $organization): void
+    {
+        CalendarConnection::query()->firstOrCreate(
+            [
+                'organization_id' => $organization->getKey(),
+                'provider' => CalendarProvider::Log,
+            ],
+            [
+                'name' => 'Calendario demo (log)',
+                'direction' => CalendarSyncDirection::Both,
+                'status' => CalendarConnectionStatus::Active,
+            ],
+        );
+    }
+
+    /**
+     * Richieste di affido in vari stati. Ogni richiesta usa un ANIMALE distinto
+     * (rispetta il vincolo unique animal_id+user_id e mantiene coerente lo stato
+     * dell'animale). L'affido ATTIVO porta l'animale a Fostered e crea un placement
+     * attivo; quello COMPLETATO ha un placement concluso e l'animale resta Available
+     * (rientro).
+     *
+     * @param  list<Animal>  $animals  animali disponibili dell'ente
+     * @param  list<User>  $adopters
+     */
+    private function seedFosterData(Organization $organization, array $animals, array $adopters): void
+    {
+        $adopterCount = count($adopters);
+        $cursor = 0;
+
+        // Affido ATTIVO: animale dedicato → Fostered + placement attivo.
+        $activeAnimal = $animals[$cursor] ?? null;
+        if ($activeAnimal !== null) {
+            $cursor++;
+
+            $application = FosterApplication::factory()
+                ->forOrganization($organization)
+                ->forAnimal($activeAnimal)
+                ->forAdopter($adopters[0])
+                ->active()
+                ->create(['staff_notes' => $this->faker->sentence()]);
+
+            FosterPlacement::factory()
+                ->forApplication($application)
+                ->ofType($this->faker->randomElement(FosterPlacementType::cases()))
+                ->active()
+                ->create(['notes' => $this->faker->sentence()]);
+
+            $activeAnimal->update(['status' => AnimalStatus::Fostered]);
+        }
+
+        // Affido COMPLETATO: animale dedicato, placement concluso, rientro (Available).
+        $completedAnimal = $animals[$cursor] ?? null;
+        if ($completedAnimal !== null) {
+            $cursor++;
+
+            $application = FosterApplication::factory()
+                ->forOrganization($organization)
+                ->forAnimal($completedAnimal)
+                ->forAdopter($adopters[1 % $adopterCount])
+                ->completed()
+                ->create();
+
+            FosterPlacement::factory()
+                ->forApplication($application)
+                ->ofType($this->faker->randomElement(FosterPlacementType::cases()))
+                ->ended()
+                ->create(['notes' => $this->faker->sentence()]);
+        }
+
+        // Altri stati d'istruttoria: un animale distinto ciascuno, finché ce ne sono.
+        $states = ['submitted', 'submitted', 'underReview', 'waitlisted', 'rejected', 'withdrawn'];
+
+        foreach ($states as $offset => $state) {
+            $animal = $animals[$cursor] ?? null;
+            if ($animal === null) {
+                break; // finiti gli animali disponibili distinti.
+            }
+            $cursor++;
+
+            $factory = FosterApplication::factory()
+                ->forOrganization($organization)
+                ->forAnimal($animal)
+                ->forAdopter($adopters[$offset % $adopterCount]);
+
+            $factory = match ($state) {
+                'underReview' => $factory->underReview(),
+                'waitlisted' => $factory->waitlisted(),
+                'rejected' => $factory->rejected(),
+                'withdrawn' => $factory->withdrawn(),
+                default => $factory->submitted(),
+            };
+
+            $factory->create();
+        }
+    }
+
+    /**
+     * Appuntamenti demo: tutti i tipi e un mix di stati/date. Include almeno un
+     * appuntamento CONFERMATO imminente (entro 24h) con reminder_sent_at null, così
+     * arkvel:send-appointment-reminders ha qualcosa da inviare nel demo.
+     *
+     * @param  list<Animal>  $animals
+     * @param  list<User>  $adopters
+     */
+    private function seedAppointments(Organization $organization, array $animals, array $adopters): void
+    {
+        $animalCount = count($animals);
+        $adopterCount = count($adopters);
+        $animalFor = fn (int $i): Animal => $animals[$i % $animalCount];
+        $adopterFor = fn (int $i): User => $adopters[$i % $adopterCount];
+
+        // Confermato imminente (entro 24h): alimenta il reminder appuntamenti.
+        Appointment::factory()
+            ->forOrganization($organization)
+            ->forAnimal($animalFor(0))
+            ->forUser($adopterFor(0))
+            ->ofType(AppointmentType::Visit)
+            ->confirmed()
+            ->at(now()->addHours(6))
+            ->create(['notes' => $this->faker->sentence()]);
+
+        // Confermato più avanti nel tempo.
+        Appointment::factory()
+            ->forOrganization($organization)
+            ->forAnimal($animalFor(1))
+            ->forUser($adopterFor(1))
+            ->ofType(AppointmentType::HomeCheck)
+            ->confirmed()
+            ->at(now()->addDays(4)->setTime(10, 0))
+            ->create(['notes' => $this->faker->sentence()]);
+
+        // Richiesto (in attesa di conferma dello staff).
+        Appointment::factory()
+            ->forOrganization($organization)
+            ->forAnimal($animalFor(2))
+            ->forUser($adopterFor(2))
+            ->ofType(AppointmentType::Interview)
+            ->requested()
+            ->at(now()->addDays(2)->setTime(15, 30))
+            ->create();
+
+        // Completato di recente.
+        Appointment::factory()
+            ->forOrganization($organization)
+            ->forAnimal($animalFor(3))
+            ->forUser($adopterFor(3))
+            ->ofType(AppointmentType::Visit)
+            ->completed()
+            ->at(now()->subDays(3)->setTime(11, 0))
+            ->create(['notes' => $this->faker->sentence()]);
+
+        // Annullato.
+        Appointment::factory()
+            ->forOrganization($organization)
+            ->forAnimal($animalFor(0))
+            ->forUser($adopterFor(1))
+            ->ofType(AppointmentType::Visit)
+            ->cancelled()
+            ->at(now()->addDays(1)->setTime(9, 0))
+            ->create();
+
+        // Assente (no-show) a un appuntamento passato: completa il ciclo di vita.
+        Appointment::factory()
+            ->forOrganization($organization)
+            ->forAnimal($animalFor(2))
+            ->forUser($adopterFor(0))
+            ->ofType(AppointmentType::HomeCheck)
+            ->noShow()
+            ->at(now()->subDays(1)->setTime(16, 0))
+            ->create();
+    }
+
+    /**
+     * Aggiunge voci sanitarie con scadenza NELLA finestra dei reminder
+     * (reminder_sent_at null): alcune imminenti (entro pochi giorni) e alcune già
+     * scadute, così lo scadenzario del pannello /manage e
+     * arkvel:send-medical-reminders sono dimostrabili.
+     *
+     * @param  list<Animal>  $animals
+     */
+    private function seedMedicalDueDates(array $animals): void
+    {
+        // Fino a 3 animali con un richiamo imminente (entro pochi giorni).
+        foreach (array_slice($animals, 0, 3) as $animal) {
+            MedicalRecord::factory()
+                ->forAnimal($animal)
+                ->vaccination()
+                ->dueSoon()
+                ->create();
+        }
+
+        // Fino a 2 richiami GIÀ SCADUTI. Usiamo i PRIMI animali (garantiti presenti:
+        // ce n'è almeno uno per arrivare qui) così il caso "scaduto" è sempre
+        // dimostrabile anche con pochi animali disponibili — una cartella non ha
+        // vincolo unique per animale, quindi convive con la voce dueSoon.
+        // La data si calcola QUI (scope del seeder): dentro la closure di state()
+        // $this è bound alla factory, quindi $this->faker non sarebbe accessibile
+        // (cfr. attachMedicalRecords).
+        foreach (array_slice($animals, 0, 2) as $animal) {
+            $overdueAt = now()->subDays($this->faker->numberBetween(2, 15));
+
+            MedicalRecord::factory()
+                ->forAnimal($animal)
+                ->state(fn (): array => [
+                    'type' => MedicalRecordType::Deworming,
+                    'next_due_at' => $overdueAt,
+                ])
+                ->create();
+        }
+    }
+
+    /**
      * Riepilogo di console con credenziali e URL utili per il login demo.
      * (Stringhe di console: non fanno parte dei dati UI tradotti.)
      */
@@ -374,10 +875,16 @@ class DemoDataSeeder extends Seeder
                 ['Org Owner (esempio)', $ownerEmail ?? 'n/d', self::DEMO_PASSWORD],
                 ['Org Staff', 'staff+{ente}@arkvel.test', self::DEMO_PASSWORD],
                 ['Org Volunteer', 'volunteer+{ente}@arkvel.test', self::DEMO_PASSWORD],
+                ['Adottante (esempio)', 'adopter+1@arkvel.test', self::DEMO_PASSWORD],
             ],
         );
-        $command->line('URL pannello admin:   /admin');
-        $command->line('URL pannello ente:    /manage');
+        $command->line('URL pannello admin:    /admin');
+        $command->line('URL pannello ente:     /manage');
+        $command->line('URL pannello adottante: /account');
+        $command->newLine();
+        $command->line('Dati demo Fase 3: affidi (richieste + placement), appuntamenti e scadenze sanitarie.');
+        $command->line('Reminder: `php artisan arkvel:send-medical-reminders` / `:send-appointment-reminders`');
+        $command->line('Le email dei reminder sono visibili in Mailpit: http://localhost:8025');
         $command->newLine();
     }
 }

@@ -22,9 +22,13 @@
 /public/js/filament
 /public/storage
 /storage/*.key
+/storage/media-library
 /storage/pail
 /vendor
 _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Pest browser: screenshot di confronto/fallimento generati localmente
+/tests/Browser/Screenshots

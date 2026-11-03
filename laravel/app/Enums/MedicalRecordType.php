@@ -23,13 +23,7 @@ enum MedicalRecordType: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Vaccination => 'Vaccinazione',
-            self::Treatment => 'Trattamento',
-            self::Surgery => 'Intervento chirurgico',
-            self::Checkup => 'Visita di controllo',
-            self::Deworming => 'Sverminazione',
-        };
+        return __('enums.medical_record_type.'.$this->value);
     }
 
     public function getColor(): string

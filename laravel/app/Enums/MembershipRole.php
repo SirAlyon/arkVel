@@ -18,11 +18,7 @@ enum MembershipRole: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Owner => 'Titolare',
-            self::Staff => 'Staff',
-            self::Volunteer => 'Volontario',
-        };
+        return __('enums.membership_role.'.$this->value);
     }
 
     /**

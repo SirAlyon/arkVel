@@ -1,3 +1,6 @@
 .DS_Store
 /nginx/logs/*.log
 seed.sh
+
+# Output del Playwright MCP
+/.playwright-mcp/

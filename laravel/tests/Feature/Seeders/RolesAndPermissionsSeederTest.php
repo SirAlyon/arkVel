@@ -42,11 +42,39 @@ it('maps role permissions correctly', function () {
     $superAdmin = Role::where('name', RoleName::SuperAdmin->value)->firstOrFail();
 
     expect($owner->permissions)->toHaveCount(count(PermissionName::cases()))
-        ->and($staff->permissions)->toHaveCount(8)
+        ->and($staff->permissions)->toHaveCount(19)
         ->and($staff->permissions->pluck('name'))
         ->not->toContain(PermissionName::OrganizationUpdate->value)
+        ->and($staff->permissions->pluck('name'))
+        ->toContain(
+            PermissionName::ApplicationView->value,
+            PermissionName::ApplicationManage->value,
+            PermissionName::FosterApplicationView->value,
+            PermissionName::FosterApplicationManage->value,
+            PermissionName::AppointmentView->value,
+            PermissionName::AppointmentManage->value,
+            PermissionName::CalendarManage->value,
+            PermissionName::MessageView->value,
+            PermissionName::MessageManage->value,
+            PermissionName::DonationView->value,
+            PermissionName::DonationManage->value,
+        )
+        ->and($volunteer->permissions->pluck('name'))
+        ->not->toContain(PermissionName::CalendarManage->value)
+        ->and($volunteer->permissions->pluck('name'))
+        ->not->toContain(PermissionName::MessageManage->value)
+        ->and($volunteer->permissions->pluck('name'))
+        ->not->toContain(PermissionName::DonationManage->value)
         ->and($volunteer->permissions->pluck('name')->sort()->values()->all())
-        ->toBe([PermissionName::AnimalView->value, PermissionName::MedicalRecordView->value])
+        ->toBe([
+            PermissionName::AnimalView->value,
+            PermissionName::ApplicationView->value,
+            PermissionName::AppointmentView->value,
+            PermissionName::DonationView->value,
+            PermissionName::FosterApplicationView->value,
+            PermissionName::MedicalRecordView->value,
+            PermissionName::MessageView->value,
+        ])
         ->and($adopter->permissions)->toHaveCount(0)
         ->and($superAdmin->permissions)->toHaveCount(0);
 });

@@ -15,11 +15,7 @@ enum OrganizationStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Pending => 'In attesa',
-            self::Verified => 'Verificato',
-            self::Suspended => 'Sospeso',
-        };
+        return __('enums.organization_status.'.$this->value);
     }
 
     public function getColor(): string

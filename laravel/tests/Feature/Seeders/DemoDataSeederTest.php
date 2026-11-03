@@ -2,17 +2,27 @@
 
 declare(strict_types=1);
 
+use App\Enums\AnimalStatus;
+use App\Enums\AppointmentStatus;
+use App\Enums\CalendarProvider;
+use App\Enums\FosterApplicationStatus;
+use App\Enums\FosterPlacementStatus;
 use App\Enums\MembershipRole;
 use App\Enums\OrganizationStatus;
 use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Models\Animal;
+use App\Models\Appointment;
+use App\Models\CalendarConnection;
+use App\Models\FosterApplication;
+use App\Models\FosterPlacement;
 use App\Models\MedicalRecord;
 use App\Models\Organization;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Spatie\Permission\PermissionRegistrar;
 
 uses(RefreshDatabase::class);
@@ -22,9 +32,34 @@ beforeEach(function () {
     // e nessuna conversione su disco durante i test.
     Storage::fake('public');
 
+    // Nessuna chiamata di rete reale nei test: la sorgente foto (LoremFlickr) è
+    // stubbata con un JPEG 1x1 valido, così esercitiamo il PERCORSO REALE del
+    // fetcher (foto scaricate) in modo deterministico e offline.
+    Http::preventStrayRequests();
+    Http::fake([
+        // Sorgenti foto per-specie del fetcher (placedog/cataas/picsum/loremflickr):
+        // stubbate con un JPEG 1x1 valido e content-type image/jpeg accettato.
+        '*' => Http::response(onePixelJpeg(), 200, [
+            'Content-Type' => 'image/jpeg',
+        ]),
+    ]);
+
     // Esegue l'intero orchestratore (ruoli + dati demo) come in produzione.
     $this->seed(DatabaseSeeder::class);
 });
+
+/**
+ * Byte di un JPEG 1x1 valido (medialibrary deduce il mime dal contenuto).
+ */
+function onePixelJpeg(): string
+{
+    return base64_decode(
+        '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRof'.
+        'Hh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAAB'.
+        'AAAAAAAAAAAAAAAAAAAACP/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AfwD/2Q==',
+        true,
+    ) ?: '';
+}
 
 /**
  * Imposta il contesto team per verificare i ruoli spatie team-scoped.
@@ -103,13 +138,21 @@ it('creates animals belonging to the seeded organizations', function () {
     });
 });
 
-it('attaches at least one media (avatar or photos) to every seeded animal', function () {
+it('attaches real photos (and an avatar) to every seeded animal', function () {
     Animal::query()->each(function (Animal $animal): void {
-        $mediaCount = $animal->getMedia('avatar')->count()
-            + $animal->getMedia('photos')->count();
-
-        expect($mediaCount)->toBeGreaterThan(0, "L'animale {$animal->slug} non ha media");
+        // Con la sorgente foto stubbata, ogni animale deve avere sia foto sia
+        // avatar (percorso reale del fetcher, non il fallback offline GD).
+        expect($animal->getMedia('photos')->count())
+            ->toBeGreaterThan(0, "L'animale {$animal->slug} non ha foto")
+            ->and($animal->getMedia('avatar')->count())
+            ->toBe(1, "L'animale {$animal->slug} non ha avatar");
     });
+
+    // Regressione: le sorgenti foto REMOTE per-specie sono state effettivamente
+    // interrogate (percorso reale del fetcher), non solo il fallback offline GD.
+    Http::assertSent(fn ($request): bool => str_contains($request->url(), 'placedog.net')
+        || str_contains($request->url(), 'cataas.com')
+        || str_contains($request->url(), 'picsum.photos'));
 });
 
 it('creates medical records linked to existing animals', function () {
@@ -145,4 +188,95 @@ it('creates a known staff user who is a verified member of its organization', fu
 
     seederWithTeam($milano->getKey());
     expect($staff->fresh()->hasRole(RoleName::OrgStaff->value))->toBeTrue();
+});
+
+it('creates demo adopters with a complete adopter profile', function () {
+    $adopter = User::where('email', 'adopter+1@arkvel.test')->first();
+
+    expect($adopter)->not->toBeNull()
+        ->and($adopter->email_verified_at)->not->toBeNull()
+        ->and($adopter->hasCompleteAdopterProfile())->toBeTrue();
+
+    // Il ruolo Adopter (di piattaforma) è rilevato team-independent, come in
+    // EnsureAdopterRole: verifichiamo l'assegnazione col team sentinel.
+    seederWithTeam(RoleName::PLATFORM_TEAM_ID);
+    expect($adopter->fresh()->hasRole(RoleName::Adopter->value))->toBeTrue();
+});
+
+it('seeds foster applications across multiple states', function () {
+    $states = FosterApplication::query()
+        ->get()
+        ->map(fn (FosterApplication $application): FosterApplicationStatus => $application->statusEnum())
+        ->unique();
+
+    expect(FosterApplication::count())->toBeGreaterThan(0)
+        ->and($states->count())->toBeGreaterThanOrEqual(3);
+});
+
+it('seeds an active foster coupled to a Fostered animal with an active placement', function () {
+    $activePlacement = FosterPlacement::query()
+        ->where('status', FosterPlacementStatus::Active)
+        ->with(['animal', 'fosterApplication'])
+        ->first();
+
+    expect($activePlacement)->not->toBeNull()
+        ->and($activePlacement->animal->status)->toBe(AnimalStatus::Fostered)
+        ->and($activePlacement->fosterApplication)->not->toBeNull()
+        ->and($activePlacement->fosterApplication->statusEnum())->toBe(FosterApplicationStatus::Active);
+});
+
+it('seeds a completed foster with an ended placement and the animal back Available', function () {
+    $endedPlacement = FosterPlacement::query()
+        ->where('status', FosterPlacementStatus::Ended)
+        ->with(['fosterApplication', 'animal'])
+        ->first();
+
+    expect($endedPlacement)->not->toBeNull()
+        ->and($endedPlacement->end_date)->not->toBeNull()
+        ->and($endedPlacement->fosterApplication?->statusEnum())->toBe(FosterApplicationStatus::Completed)
+        // Rientro: l'animale del placement concluso NON resta bloccato in Fostered.
+        ->and($endedPlacement->animal->status)->not->toBe(AnimalStatus::Fostered);
+});
+
+it('never reuses the same (animal, carer) pair across foster applications', function () {
+    // Il seeder assegna un animale distinto per richiesta: il vincolo unique
+    // (animal_id, user_id) non deve mai essere a rischio.
+    $pairs = FosterApplication::query()
+        ->get()
+        ->map(fn (FosterApplication $application): string => $application->animal_id.'-'.$application->user_id);
+
+    expect($pairs->count())->toBe($pairs->unique()->count());
+});
+
+it('seeds appointments across types and states', function () {
+    $statuses = Appointment::query()
+        ->get()
+        ->pluck('status')
+        ->unique();
+
+    expect(Appointment::count())->toBeGreaterThan(0)
+        ->and($statuses->count())->toBeGreaterThanOrEqual(3);
+});
+
+it('seeds at least one confirmed appointment due for a reminder', function () {
+    // Un appuntamento confermato entro 24h con reminder_sent_at null: il comando
+    // arkvel:send-appointment-reminders deve avere qualcosa da inviare nel demo.
+    expect(Appointment::query()->dueForReminder(24)->exists())->toBeTrue();
+
+    $due = Appointment::query()->dueForReminder(24)->first();
+    expect($due?->status)->toBe(AppointmentStatus::Confirmed);
+});
+
+it('seeds medical records due for a reminder', function () {
+    // Voci con next_due_at nella finestra e reminder_sent_at null: lo scadenzario
+    // e arkvel:send-medical-reminders devono avere dati dimostrabili.
+    expect(MedicalRecord::query()->dueForReminder(7)->exists())->toBeTrue();
+});
+
+it('seeds a demo (log) calendar connection so the sync UI is demonstrable', function () {
+    // Ogni ente demo ha una connessione calendario Log attiva: la pagina /manage
+    // "Connessioni calendario" e la pipeline di sync sono dimostrabili senza credenziali.
+    expect(CalendarConnection::query()->where('provider', CalendarProvider::Log)->count())
+        ->toBeGreaterThanOrEqual(3)
+        ->and(CalendarConnection::query()->active()->exists())->toBeTrue();
 });

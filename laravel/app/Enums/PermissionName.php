@@ -24,20 +24,20 @@ enum PermissionName: string implements HasLabel
     case MedicalRecordCreate = 'medical_record.create';
     case MedicalRecordUpdate = 'medical_record.update';
     case MedicalRecordDelete = 'medical_record.delete';
+    case ApplicationView = 'application.view';
+    case ApplicationManage = 'application.manage';
+    case FosterApplicationView = 'foster_application.view';
+    case FosterApplicationManage = 'foster_application.manage';
+    case AppointmentView = 'appointment.view';
+    case AppointmentManage = 'appointment.manage';
+    case CalendarManage = 'calendar.manage';
+    case MessageView = 'message.view';
+    case MessageManage = 'message.manage';
+    case DonationView = 'donation.view';
+    case DonationManage = 'donation.manage';
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::OrganizationUpdate => 'Modifica ente',
-            self::OrganizationManageStaff => 'Gestisci staff ente',
-            self::AnimalView => 'Visualizza animali',
-            self::AnimalCreate => 'Crea animali',
-            self::AnimalUpdate => 'Modifica animali',
-            self::AnimalDelete => 'Elimina animali',
-            self::MedicalRecordView => 'Visualizza cartelle sanitarie',
-            self::MedicalRecordCreate => 'Crea cartelle sanitarie',
-            self::MedicalRecordUpdate => 'Modifica cartelle sanitarie',
-            self::MedicalRecordDelete => 'Elimina cartelle sanitarie',
-        };
+        return __('enums.permission_name.'.$this->value);
     }
 }

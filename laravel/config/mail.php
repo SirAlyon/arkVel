@@ -115,4 +115,25 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Markdown Mail Settings
+    |--------------------------------------------------------------------------
+    |
+    | Tema e percorsi dei componenti markdown delle email. Impostiamo il tema
+    | 'arkvel' come default: OGNI MailMessage markdown (quindi tutte le notifiche
+    | del progetto) è brandizzata ArkVel senza toccare le singole notifiche. Il
+    | CSS del tema (resources/views/vendor/mail/html/themes/arkvel.css) viene
+    | inlineato da Laravel in fase di render.
+    |
+    */
+
+    'markdown' => [
+        'theme' => 'arkvel',
+
+        'paths' => [
+            resource_path('views/vendor/mail'),
+        ],
+    ],
+
 ];

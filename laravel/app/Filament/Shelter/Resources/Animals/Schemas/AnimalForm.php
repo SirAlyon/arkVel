@@ -201,6 +201,8 @@ class AnimalForm
                     ->image()
                     ->acceptedFileTypes(Animal::ACCEPTED_IMAGE_MIME_TYPES)
                     ->imageEditor()
+                    ->downloadable()
+                    ->openable()
                     ->maxSize(5120),
                 SpatieMediaLibraryFileUpload::make('photos')
                     ->label(__('Galleria foto'))
@@ -210,6 +212,8 @@ class AnimalForm
                     ->multiple()
                     ->reorderable()
                     ->appendFiles()
+                    ->downloadable()
+                    ->openable()
                     ->maxFiles(12)
                     ->maxSize(5120),
             ]);

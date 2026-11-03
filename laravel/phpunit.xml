@@ -28,9 +28,24 @@
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SCOUT_DRIVER" value="collection"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- La sync Google è "non configurata" di default nei test, così la suite NON
+             eredita le credenziali reali dell'.env dello sviluppatore. I test che la
+             vogliono attiva impostano le config esplicitamente (config()->set(...)). -->
+        <env name="GOOGLE_CALENDAR_CLIENT_ID" value=""/>
+        <env name="GOOGLE_CALENDAR_CLIENT_SECRET" value=""/>
+        <env name="GOOGLE_CALENDAR_REDIRECT_URI" value=""/>
+        <!-- Stripe/Cashier "non configurato" di default nei test: la suite NON eredita
+             eventuali chiavi reali dell'.env dello sviluppatore e non tocca mai Stripe.
+             I test che vogliono simulare la configurazione impostano le config a mano
+             (config()->set('cashier.key', ...)) o usano PlatformSettings. -->
+        <env name="STRIPE_KEY" value=""/>
+        <env name="STRIPE_SECRET" value=""/>
+        <env name="STRIPE_WEBHOOK_SECRET" value=""/>
+        <env name="CASHIER_CURRENCY" value="eur"/>
     </php>
 </phpunit>

@@ -14,10 +14,6 @@ enum Species: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Dog => 'Cane',
-            self::Cat => 'Gatto',
-            self::Other => 'Altro',
-        };
+        return __('enums.species.'.$this->value);
     }
 }

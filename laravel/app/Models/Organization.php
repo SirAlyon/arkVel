@@ -9,9 +9,11 @@ use App\Enums\OrganizationType;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Spatie\Translatable\HasTranslations;
 
@@ -24,9 +26,13 @@ use Spatie\Translatable\HasTranslations;
  * gestiti da spatie/laravel-medialibrary (nessuna colonna dedicata qui).
  *
  * @property int $id
+ * @property string $name
  * @property string $slug
+ * @property string|null $city
  * @property OrganizationType $type
  * @property OrganizationStatus $status
+ * @property string|null $calendar_feed_token
+ * @property-read Collection<int, Animal> $animals
  */
 class Organization extends Model
 {
@@ -58,6 +64,7 @@ class Organization extends Model
         'email',
         'phone',
         'website',
+        'calendar_feed_token',
         'status',
         'verified_at',
     ];
@@ -103,6 +110,39 @@ class Organization extends Model
     }
 
     /**
+     * Animali dell'ente. Per il catalogo pubblico filtra con lo scope
+     * {@see Animal::publiclyVisible()} (o `available()`), mai grezzo.
+     *
+     * @return HasMany<Animal, $this>
+     */
+    public function animals(): HasMany
+    {
+        return $this->hasMany(Animal::class);
+    }
+
+    /**
+     * Connessioni a calendari esterni (Google/CalDAV) dell'ente. Filtra con lo scope
+     * {@see CalendarConnection::active()} per la pipeline di push.
+     *
+     * @return HasMany<CalendarConnection, $this>
+     */
+    public function calendarConnections(): HasMany
+    {
+        return $this->hasMany(CalendarConnection::class);
+    }
+
+    /**
+     * Donazioni ricevute dall'ente. Filtra con lo scope {@see Donation::completed()}
+     * per i KPI di raccolta (solo le donazioni incassate).
+     *
+     * @return HasMany<Donation, $this>
+     */
+    public function donations(): HasMany
+    {
+        return $this->hasMany(Donation::class);
+    }
+
+    /**
      * Tutti i membri dell'ente (a qualunque titolo), con dati di membership.
      *
      * @return BelongsToMany<User, $this, OrganizationUser>
@@ -123,5 +163,55 @@ class Organization extends Model
     public function verifiedStaff(): BelongsToMany
     {
         return $this->users()->wherePivot('verified', true);
+    }
+
+    /**
+     * Garantisce l'esistenza del token del feed iCal e lo restituisce: se manca ne
+     * genera uno ad alta entropia (Str::random(48)) e lo persiste; se c'è, lo
+     * restituisce invariato (idempotente). È il punto d'ingresso dalla UI (prima
+     * apertura del pannello feed): genera il segreto solo quando serve.
+     */
+    public function ensureCalendarFeedToken(): string
+    {
+        if (blank($this->calendar_feed_token)) {
+            $this->forceFill(['calendar_feed_token' => Str::random(48)])->save();
+        }
+
+        /** @var string $token */
+        $token = $this->calendar_feed_token;
+
+        return $token;
+    }
+
+    /**
+     * Rigenera il token: assegna un nuovo segreto e persiste. Il vecchio valore è
+     * sovrascritto, quindi il vecchio URL di sottoscrizione smette immediatamente di
+     * funzionare (revoca). È l'azione "Rigenera/Revoca" del pannello.
+     */
+    public function regenerateCalendarFeedToken(): string
+    {
+        $token = Str::random(48);
+
+        $this->forceFill(['calendar_feed_token' => $token])->save();
+
+        return $token;
+    }
+
+    /**
+     * URL firmato-dal-segreto del feed iCal, o null se il token non è ancora stato
+     * generato. Il segreto è parte dell'URL (come le "secret ICS URL" di
+     * Google/Fastmail): chi possiede l'URL può leggere il feed, quindi va condiviso
+     * con cautela e può essere revocato con {@see regenerateCalendarFeedToken()}.
+     */
+    public function calendarFeedUrl(): ?string
+    {
+        if (blank($this->calendar_feed_token)) {
+            return null;
+        }
+
+        return route('calendar.feed', [
+            'organization' => $this->slug,
+            'token' => $this->calendar_feed_token,
+        ]);
     }
 }

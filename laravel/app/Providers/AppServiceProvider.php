@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Listeners\BroadcastDatabaseNotificationSent;
 use App\Models\User;
+use App\Support\Contracts\ContractGenerator;
+use App\Support\Pdf\DompdfContractGenerator;
+use App\Support\Settings\PlatformSettings;
+use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -12,10 +18,19 @@ class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
+     *
+     * Dependency Inversion: FinalizeAdoption dipende dall'interfaccia
+     * ContractGenerator; qui la leghiamo all'implementazione dompdf. I test
+     * possono rimpiazzare il binding con un fake deterministico.
      */
     public function register(): void
     {
-        //
+        $this->app->bind(ContractGenerator::class, DompdfContractGenerator::class);
+
+        // Singleton per-request: lo store delle impostazioni di piattaforma tiene un
+        // memo in memoria; condividendo l'istanza, ogni consumatore (resolver Google,
+        // pagina admin) legge/invalida la stessa cache all'interno della request.
+        $this->app->singleton(PlatformSettings::class);
     }
 
     /**
@@ -24,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerSuperAdminBypass();
+
+        // Campanella Filament LIVE: ogni notifica Laravel salvata su `database`
+        // ri-emette DatabaseNotificationsSent verso l'utente, così il badge si
+        // aggiorna via websocket senza reload (polling resta come fallback).
+        Event::listen(NotificationSent::class, BroadcastDatabaseNotificationSent::class);
     }
 
     /**

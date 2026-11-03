@@ -6,6 +6,8 @@ namespace App\Models;
 
 use App\Enums\MedicalRecordType;
 use Database\Factories\MedicalRecordFactory;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +31,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string|null $vet_name
  * @property string|null $description
  * @property Carbon|null $next_due_at
+ * @property Carbon|null $reminder_sent_at
  * @property-read Animal|null $animal
  */
 class MedicalRecord extends Model implements HasMedia
@@ -48,6 +51,7 @@ class MedicalRecord extends Model implements HasMedia
         'vet_name',
         'description',
         'next_due_at',
+        'reminder_sent_at',
     ];
 
     /**
@@ -59,6 +63,7 @@ class MedicalRecord extends Model implements HasMedia
             'type' => MedicalRecordType::class,
             'date' => 'date',
             'next_due_at' => 'date',
+            'reminder_sent_at' => 'datetime',
         ];
     }
 
@@ -68,6 +73,40 @@ class MedicalRecord extends Model implements HasMedia
     public function animal(): BelongsTo
     {
         return $this->belongsTo(Animal::class);
+    }
+
+    /**
+     * Voci sanitarie da promemorizzare: hanno una scadenza (next_due_at valorizzato),
+     * non sono ancora state notificate (reminder_sent_at null) e la scadenza cade
+     * entro N giorni — inclusi i casi già scaduti (whereDate <= now()+N). È il
+     * predicato usato da arkvel:send-medical-reminders; la nullità di
+     * reminder_sent_at garantisce l'idempotenza (una notifica per ciclo di scadenza).
+     *
+     * @param  Builder<MedicalRecord>  $query
+     */
+    #[Scope]
+    protected function dueForReminder(Builder $query, int $withinDays): void
+    {
+        $query
+            ->whereNotNull('next_due_at')
+            ->whereNull('reminder_sent_at')
+            ->whereDate('next_due_at', '<=', now()->addDays($withinDays));
+    }
+
+    /**
+     * Voci sanitarie con scadenza entro N giorni (o già scadute), a prescindere dal
+     * fatto che il promemoria sia già stato inviato. Utile allo scadenzario in UI
+     * (widget): mostra sempre le scadenze imminenti, non solo quelle non notificate.
+     * L'ordinamento è lasciato al chiamante.
+     *
+     * @param  Builder<MedicalRecord>  $query
+     */
+    #[Scope]
+    protected function dueWithin(Builder $query, int $days): void
+    {
+        $query
+            ->whereNotNull('next_due_at')
+            ->whereDate('next_due_at', '<=', now()->addDays($days));
     }
 
     /**

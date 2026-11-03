@@ -89,6 +89,10 @@ class MedicalRecordsRelationManager extends RelationManager
                     ->multiple()
                     ->reorderable()
                     ->appendFiles()
+                    // Consente di aprire in anteprima e SCARICARE i file già caricati
+                    // (referti/PDF), non solo di caricarne di nuovi.
+                    ->downloadable()
+                    ->openable()
                     ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
                     ->maxSize(10240)
                     ->columnSpanFull(),

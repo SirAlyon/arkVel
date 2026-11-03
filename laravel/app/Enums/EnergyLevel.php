@@ -18,10 +18,6 @@ enum EnergyLevel: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Low => 'Basso',
-            self::Medium => 'Medio',
-            self::High => 'Alto',
-        };
+        return __('enums.energy_level.'.$this->value);
     }
 }

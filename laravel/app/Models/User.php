@@ -16,10 +16,13 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Laravel\Cashier\Billable;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password'])]
@@ -27,7 +30,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements FilamentUser, HasTenants, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable;
+    use Billable, HasFactory, HasRoles, Notifiable;
 
     /**
      * Get the attributes that should be cast.
@@ -73,6 +76,67 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
         return $this->organizations()
             ->wherePivot('verified', true)
             ->where('organizations.status', '!=', OrganizationStatus::Suspended);
+    }
+
+    /**
+     * Profilo/questionario dell'adottante (1:1). L'ownership è per utente, non
+     * per ente: non è una risorsa tenant-scoped.
+     *
+     * @return HasOne<AdopterProfile, $this>
+     */
+    public function adopterProfile(): HasOne
+    {
+        return $this->hasOne(AdopterProfile::class);
+    }
+
+    /**
+     * L'utente ha un profilo adottante completo (questionario obbligatorio +
+     * consenso GDPR). Delega il giudizio di completezza al profilo stesso.
+     */
+    public function hasCompleteAdopterProfile(): bool
+    {
+        return $this->adopterProfile?->isComplete() === true;
+    }
+
+    /**
+     * Candidature di adozione inviate dall'utente (lato adottante). La relazione
+     * è SELF-OWNED per user_id: la pagina "Le mie candidature" del pannello
+     * adottante legge sempre da `Auth::user()->applications()`. L'ownership è
+     * quindi implicita nella scope; la AdoptionApplicationPolicy resta il
+     * confine per view/withdraw sulla singola riga.
+     *
+     * @return HasMany<AdoptionApplication, $this>
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(AdoptionApplication::class);
+    }
+
+    /**
+     * Animali messi tra i preferiti dall'utente (wishlist). La relazione è
+     * SELF-OWNED: ogni riga della pivot `favorites` appartiene all'utente che
+     * l'ha creata, quindi tutte le letture/scritture passano SEMPRE da
+     * `auth()->user()->favorites()`. Non esiste azione cross-utente da
+     * autorizzare a livello di riga: non serve una Policy sulla pivot,
+     * l'ownership è implicita nella scope della relazione.
+     *
+     * @return BelongsToMany<Animal, $this>
+     */
+    public function favorites(): BelongsToMany
+    {
+        return $this->belongsToMany(Animal::class, 'favorites')
+            ->withTimestamps();
+    }
+
+    /**
+     * L'utente ha già l'animale indicato tra i preferiti. Predicato banale sulla
+     * relazione self-owned: nessuna business logic, solo una query di appartenenza.
+     */
+    public function hasFavorited(Animal $animal): bool
+    {
+        return $this->favorites()
+            ->whereKey($animal->getKey())
+            ->exists();
     }
 
     /**
@@ -163,11 +227,18 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
      *   non abilita emailVerification(), quindi il contratto MustVerifyEmail non
      *   introduce regressioni sull'admin. Il gating fine dell'admin sarà definito
      *   in una slice dedicata.
+     * - adopter: accesso permissivo per ogni utente autenticato (`true`). Qui non
+     *   c'è tenancy: l'ISOLAMENTO del pannello adopter è per OWNERSHIP a livello di
+     *   Policy (AdopterProfilePolicy: solo il proprietario vede/modifica il proprio
+     *   profilo) più la VERIFICA EMAIL obbligatoria (emailVerification() sul
+     *   pannello). Il ruolo Adopter è di piattaforma, assegnato team-independent dal
+     *   middleware EnsureAdopterRole, ed è bookkeeping (nessun permesso).
      */
     public function canAccessPanel(Panel $panel): bool
     {
         return match ($panel->getId()) {
             'shelter' => true,
+            'adopter' => true,
             default => true,
         };
     }

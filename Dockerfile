@@ -17,7 +17,7 @@ RUN apk add --no-cache \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
         pdo pdo_pgsql pgsql \
-        intl gd zip bcmath exif pcntl opcache \
+        intl gd zip bcmath exif pcntl opcache sockets \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del $PHPIZE_DEPS

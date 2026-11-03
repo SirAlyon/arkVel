@@ -1,9 +1,410 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/bricolage-grotesque/opsz.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../views/**/*.blade.php';
+@source '../../app/Livewire/**/*.php';
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+/*
+ | Dark mode a classe: `.dark` su <html>, impostata dallo script in
+ | resources/views/partials/theme-script.blade.php (scelta salvata o
+ | prefers-color-scheme). Vedi docs/PIANO-UI-FRONTEND.md §1-bis.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ | ArkVel · design token — direzione "B · Pop affettuoso" (§1-bis del piano UI).
+ |
+ | Tre livelli:
+ |  1. palette (scale 50-950 in OKLCH, ancorate ai colori del mockup);
+ |  2. token semantici (canvas, surface, fg, primary, block-*, stati...), che sono
+ |     quelli da usare nei componenti e cambiano valore in dark mode;
+ |  3. tipografia, forme, spazi e motion.
+ |
+ | `static`: le variabili sono sempre emesse, anche se nessuna utility le usa
+ | (servono alla dark mode, alla styleguide e al test dei contrasti).
+ |
+ | I contrasti delle coppie semantiche sono verificati da
+ | tests/Unit/DesignTokens/ColorContrastTest.php: chi cambia un valore deve
+ | tenerlo verde (testo >= 4.5:1, bordi dei controlli e focus >= 3:1).
+ */
+@theme static {
+    /* ── Tipografia ─────────────────────────────────────────────────────── */
+    /* Una sola famiglia, variabile con asse ottico (opsz 12-96): il browser
+       adatta automaticamente il disegno alla dimensione (font-optical-sizing). */
+    --font-sans: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Scala fluida: titoli 800 molto stretti, testo 17 px / 1.5. */
+    --text-display: clamp(3rem, 1.6rem + 7vw, 6rem);
+    --text-display--line-height: 0.95;
+    --text-display--letter-spacing: -0.045em;
+    --text-display--font-weight: 800;
+
+    --text-h1: clamp(2.5rem, 1.75rem + 3.2vw, 4rem);
+    --text-h1--line-height: 1;
+    --text-h1--letter-spacing: -0.04em;
+    --text-h1--font-weight: 800;
+
+    --text-h2: clamp(2rem, 1.5rem + 2vw, 3rem);
+    --text-h2--line-height: 1.05;
+    --text-h2--letter-spacing: -0.035em;
+    --text-h2--font-weight: 800;
+
+    --text-h3: clamp(1.625rem, 1.35rem + 1.1vw, 2.25rem);
+    --text-h3--line-height: 1.08;
+    --text-h3--letter-spacing: -0.03em;
+    --text-h3--font-weight: 800;
+
+    --text-h4: 1.625rem;
+    --text-h4--line-height: 1.15;
+    --text-h4--letter-spacing: -0.02em;
+    --text-h4--font-weight: 800;
+
+    --text-h5: 1.3125rem;
+    --text-h5--line-height: 1.3;
+    --text-h5--letter-spacing: -0.01em;
+    --text-h5--font-weight: 700;
+
+    --text-lead: clamp(1.125rem, 1.05rem + 0.35vw, 1.25rem);
+    --text-lead--line-height: 1.45;
+
+    --text-body: 1.0625rem;
+    --text-body--line-height: 1.5;
+
+    --text-small: 0.9375rem;
+    --text-small--line-height: 1.45;
+
+    --text-caption: 0.875rem;
+    --text-caption--line-height: 1.4;
+
+    /* ── Palette ────────────────────────────────────────────────────────── */
+    /* Generata in OKLCH: ogni scala mantiene tinta e croma e varia la luminosità;
+       i colori del mockup sono ancorati esatti (hex di riferimento in commento). */
+    /* Inchiostro (navy): testo, bottone primario, card scure. 900 = #1B1B3A, 700 = hover #3A3A70, 950 = fondo dark #13132B. */
+    --color-navy-50: oklch(97.00% 0.0120 281.00); /* #F3F4FD */
+    --color-navy-100: oklch(93.50% 0.0250 281.00); /* #E6E8FA */
+    --color-navy-200: oklch(87.00% 0.0450 281.00); /* #CED1F2 */
+    --color-navy-300: oklch(78.00% 0.0700 281.00); /* #AFB3E4 */
+    --color-navy-400: oklch(67.00% 0.1000 281.00); /* #8A8ED2 */
+    --color-navy-500: oklch(56.00% 0.1200 281.00); /* #696AB9 */
+    --color-navy-600: oklch(46.00% 0.1100 281.00); /* #4E4F93 */
+    --color-navy-700: oklch(37.69% 0.0906 281.14); /* #3A3A70 */
+    --color-navy-800: oklch(30.00% 0.0750 281.00); /* #282852 */
+    --color-navy-900: oklch(24.04% 0.0582 281.10); /* #1B1B3A */
+    --color-navy-950: oklch(20.14% 0.0472 281.30); /* #13132B */
+
+    /* Neutri freddi: testo secondario (700 = #4A4A68, 300 = #B8B6C8 in dark) e bordi dei controlli (500, >= 3:1). */
+    --color-dusk-50: oklch(97.00% 0.0060 286.00); /* #F5F5F9 */
+    --color-dusk-100: oklch(93.50% 0.0100 286.00); /* #E9E9F0 */
+    --color-dusk-200: oklch(87.50% 0.0180 286.00); /* #D4D4E2 */
+    --color-dusk-300: oklch(78.35% 0.0254 290.91); /* #B8B6C8 */
+    --color-dusk-400: oklch(69.00% 0.0300 286.00); /* #9999AE */
+    --color-dusk-500: oklch(60.00% 0.0350 286.00); /* #7E7E95 */
+    --color-dusk-600: oklch(51.00% 0.0400 286.00); /* #64637C */
+    --color-dusk-700: oklch(42.18% 0.0496 284.07); /* #4A4A68 */
+    --color-dusk-800: oklch(35.00% 0.0450 286.00); /* #383751 */
+    --color-dusk-900: oklch(28.00% 0.0400 286.00); /* #27263C */
+    --color-dusk-950: oklch(21.00% 0.0350 286.00); /* #171628 */
+
+    /* Neutri caldi: superfici. 100 = superficie #F3F1EA, 200 = bordo decorativo #E4E1D6 (1,31:1: mai per i controlli), 50 = testo dark #F7F5EE. */
+    --color-sand-50: oklch(96.98% 0.0095 93.57); /* #F7F5EE */
+    --color-sand-100: oklch(95.78% 0.0095 93.57); /* #F3F1EA */
+    --color-sand-200: oklch(90.91% 0.0151 94.21); /* #E4E1D6 */
+    --color-sand-300: oklch(85.00% 0.0200 94.00); /* #D2CEBF */
+    --color-sand-400: oklch(76.00% 0.0220 94.00); /* #B5B1A2 */
+    --color-sand-500: oklch(66.00% 0.0220 94.00); /* #969283 */
+    --color-sand-600: oklch(56.00% 0.0200 94.00); /* #787467 */
+    --color-sand-700: oklch(47.00% 0.0180 94.00); /* #5E5B50 */
+    --color-sand-800: oklch(38.00% 0.0160 94.00); /* #454239 */
+    --color-sand-900: oklch(30.00% 0.0140 94.00); /* #302E26 */
+    --color-sand-950: oklch(22.00% 0.0120 94.00); /* #1C1B14 */
+
+    /* Giallo primario: 300 = #FFD23F. Fondo di blocchi, CTA e badge; testo sopra sempre navy. Mai testo giallo sotto i 24 px sul verde (4,43:1). */
+    --color-sun-50: oklch(98.50% 0.0240 95.00); /* #FFFAE8 */
+    --color-sun-100: oklch(96.50% 0.0530 94.00); /* #FFF4CC */
+    --color-sun-200: oklch(93.00% 0.1010 93.00); /* #FFE799 */
+    --color-sun-300: oklch(87.89% 0.1617 90.94); /* #FFD23F */
+    --color-sun-400: oklch(82.00% 0.1650 86.00); /* #F3BB13 */
+    --color-sun-500: oklch(74.00% 0.1530 80.00); /* #DD9E02 */
+    --color-sun-600: oklch(63.00% 0.1340 72.00); /* #BA7904 */
+    --color-sun-700: oklch(53.00% 0.1190 64.00); /* #9A5A02 */
+    --color-sun-800: oklch(44.00% 0.1000 58.00); /* #7A420A */
+    --color-sun-900: oklch(37.00% 0.0800 55.00); /* #5F330F */
+    --color-sun-950: oklch(27.00% 0.0600 52.00); /* #3D1D06 */
+
+    /* Pesca: 300 = #FFB4A2 (blocchi foto, numeri dei passi), 800 = #5A2A20 (testo su pesca, 6,9:1). */
+    --color-peach-50: oklch(97.50% 0.0120 36.00); /* #FFF4F1 */
+    --color-peach-100: oklch(94.50% 0.0280 36.00); /* #FFE7E0 */
+    --color-peach-200: oklch(89.50% 0.0550 35.00); /* #FED0C4 */
+    --color-peach-300: oklch(83.62% 0.0918 34.00); /* #FFB4A2 */
+    --color-peach-400: oklch(76.00% 0.1200 33.00); /* #F3947F */
+    --color-peach-500: oklch(68.00% 0.1350 32.00); /* #DF7662 */
+    --color-peach-600: oklch(59.00% 0.1300 31.00); /* #BE5C4B */
+    --color-peach-700: oklch(48.00% 0.1100 32.00); /* #914234 */
+    --color-peach-800: oklch(34.81% 0.0732 33.06); /* #5A2A20 */
+    --color-peach-900: oklch(28.00% 0.0600 33.00); /* #421C15 */
+    --color-peach-950: oklch(21.00% 0.0450 33.00); /* #2A100A */
+
+    /* Verdi: 200 = menta #B7E4C7, 700 = verde #2D6A4F (stat, banda donazione, testo bianco 6,4:1). */
+    --color-leaf-50: oklch(97.50% 0.0150 155.00); /* #EFFAF2 */
+    --color-leaf-100: oklch(94.50% 0.0300 156.00); /* #DEF3E5 */
+    --color-leaf-200: oklch(87.92% 0.0614 156.65); /* #B7E4C7 */
+    --color-leaf-300: oklch(80.00% 0.0850 158.00); /* #8ECFA9 */
+    --color-leaf-400: oklch(70.00% 0.1000 160.00); /* #62B289 */
+    --color-leaf-500: oklch(62.00% 0.1000 161.00); /* #479972 */
+    --color-leaf-600: oklch(55.00% 0.0900 162.00); /* #398261 */
+    --color-leaf-700: oklch(47.58% 0.0777 162.16); /* #2D6A4F */
+    --color-leaf-800: oklch(40.00% 0.0680 163.00); /* #1E533D */
+    --color-leaf-900: oklch(32.00% 0.0550 163.00); /* #133C2B */
+    --color-leaf-950: oklch(24.00% 0.0420 163.00); /* #082519 */
+
+    /* Rosso: solo per errori e azioni distruttive. */
+    --color-cherry-50: oklch(97.00% 0.0140 18.00); /* #FFF2F1 */
+    --color-cherry-100: oklch(93.50% 0.0320 18.00); /* #FEE2E1 */
+    --color-cherry-200: oklch(88.00% 0.0630 19.00); /* #FFC8C7 */
+    --color-cherry-300: oklch(80.00% 0.1100 20.00); /* #FDA1A0 */
+    --color-cherry-400: oklch(71.00% 0.1600 22.00); /* #F57373 */
+    --color-cherry-500: oklch(62.00% 0.1900 24.00); /* #E2484A */
+    --color-cherry-600: oklch(55.00% 0.1900 25.00); /* #C92F33 */
+    --color-cherry-700: oklch(48.00% 0.1700 25.00); /* #A92227 */
+    --color-cherry-800: oklch(40.00% 0.1400 25.00); /* #831A1D */
+    --color-cherry-900: oklch(32.00% 0.1100 24.00); /* #5F1115 */
+    --color-cherry-950: oklch(24.00% 0.0800 24.00); /* #3D090B */
+
+    /* ── Token semantici (tema chiaro; il tema scuro li ridefinisce sotto) ── */
+    /* Fondi */
+    --color-canvas: var(--color-white);
+    --color-surface: var(--color-sand-100);
+    --color-surface-raised: var(--color-white);
+
+    /* Testo */
+    --color-fg: var(--color-navy-900);
+    --color-fg-muted: var(--color-dusk-700);
+
+    /* Bordi: `line` è solo decorativo (1,31:1), `line-strong` per input e controlli (>= 3:1). */
+    --color-line: var(--color-sand-200);
+    --color-line-strong: var(--color-dusk-500);
+
+    /* Azioni */
+    --color-primary: var(--color-navy-900);
+    --color-primary-hover: var(--color-navy-700);
+    --color-on-primary: var(--color-white);
+    --color-highlight: var(--color-sun-300);
+    --color-highlight-hover: var(--color-sun-400);
+    --color-on-highlight: var(--color-navy-900);
+    --color-link: var(--color-navy-900);
+    --color-link-hover: var(--color-navy-600);
+    --color-focus: var(--color-navy-900);
+
+    /* Bollino ruotato della hero e badge forti; card scura a fine griglia */
+    --color-stamp: var(--color-navy-900);
+    --color-on-stamp: var(--color-sun-300);
+    --color-inverse: var(--color-navy-900);
+    --color-on-inverse: var(--color-white);
+
+    /* Blocchi di colore piatto (bento, foto delle card, numeri dei passi) */
+    --color-block-sun: var(--color-sun-300);
+    --color-on-block-sun: var(--color-navy-900);
+    --color-block-peach: var(--color-peach-300);
+    --color-on-block-peach: var(--color-navy-900);
+    --color-block-mint: var(--color-leaf-200);
+    --color-on-block-mint: var(--color-navy-900);
+    --color-block-leaf: var(--color-leaf-700);
+    --color-on-block-leaf: var(--color-white);
+
+    /* Stati: solido (icone, testo su canvas), -subtle (fondo), on-*-subtle (testo sul fondo).
+       Mai solo colore: affiancare sempre icona o testo. */
+    --color-success: var(--color-leaf-700);
+    --color-success-subtle: var(--color-leaf-50);
+    --color-on-success-subtle: var(--color-leaf-800);
+    --color-warning: var(--color-sun-700);
+    --color-warning-subtle: var(--color-sun-100);
+    --color-on-warning-subtle: var(--color-sun-900);
+    --color-danger: var(--color-cherry-600);
+    --color-on-danger: var(--color-white);
+    --color-danger-subtle: var(--color-cherry-50);
+    --color-on-danger-subtle: var(--color-cherry-800);
+    --color-info: var(--color-navy-600);
+    --color-info-subtle: var(--color-navy-50);
+    --color-on-info-subtle: var(--color-navy-800);
+
+    /* ── Legacy (da rimuovere in UI-6) ──────────────────────────────────── */
+    /* Le pagine attuali usano ancora brand-* (ex terracotta) e accent-* (ex teal).
+       Fino alla loro migrazione puntano alla nuova palette: brand → sabbia/navy,
+       accent → verde, scalato di un passo perché il bianco sopra resti >= 4.5:1. */
+    --color-brand-50: var(--color-sand-50);
+    --color-brand-100: var(--color-sand-100);
+    --color-brand-200: var(--color-sand-200);
+    --color-brand-300: var(--color-navy-300);
+    --color-brand-400: var(--color-navy-400);
+    --color-brand-500: var(--color-navy-500);
+    --color-brand-600: var(--color-navy-600);
+    --color-brand-700: var(--color-navy-700);
+    --color-brand-800: var(--color-navy-800);
+    --color-brand-900: var(--color-navy-900);
+    --color-brand-950: var(--color-navy-950);
+    --color-accent-50: var(--color-leaf-50);
+    --color-accent-100: var(--color-leaf-100);
+    --color-accent-200: var(--color-leaf-200);
+    --color-accent-300: var(--color-leaf-300);
+    --color-accent-400: var(--color-leaf-400);
+    --color-accent-500: var(--color-leaf-600);
+    --color-accent-600: var(--color-leaf-700);
+    --color-accent-700: var(--color-leaf-800);
+    --color-accent-800: var(--color-leaf-900);
+    --color-accent-900: var(--color-leaf-950);
+    --color-accent-950: var(--color-leaf-950);
+
+    /* ── Forme ──────────────────────────────────────────────────────────── */
+    /* Raggi generosi per gerarchia: pannello > card > passo > immagine > icona.
+       Bottoni, chip, nav e ricerca: `rounded-full`. Nessuna ombra: la profondità
+       viene dai blocchi di colore. */
+    --radius-panel: 2.5rem;
+    --radius-card: 2rem;
+    --radius-step: 1.75rem;
+    --radius-media: 1.5rem;
+    --radius-icon: 0.875rem;
+    --radius-icon-lg: 1rem;
+
+    /* Unica eccezione alle "nessuna ombra": i livelli flottanti (dialog, dropdown,
+       toast), che devono staccarsi dal contenuto sottostante. */
+    --shadow-overlay: 0 1px 2px oklch(24% 0.058 281 / 0.08), 0 12px 32px -8px oklch(24% 0.058 281 / 0.22);
+
+    /* ── Spazi e layout ─────────────────────────────────────────────────── */
+    --container-page: 77.5rem;
+    --spacing-gutter: clamp(1rem, 0.6rem + 1.6vw, 1.5rem);
+    --spacing-panel: clamp(1.5rem, 0.6rem + 3.6vw, 3.5rem);
+    --spacing-section: clamp(2.5rem, 1.5rem + 4vw, 4rem);
+
+    /* ── Motion ─────────────────────────────────────────────────────────── */
+    /* Easing: `out` per entrate e risposte, `in-out` per spostamenti, `pop` (leggero
+       overshoot) per le micro-interazioni giocose (cuore, chip). */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Durate (uso: `duration-(--duration-fast)`). Interazioni <= 300 ms; `reveal`
+       solo per entrate non legate a un'azione. Con reduced-motion vanno a ~0. */
+    --duration-instant: 100ms;
+    --duration-fast: 160ms;
+    --duration-base: 220ms;
+    --duration-slow: 300ms;
+    --duration-reveal: 480ms;
+}
+
+@layer base {
+    /*
+     | Tema scuro: fondo navy molto scuro, superfici navy via via più chiare (un gradino
+     | di luminosità per livello, così i blocchi restano distinguibili), testo crema.
+     | Il giallo resta accento (bottoni, badge, numeri), mai grande superficie: il blocco
+     | hero diventa una superficie scura e la card "inverse" un navy più chiaro (niente
+     | grandi superfici crema che abbagliano). Pesca e menta diventano blocchi scuri con
+     | testo chiaro; il verde resta leaf-700, più luminoso della menta per distinguerli.
+     */
+    .dark {
+        color-scheme: dark;
+
+        --color-canvas: var(--color-navy-950);
+        --color-surface: var(--color-navy-800);
+        --color-surface-raised: var(--color-navy-700);
+
+        --color-fg: var(--color-sand-50);
+        --color-fg-muted: var(--color-dusk-300);
+
+        --color-line: var(--color-navy-600);
+        --color-line-strong: var(--color-dusk-400);
+
+        --color-primary: var(--color-sun-300);
+        --color-primary-hover: var(--color-sun-200);
+        --color-on-primary: var(--color-navy-900);
+        --color-highlight: var(--color-sun-300);
+        --color-highlight-hover: var(--color-sun-200);
+        --color-on-highlight: var(--color-navy-900);
+        --color-link: var(--color-sun-300);
+        --color-link-hover: var(--color-sun-200);
+        --color-focus: var(--color-sun-300);
+
+        --color-stamp: var(--color-sun-300);
+        --color-on-stamp: var(--color-navy-900);
+        --color-inverse: var(--color-navy-600);
+        --color-on-inverse: var(--color-sand-50);
+
+        --color-block-sun: var(--color-navy-800);
+        --color-on-block-sun: var(--color-sand-50);
+        --color-block-peach: var(--color-peach-800);
+        --color-on-block-peach: var(--color-peach-100);
+        --color-block-mint: var(--color-leaf-900);
+        --color-on-block-mint: var(--color-leaf-100);
+        --color-block-leaf: var(--color-leaf-700);
+        --color-on-block-leaf: var(--color-white);
+
+        --color-success: var(--color-leaf-300);
+        --color-success-subtle: var(--color-leaf-950);
+        --color-on-success-subtle: var(--color-leaf-100);
+        --color-warning: var(--color-sun-300);
+        --color-warning-subtle: var(--color-sun-950);
+        --color-on-warning-subtle: var(--color-sun-100);
+        --color-danger: var(--color-cherry-300);
+        --color-on-danger: var(--color-navy-950);
+        --color-danger-subtle: var(--color-cherry-950);
+        --color-on-danger-subtle: var(--color-cherry-100);
+        --color-info: var(--color-navy-300);
+        --color-info-subtle: var(--color-navy-800);
+        --color-on-info-subtle: var(--color-navy-100);
+
+        --shadow-overlay: 0 1px 2px oklch(0% 0 0 / 0.3), 0 12px 32px -8px oklch(0% 0 0 / 0.55);
+    }
+
+    /*
+     | Focus sui blocchi colorati: l'anello (con outline-offset) è disegnato sul fondo del
+     | contenitore, dove il colore di default può sparire (navy su navy, navy su verde).
+     | Dentro questi fondi il focus prende il colore del testo del blocco. Elenco tenuto
+     | allineato a ContrastPairs::focusScopes() e verificato da ColorContrastTest.
+     */
+    .bg-inverse { --color-focus: var(--color-on-inverse); }
+    .bg-stamp { --color-focus: var(--color-on-stamp); }
+    .bg-block-sun { --color-focus: var(--color-on-block-sun); }
+    .bg-block-peach { --color-focus: var(--color-on-block-peach); }
+    .bg-block-mint { --color-focus: var(--color-on-block-mint); }
+    .bg-block-leaf { --color-focus: var(--color-on-block-leaf); }
+
+    /* Focus visibile e coerente su tutti gli elementi interattivi (>= 3:1 sui fondi).
+       Il colore è impostato su ogni elemento, non solo al focus: così `transition-colors`
+       (che include outline-color) non anima l'anello partendo da currentColor. */
+    *,
+    ::before,
+    ::after {
+        outline-color: var(--color-focus);
+    }
+
+    :focus-visible {
+        outline: 3px solid var(--color-focus);
+        outline-offset: 2px;
+    }
+
+    /* Rispetto di prefers-reduced-motion: niente animazioni né scroll animato. */
+    @media (prefers-reduced-motion: reduce) {
+        :root {
+            --duration-instant: 0.01ms;
+            --duration-fast: 0.01ms;
+            --duration-base: 0.01ms;
+            --duration-slow: 0.01ms;
+            --duration-reveal: 0.01ms;
+        }
+
+        *,
+        ::before,
+        ::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+
+        html {
+            scroll-behavior: auto !important;
+        }
+    }
 }

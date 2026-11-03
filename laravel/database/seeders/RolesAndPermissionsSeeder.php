@@ -82,12 +82,28 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::MedicalRecordCreate,
                 PermissionName::MedicalRecordUpdate,
                 PermissionName::MedicalRecordDelete,
+                PermissionName::ApplicationView,
+                PermissionName::ApplicationManage,
+                PermissionName::FosterApplicationView,
+                PermissionName::FosterApplicationManage,
+                PermissionName::AppointmentView,
+                PermissionName::AppointmentManage,
+                PermissionName::CalendarManage,
+                PermissionName::MessageView,
+                PermissionName::MessageManage,
+                PermissionName::DonationView,
+                PermissionName::DonationManage,
             ));
 
         $this->roleFor(RoleName::OrgVolunteer)
             ->syncPermissions($this->permissionValues(
                 PermissionName::AnimalView,
                 PermissionName::MedicalRecordView,
+                PermissionName::ApplicationView,
+                PermissionName::FosterApplicationView,
+                PermissionName::AppointmentView,
+                PermissionName::MessageView,
+                PermissionName::DonationView,
             ));
 
         // Adopter e SuperAdmin non hanno permessi d'ente espliciti.

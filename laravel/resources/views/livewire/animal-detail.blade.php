@@ -1,0 +1,365 @@
+<div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    {{-- Breadcrumb --}}
+    <nav class="mb-6 flex items-center gap-2 text-sm text-stone-500" aria-label="{{ __('public.detail.breadcrumb') }}">
+        <a href="{{ route('catalog') }}" class="hover:text-brand-700">{{ __('public.nav.catalog') }}</a>
+        <span aria-hidden="true">/</span>
+        <span class="text-stone-700">{{ $animal->name }}</span>
+    </nav>
+
+    <div class="grid grid-cols-1 gap-10 lg:grid-cols-2">
+        {{-- Galleria --}}
+        <div>
+            @php
+                $cover = $animal->getFirstMediaUrl('photos', 'thumb') ?: $animal->getFirstMediaUrl('avatar', 'thumb');
+            @endphp
+            <div class="aspect-[4/3] overflow-hidden rounded-2xl border border-brand-100 bg-brand-100">
+                @if ($cover)
+                    <img src="{{ $cover }}" alt="{{ __('public.animal.photo_alt', ['name' => $animal->name]) }}"
+                         class="h-full w-full object-cover">
+                @else
+                    <div class="flex h-full w-full items-center justify-center text-brand-300" aria-hidden="true">
+                        <svg class="h-24 w-24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8.5 5.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0ZM5 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm14 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm-7 1c2 0 3.6 1.3 4.6 3 .8 1.3 1.4 2.7-.1 3.6-.9.6-2.2.1-3.3-.2a4.7 4.7 0 0 0-2.4 0c-1.1.3-2.4.8-3.3.2-1.5-.9-.9-2.3-.1-3.6C8.4 13.3 10 12 12 12Z"/>
+                        </svg>
+                    </div>
+                @endif
+            </div>
+
+            @if ($photos->count() > 1)
+                <div class="mt-3 grid grid-cols-4 gap-3">
+                    @foreach ($photos->take(4) as $photo)
+                        <div class="aspect-square overflow-hidden rounded-xl border border-brand-100 bg-brand-100">
+                            <img src="{{ $photo->getUrl('thumb') }}" alt="{{ __('public.animal.photo_alt', ['name' => $animal->name]) }}"
+                                 loading="lazy" class="h-full w-full object-cover">
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        {{-- Dettagli --}}
+        <div>
+            <div class="flex flex-wrap items-center gap-2">
+                <x-badge color="brand">{{ $animal->species->getLabel() }}</x-badge>
+                @if ($animal->featured)
+                    <x-badge color="accent">&#9733; {{ __('public.animal.featured') }}</x-badge>
+                @endif
+            </div>
+
+            <div class="mt-3 flex items-start justify-between gap-3">
+                <h1 class="text-3xl font-bold tracking-tight text-stone-900">{{ $animal->name }}</h1>
+                <livewire:favorite-button :animal="$animal" :key="'fav-detail-'.$animal->id" />
+            </div>
+
+            @if ($animal->breed)
+                <p class="mt-1 text-stone-500">{{ $animal->breed }}</p>
+            @endif
+
+            {{-- Anagrafica --}}
+            <dl class="mt-6 grid grid-cols-2 gap-4 rounded-2xl border border-brand-100 bg-white p-5 sm:grid-cols-3">
+                <div>
+                    <dt class="text-xs uppercase tracking-wide text-stone-400">{{ __('public.detail.sex') }}</dt>
+                    <dd class="mt-0.5 text-sm font-medium text-stone-800">{{ $animal->sex->getLabel() }}</dd>
+                </div>
+                @if ($animal->size)
+                    <div>
+                        <dt class="text-xs uppercase tracking-wide text-stone-400">{{ __('public.detail.size') }}</dt>
+                        <dd class="mt-0.5 text-sm font-medium text-stone-800">{{ $animal->size->getLabel() }}</dd>
+                    </div>
+                @endif
+                @if ($animal->energy_level)
+                    <div>
+                        <dt class="text-xs uppercase tracking-wide text-stone-400">{{ __('public.detail.energy') }}</dt>
+                        <dd class="mt-0.5 text-sm font-medium text-stone-800">{{ $animal->energy_level->getLabel() }}</dd>
+                    </div>
+                @endif
+                @if ($animal->estimated_age_months)
+                    <div>
+                        <dt class="text-xs uppercase tracking-wide text-stone-400">{{ __('public.detail.age') }}</dt>
+                        <dd class="mt-0.5 text-sm font-medium text-stone-800">
+                            {{ trans_choice('public.detail.age_months', $animal->estimated_age_months, ['count' => $animal->estimated_age_months]) }}
+                        </dd>
+                    </div>
+                @endif
+            </dl>
+
+            {{-- Temperamento / compatibilità --}}
+            @if ($animal->temperament || $animal->good_with_kids !== null || $animal->good_with_dogs !== null || $animal->good_with_cats !== null)
+                <div class="mt-5">
+                    <h2 class="text-sm font-semibold text-stone-700">{{ __('public.detail.character') }}</h2>
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                        @if ($animal->temperament)
+                            <x-badge color="stone">{{ $animal->temperament }}</x-badge>
+                        @endif
+                        @if ($animal->good_with_kids)
+                            <x-badge color="accent">{{ __('public.detail.good_with_kids') }}</x-badge>
+                        @endif
+                        @if ($animal->good_with_dogs)
+                            <x-badge color="accent">{{ __('public.detail.good_with_dogs') }}</x-badge>
+                        @endif
+                        @if ($animal->good_with_cats)
+                            <x-badge color="accent">{{ __('public.detail.good_with_cats') }}</x-badge>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            {{-- Descrizione (locale corrente) --}}
+            @php
+                $description = $animal->getTranslation('description', app()->getLocale(), false);
+            @endphp
+            @if ($description)
+                <div class="mt-6">
+                    <h2 class="text-sm font-semibold text-stone-700">{{ __('public.detail.about') }}</h2>
+                    <p class="mt-2 whitespace-pre-line text-stone-600">{{ $description }}</p>
+                </div>
+            @endif
+
+            {{-- CTA candidatura --}}
+            <div class="mt-8 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 p-6 text-white shadow-sm">
+                <h2 class="text-lg font-semibold">{{ __('public.detail.cta_title', ['name' => $animal->name]) }}</h2>
+                <p class="mt-1 text-sm text-brand-100">{{ __('public.detail.cta_body') }}</p>
+
+                {{-- Feedback in-place (successo / messaggio amichevole). Le redirezioni
+                     (ospite / profilo incompleto) usano invece il flash di sessione. --}}
+                @if ($applyMessage)
+                    <p class="mt-4 rounded-xl px-4 py-2.5 text-sm font-medium {{ $applyMessageIsError ? 'bg-white/20 text-white' : 'bg-white/90 text-brand-800' }}"
+                       role="status" aria-live="polite" wire:key="apply-message">
+                        {{ $applyMessage }}
+                    </p>
+                @endif
+
+                @if ($hasApplied)
+                    {{-- GIÀ CANDIDATO: stato "inviata" + rimando alle candidature. --}}
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                        <span class="inline-flex items-center gap-2 rounded-xl bg-white/90 px-4 py-2.5 text-sm font-semibold text-brand-800">
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 0 1 1.4-1.4l3.1 3.1 6.8-6.8a1 1 0 0 1 1.4 0Z" clip-rule="evenodd"/>
+                            </svg>
+                            {{ __('applications.apply.applied') }}
+                        </span>
+                        <x-button :href="route('filament.adopter.pages.my-applications')" variant="outline" size="lg">
+                            {{ __('applications.apply.my_applications') }}
+                        </x-button>
+                    </div>
+                @else
+                    {{-- OSPITE / PROFILO INCOMPLETO / CANDIDABILE: un solo pulsante che
+                         delega all'Action; il ramo è deciso lato server in apply(). --}}
+                    <x-button
+                        type="button"
+                        variant="accent"
+                        size="lg"
+                        class="mt-4"
+                        wire:click="apply"
+                        wire:loading.attr="disabled"
+                        wire:target="apply"
+                    >
+                        <span wire:loading.remove wire:target="apply">{{ __('public.detail.cta_button') }}</span>
+                        <span wire:loading wire:target="apply">{{ __('applications.apply.submitting') }}</span>
+                    </x-button>
+                @endif
+
+                {{-- CTA affido: accanto alla candidatura di adozione. Specchio della
+                     stessa logica, delega a SubmitFosterApplication in requestFoster(). --}}
+                <div class="mt-5 border-t border-white/20 pt-5">
+                    <p class="text-sm text-brand-100">{{ __('fostering.request.cta_body') }}</p>
+
+                    {{-- Feedback in-place del ramo affido (successo / messaggio amichevole). --}}
+                    @if ($fosterMessage)
+                        <p class="mt-3 rounded-xl px-4 py-2.5 text-sm font-medium {{ $fosterMessageIsError ? 'bg-white/20 text-white' : 'bg-white/90 text-brand-800' }}"
+                           role="status" aria-live="polite" wire:key="foster-message">
+                            {{ $fosterMessage }}
+                        </p>
+                    @endif
+
+                    @if ($hasRequestedFoster)
+                        {{-- GIÀ RICHIESTO: stato "inviata" + rimando ai miei affidi. --}}
+                        <div class="mt-3 flex flex-wrap items-center gap-3">
+                            <span class="inline-flex items-center gap-2 rounded-xl bg-white/90 px-4 py-2.5 text-sm font-semibold text-brand-800">
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 0 1 1.4-1.4l3.1 3.1 6.8-6.8a1 1 0 0 1 1.4 0Z" clip-rule="evenodd"/>
+                                </svg>
+                                {{ __('fostering.request.requested') }}
+                            </span>
+                            <x-button :href="route('filament.adopter.pages.my-foster-applications')" variant="outline" size="lg">
+                                {{ __('fostering.request.my_foster_applications') }}
+                            </x-button>
+                        </div>
+                    @else
+                        {{-- OSPITE / PROFILO INCOMPLETO / RICHIEDIBILE: un solo pulsante che
+                             delega all'Action; il ramo è deciso lato server in requestFoster(). --}}
+                        <x-button
+                            type="button"
+                            variant="outline"
+                            size="lg"
+                            class="mt-3"
+                            wire:click="requestFoster"
+                            wire:loading.attr="disabled"
+                            wire:target="requestFoster"
+                        >
+                            <span wire:loading.remove wire:target="requestFoster">{{ __('fostering.request.cta_button') }}</span>
+                            <span wire:loading wire:target="requestFoster">{{ __('fostering.request.submitting') }}</span>
+                        </x-button>
+                    @endif
+                </div>
+            </div>
+
+            {{-- CTA prenotazione: form (tipo + data/ora + note) che delega a
+                 RequestAppointment in book(). A differenza di candidatura/affido
+                 richiede input, quindi ha un piccolo form validato. Non c'è guardia
+                 di profilo: basta l'autenticazione (l'ospite viene instradato alla
+                 login da book()). --}}
+            <div class="mt-8 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm">
+                <h2 class="text-lg font-semibold text-stone-900">{{ __('appointments.booking.cta_title') }}</h2>
+                <p class="mt-1 text-sm text-stone-500">{{ __('appointments.booking.cta_body', ['name' => $animal->name]) }}</p>
+
+                {{-- Feedback in-place (successo / errore di dominio o validazione). --}}
+                @if ($bookingMessage)
+                    <p class="mt-4 rounded-xl px-4 py-2.5 text-sm font-medium {{ $bookingMessageIsError ? 'bg-red-50 text-red-700' : 'bg-brand-50 text-brand-800' }}"
+                       role="status" aria-live="polite" wire:key="booking-message">
+                        {{ $bookingMessage }}
+                    </p>
+                @endif
+
+                <form wire:submit="book" class="mt-4 space-y-4">
+                    <div>
+                        <label for="appointment-type" class="block text-sm font-medium text-stone-700">
+                            {{ __('appointments.booking.type') }}
+                        </label>
+                        <select
+                            id="appointment-type"
+                            wire:model="appointmentType"
+                            class="mt-1 block w-full rounded-xl border-brand-200 text-sm shadow-sm focus:border-brand-400 focus:ring-brand-400"
+                        >
+                            <option value="">—</option>
+                            @foreach ($appointmentTypes as $type)
+                                <option value="{{ $type->value }}">{{ $type->getLabel() }}</option>
+                            @endforeach
+                        </select>
+                        @error('appointmentType')
+                            <p class="mt-1 text-sm text-red-600" wire:key="err-type">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="appointment-scheduled-at" class="block text-sm font-medium text-stone-700">
+                            {{ __('appointments.booking.scheduled_at') }}
+                        </label>
+                        <input
+                            id="appointment-scheduled-at"
+                            type="datetime-local"
+                            wire:model="appointmentScheduledAt"
+                            class="mt-1 block w-full rounded-xl border-brand-200 text-sm shadow-sm focus:border-brand-400 focus:ring-brand-400"
+                        >
+                        @error('appointmentScheduledAt')
+                            <p class="mt-1 text-sm text-red-600" wire:key="err-scheduled-at">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="appointment-notes" class="block text-sm font-medium text-stone-700">
+                            {{ __('appointments.booking.notes') }}
+                        </label>
+                        <textarea
+                            id="appointment-notes"
+                            wire:model="appointmentNotes"
+                            rows="2"
+                            placeholder="{{ __('appointments.booking.notes_placeholder') }}"
+                            class="mt-1 block w-full rounded-xl border-brand-200 text-sm shadow-sm focus:border-brand-400 focus:ring-brand-400"
+                        ></textarea>
+                        @error('appointmentNotes')
+                            <p class="mt-1 text-sm text-red-600" wire:key="err-notes">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <x-button
+                            type="submit"
+                            variant="primary"
+                            size="lg"
+                            wire:loading.attr="disabled"
+                            wire:target="book"
+                        >
+                            <span wire:loading.remove wire:target="book">{{ __('appointments.booking.submit') }}</span>
+                            <span wire:loading wire:target="book">{{ __('appointments.booking.submitting') }}</span>
+                        </x-button>
+                        @auth
+                            <x-button :href="route('filament.adopter.pages.my-appointments')" variant="outline" size="lg">
+                                {{ __('appointments.booking.my_appointments') }}
+                            </x-button>
+                        @endauth
+                    </div>
+                </form>
+            </div>
+
+            {{-- CTA "Contatta l'ente": form con un solo campo (messaggio) che delega
+                 a StartMessageThread/PostMessage in contact(). Come la prenotazione
+                 richiede input; non c'è guardia di profilo (basta l'autenticazione:
+                 l'ospite viene instradato alla login da contact()). Il ricontatto
+                 riusa la conversazione esistente per questa terna, senza duplicarla. --}}
+            <div class="mt-8 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm">
+                <h2 class="text-lg font-semibold text-stone-900">{{ __('messaging.contact.cta_title') }}</h2>
+                <p class="mt-1 text-sm text-stone-500">{{ __('messaging.contact.cta_body', ['name' => $animal->name]) }}</p>
+
+                {{-- Feedback in-place (successo / errore di dominio o validazione). --}}
+                @if ($contactMessage)
+                    <p class="mt-4 rounded-xl px-4 py-2.5 text-sm font-medium {{ $contactMessageIsError ? 'bg-red-50 text-red-700' : 'bg-brand-50 text-brand-800' }}"
+                       role="status" aria-live="polite" wire:key="contact-message">
+                        {{ $contactMessage }}
+                    </p>
+                @endif
+
+                <form wire:submit="contact" class="mt-4 space-y-4">
+                    <div>
+                        <label for="contact-body" class="block text-sm font-medium text-stone-700">
+                            {{ __('messaging.reply.label') }}
+                        </label>
+                        <textarea
+                            id="contact-body"
+                            wire:model="contactBody"
+                            rows="3"
+                            placeholder="{{ __('messaging.contact.placeholder') }}"
+                            class="mt-1 block w-full rounded-xl border-brand-200 text-sm shadow-sm focus:border-brand-400 focus:ring-brand-400"
+                        ></textarea>
+                        @error('contactBody')
+                            <p class="mt-1 text-sm text-red-600" wire:key="err-contact-body">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <x-button
+                            type="submit"
+                            variant="primary"
+                            size="lg"
+                            wire:loading.attr="disabled"
+                            wire:target="contact"
+                        >
+                            <span wire:loading.remove wire:target="contact">{{ __('messaging.contact.submit') }}</span>
+                            <span wire:loading wire:target="contact">{{ __('messaging.contact.submitting') }}</span>
+                        </x-button>
+                        @auth
+                            <x-button :href="route('filament.adopter.pages.my-messages')" variant="outline" size="lg">
+                                {{ __('messaging.contact.my_messages') }}
+                            </x-button>
+                        @endauth
+                    </div>
+                </form>
+            </div>
+
+            {{-- Ente --}}
+            @if ($animal->organization)
+                <a href="{{ route('organizations.show', $animal->organization) }}"
+                   class="mt-5 flex items-center gap-3 rounded-2xl border border-brand-100 bg-white p-4 transition hover:border-brand-200 hover:shadow-sm">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600" aria-hidden="true">
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-3v-4H7v4H4a1 1 0 0 1-1-1V4Zm3 2h2v2H6V6Zm6 0h2v2h-2V6ZM6 9h2v2H6V9Zm6 0h2v2h-2V9Z"/></svg>
+                    </span>
+                    <span class="min-w-0">
+                        <span class="block text-xs text-stone-400">{{ __('public.detail.managed_by') }}</span>
+                        <span class="block truncate font-medium text-stone-800">{{ $animal->organization->name }}</span>
+                    </span>
+                    <span class="ml-auto text-brand-500" aria-hidden="true">&rarr;</span>
+                </a>
+            @endif
+        </div>
+    </div>
+</div>

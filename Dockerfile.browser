@@ -1,0 +1,39 @@
+# ArkVel — immagine per i test browser (Pest 4 Browser + Playwright)
+#
+# L'immagine principale `php` è Alpine (musl): Playwright non supporta Alpine, quindi
+# i test browser girano in questa immagine Debian dedicata. Viene usata SOLO dal servizio
+# `browser-tests` (profilo compose "testing"); nessun altro servizio dipende da lei.
+# I test usano SQLite in memoria (phpunit.xml), quindi non serve il database.
+FROM php:8.4-cli-bookworm
+
+# Versione di Playwright: DEVE coincidere con `playwright` in laravel/package.json,
+# altrimenti i browser installati qui non corrispondono al client usato dai test.
+ARG PLAYWRIGHT_VERSION=1.64.1
+ARG NODE_MAJOR=22
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git curl unzip ca-certificates gnupg \
+        libicu-dev libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# PHP extensions (stesse dell'immagine principale, tranne pgsql/redis non necessari ai test)
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" intl gd zip bcmath exif pcntl sockets
+
+# Node.js (NodeSource) per il server Playwright
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Chromium + dipendenze di sistema, nella versione allineata a package.json
+RUN npx -y playwright@${PLAYWRIGHT_VERSION} install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/* /root/.npm
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+RUN echo 'memory_limit=1G' > /usr/local/etc/php/conf.d/arkvel.ini
+
+WORKDIR /var/www/html/arkvel

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Filament\Shelter\Pages\Tenancy\RegisterOrganization;
+use App\Filament\Shelter\Widgets\UpcomingAppointmentsWidget;
+use App\Filament\Shelter\Widgets\UpcomingMedicalRemindersWidget;
 use App\Http\Middleware\SetPermissionsTeamFromTenant;
 use App\Models\Organization;
 use Filament\Http\Middleware\Authenticate;
@@ -15,12 +17,15 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
+use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\View as ViewFacade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
@@ -60,6 +65,17 @@ class ShelterPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Emerald,
             ])
+            // Campanella notifiche in-app (canale database, tabella `notifications`):
+            // lo staff dell'ente vede qui le nuove candidature e i ritiri. Polling
+            // ogni 30s per l'aggiornamento del badge senza reload.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
+            // Carica Echo (Reverb) nel pannello: la campanella va live via websocket
+            // (evento `database-notifications.sent`), col polling 30s come fallback.
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): View => ViewFacade::make('filament.realtime-assets'),
+            )
             ->tenant(Organization::class, slugAttribute: 'slug')
             ->tenantRegistration(RegisterOrganization::class)
             ->discoverResources(in: app_path('Filament/Shelter/Resources'), for: 'App\Filament\Shelter\Resources')
@@ -70,6 +86,9 @@ class ShelterPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Shelter/Widgets'), for: 'App\Filament\Shelter\Widgets')
             ->widgets([
                 AccountWidget::class,
+                // Scadenzario e promemoria in dashboard, entrambi tenant-scoped.
+                UpcomingMedicalRemindersWidget::class,
+                UpcomingAppointmentsWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
