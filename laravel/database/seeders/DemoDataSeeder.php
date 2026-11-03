@@ -10,20 +10,25 @@ use App\Enums\AppointmentType;
 use App\Enums\CalendarConnectionStatus;
 use App\Enums\CalendarProvider;
 use App\Enums\CalendarSyncDirection;
+use App\Enums\DonationStatus;
+use App\Enums\DonationType;
 use App\Enums\FosterPlacementType;
 use App\Enums\MedicalRecordType;
 use App\Enums\MembershipRole;
 use App\Enums\OrganizationType;
+use App\Enums\RecurringDonationStatus;
 use App\Enums\RoleName;
 use App\Enums\Species;
 use App\Models\AdopterProfile;
 use App\Models\Animal;
 use App\Models\Appointment;
 use App\Models\CalendarConnection;
+use App\Models\Donation;
 use App\Models\FosterApplication;
 use App\Models\FosterPlacement;
 use App\Models\MedicalRecord;
 use App\Models\Organization;
+use App\Models\RecurringDonation;
 use App\Models\User;
 use Database\Seeders\Support\PlaceholderImageFactory;
 use Database\Seeders\Support\RemoteAnimalPhotoFetcher;
@@ -45,7 +50,10 @@ use Spatie\Permission\PermissionRegistrar;
  *     placedog.net, gatti da cataas.com, altri da picsum; vedi
  *     {@see RemoteAnimalPhotoFetcher}); se la rete non è disponibile si ricade su
  *     placeholder GD offline, senza mai abortire il seeding;
- *   - alcune cartelle sanitarie coerenti per una parte degli animali.
+ *   - alcune cartelle sanitarie coerenti per una parte degli animali;
+ *   - dati operativi di Fase 3 (affidi, appuntamenti, scadenze) e, di Fase 4,
+ *     donazioni demo (una tantum completate + una ricorrente mensile attiva con
+ *     storico addebiti) scritte a DB senza mai toccare Stripe.
  *
  * Idempotenza: gli utenti a credenziali note usano firstOrCreate (rieseguibile
  * senza errori); enti/animali sono pensati per `migrate:fresh --seed` (DB pulito).
@@ -541,6 +549,89 @@ class DemoDataSeeder extends Seeder
         $this->seedAppointments($organization, $animals, $adopterList);
         $this->seedMedicalDueDates($animals);
         $this->seedCalendarConnection($organization);
+        $this->seedDonations($organization, $adopterList);
+    }
+
+    /**
+     * Donazioni DEMO per l'ente (Fase 4), scritte direttamente a DB: NON toccano mai
+     * Stripe (il seeder gira anche senza chiavi configurate). Mostrano la lista d'ente
+     * read-only in /manage e la pagina "Le mie donazioni" dell'adottante:
+     *  - alcune UNA TANTUM completate (donatori autenticati + un'ospite anonima);
+     *  - una RICORRENTE mensile ATTIVA con qualche addebito storico nel registro.
+     *
+     * @param  list<User>  $adopters
+     */
+    private function seedDonations(Organization $organization, array $adopters): void
+    {
+        $presetCents = [500, 1000, 2500, 5000];
+
+        // Una tantum da donatori autenticati (i primi adottanti), più una da ospite.
+        foreach (array_slice($adopters, 0, 2) as $index => $adopter) {
+            Donation::factory()->create([
+                'organization_id' => $organization->getKey(),
+                'donor_user_id' => $adopter->getKey(),
+                'donor_name' => $adopter->name,
+                'donor_email' => $adopter->email,
+                'amount' => $presetCents[$index % count($presetCents)],
+                'currency' => 'eur',
+                'type' => DonationType::OneOff,
+                'status' => DonationStatus::Completed,
+                'provider' => 'stripe',
+                'provider_ref' => 'cs_demo_'.Str::lower(Str::random(16)),
+                'message' => $this->faker->boolean(60) ? $this->faker->sentence() : null,
+                'paid_at' => now()->subDays($this->faker->numberBetween(1, 40)),
+            ]);
+        }
+
+        Donation::factory()->create([
+            'organization_id' => $organization->getKey(),
+            'donor_user_id' => null,
+            'donor_name' => $this->faker->name(),
+            'donor_email' => $this->faker->safeEmail(),
+            'amount' => 1500,
+            'currency' => 'eur',
+            'type' => DonationType::OneOff,
+            'status' => DonationStatus::Completed,
+            'provider' => 'stripe',
+            'provider_ref' => 'cs_demo_'.Str::lower(Str::random(16)),
+            'message' => null,
+            'paid_at' => now()->subDays($this->faker->numberBetween(1, 40)),
+        ]);
+
+        // Una ricorrente mensile ATTIVA del primo adottante, con 3 addebiti storici nel
+        // registro (uno per mese) collegati via recurring_donation_id.
+        $donor = $adopters[0];
+        $monthlyCents = 1000;
+        $startedAt = now()->subMonths(3)->startOfMonth();
+
+        $recurring = RecurringDonation::factory()->create([
+            'user_id' => $donor->getKey(),
+            'organization_id' => $organization->getKey(),
+            'amount' => $monthlyCents,
+            'currency' => 'eur',
+            'interval' => 'monthly',
+            'stripe_subscription_id' => 'sub_demo_'.Str::lower(Str::random(14)),
+            'status' => RecurringDonationStatus::Active,
+            'started_at' => $startedAt,
+        ]);
+
+        for ($month = 0; $month < 3; $month++) {
+            Donation::factory()->create([
+                'organization_id' => $organization->getKey(),
+                'recurring_donation_id' => $recurring->getKey(),
+                'donor_user_id' => $donor->getKey(),
+                'donor_name' => $donor->name,
+                'donor_email' => $donor->email,
+                'amount' => $monthlyCents,
+                'currency' => 'eur',
+                'type' => DonationType::Recurring,
+                'status' => DonationStatus::Completed,
+                'provider' => 'stripe',
+                'provider_ref' => 'in_demo_'.Str::lower(Str::random(16)),
+                'message' => null,
+                'paid_at' => (clone $startedAt)->addMonths($month),
+            ]);
+        }
     }
 
     /**

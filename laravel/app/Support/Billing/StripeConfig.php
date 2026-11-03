@@ -99,6 +99,16 @@ class StripeConfig
     }
 
     /**
+     * Il DB ha un valore per il webhook secret (override presente). Come
+     * {@see hasStoredSecretKey()}: la UI admin (P4-8) mostra "segreto salvato" senza mai
+     * ripresentare il valore al browser.
+     */
+    public function hasStoredWebhookSecret(): bool
+    {
+        return filled($this->settings->get(self::KEY_WEBHOOK_SECRET));
+    }
+
+    /**
      * Legge la chiave DB; se vuota/assente ricade sul path di config (.env).
      */
     private function resolve(string $key, string $configPath): ?string
