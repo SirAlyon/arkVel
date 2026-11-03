@@ -6,7 +6,7 @@ tools: Read, Grep, Glob, Bash, mcp__playwright, mcp__chrome-devtools
 
 You review ArkVel's public UI visually. You do NOT edit project files; you report findings.
 
-**Read first:** `docs/PIANO-UI-FRONTEND.md`: §1-bis (direzione visiva "Editoriale caldo"),
+**Read first:** `docs/PIANO-UI-FRONTEND.md`: §1-bis (direzione visiva "B · Pop affettuoso"),
 §4 (regole) and §6 (checklist di revisione design).
 
 ## Procedure

@@ -14,7 +14,8 @@
 - **Stack:** Tailwind 4 (config CSS-first in `resources/css/app.css`), Vite 8, Livewire 4.4
   (arriva tramite Filament), Alpine (incluso in Livewire), Echo/Reverb.
 - **Token attuali:** palette `brand` (terracotta) e `accent` (teal), neutri `stone`,
-  font Instrument Sans via Bunny Fonts.
+  font Instrument Sans via Bunny Fonts (configurato in Vite ma mai caricato nel layout: manca
+  `@fonts`). Tutto da sostituire in UI-1 con la direzione B (§1-bis).
 - **Componenti Blade:** `site-header`, `site-footer`, `animal-card`, `badge`, `button`,
   `filter-select`. Icone SVG inline (~32), nessuna libreria UI.
 - **Pagine Livewire pubbliche:** `Home`, `AnimalCatalog` (Scout/Meilisearch), `AnimalDetail`
@@ -33,42 +34,85 @@
 
 ---
 
-## 1-bis. Direzione visiva scelta: **A · Editoriale caldo** (2026-11-03)
+## 1-bis. Direzione visiva scelta: **B · Pop affettuoso** (2026-11-03)
 
-Mockup di riferimento: canvas "ArkVel — Direzioni visive", artboard A
-(https://claude.ai/artifact/2iJmacpuA1C2YsvhA3cL86). Prosegue il brand terracotta esistente.
+Mockup di riferimento: canvas "ArkVel — Direzioni visive", artboard **B · Pop affettuoso**
+(https://claude.ai/artifact/2iJmacpuA1C2YsvhA3cL86).
+
+> **Cambio di direzione.** La prima scelta era "A · Editoriale caldo" (Fraunces + Instrument
+> Sans; crema, terracotta e salvia). Il 2026-11-03, dopo UI-0 e prima di UI-1, è stata
+> sostituita da B. Il brand terracotta esce di scena: i token `brand-*`/`accent-*` attuali di
+> `resources/css/app.css` vanno rimpiazzati in UI-1. I pannelli Filament non cambiano, perché
+> usano già colori propri (Amber, Rose, Emerald).
 
 - **Tipografia:**
-  - display: **Fraunces** (serif variabile, asse `opsz`), pesi 400/600/700; corsivo per
-    l'enfasi di una parola nei titoli;
-  - testo/UI: **Instrument Sans** 400/500/600 (già in uso);
-  - entrambi self-hosted via Fontsource.
+  - **una sola famiglia:** [Bricolage Grotesque](https://fontsource.org/fonts/bricolage-grotesque),
+    variabile con asse ottico `opsz` 12–96, pesi 400/600/800, licenza OFL;
+  - self-hosted via Fontsource (`@fontsource-variable/bricolage-grotesque`);
+  - titoli 800 molto stretti (`letter-spacing` da −0.035em a −0.045em, `line-height` ~0.95–1.05),
+    H1 fluido `clamp(48px, 7vw, 96px)`;
+  - testo 17 px, `line-height` 1.5; etichette e bottoni 600–700;
+  - Instrument Sans e il caricamento via Bunny Fonts in `vite.config.js` vanno rimossi.
 - **Colori di partenza** (da convertire in OKLCH e da estendere in scale 50-950 in UI-1):
 
-  | Ruolo | Valore |
-  |---|---|
-  | Fondo | `#FBF6F0` (crema) |
-  | Superficie | `#FFFFFF` |
-  | Superficie alternata | `#F3E9DE` |
-  | Bordo | `#EADFD3` |
-  | Inchiostro | `#2A1D17` |
-  | Testo secondario | `#5E4D43` |
-  | Primario (terracotta) | `#B9471F`, hover `#8E3415` |
-  | Secondario (salvia) | `#4F6B57`, tinta `#E3ECE2` |
-  | Foto placeholder | `#E7C9B4` / `#C9D6C8` |
+  | Ruolo | Valore | Uso |
+  |---|---|---|
+  | Fondo | `#FFFFFF` | pagina |
+  | Superficie | `#F3F1EA` | card, nav a pillola, pannelli "come funziona" |
+  | Bordo | `#E4E1D6` | solo decorativo (vedi i contrasti) |
+  | Inchiostro (navy) | `#1B1B3A` | testo, bottone primario, card scure; hover `#3A3A70` |
+  | Testo secondario | `#4A4A68` | proposta, da validare in UI-1 |
+  | Primario (giallo) | `#FFD23F` | blocco hero, CTA su fondi scuri o verdi, badge |
+  | Pesca | `#FFB4A2` | blocchi foto e numeri dei passi; testo sopra `#5A2A20` |
+  | Verde | `#2D6A4F` | stat, banda donazione (testo bianco) |
+  | Menta | `#B7E4C7` | blocchi foto e numeri dei passi |
 
-  La dark mode va derivata in UI-1 (fondo bruno scuro caldo, non nero puro).
+- **Contrasti verificati** (WCAG 2.x):
+
+  | Coppia | Rapporto | Esito |
+  |---|---|---|
+  | navy su giallo | 11,5:1 | AA/AAA |
+  | navy su pesca | 9,7:1 | AA/AAA |
+  | navy su menta | 11,8:1 | AA/AAA |
+  | navy su superficie | 14,7:1 | AA/AAA |
+  | `#5A2A20` su pesca | 6,9:1 | AA |
+  | bianco su verde | 6,4:1 | AA |
+  | `#4A4A68` su bianco / superficie | 8,5:1 / 7,5:1 | AA/AAA |
+  | **giallo su verde** | **4,43:1** | **non va bene per testo normale**: sul verde il giallo è solo un fondo (bottone con testo navy) o testo ≥ 24 px |
+  | **`#E4E1D6` su bianco** | **1,31:1** | **solo decorativo**: per i bordi di input e controlli serve un tono ≥ 3:1 (WCAG 1.4.11) |
+
+- **Dark mode** (da derivare in UI-1, non c'è nel mockup):
+  - fondo navy molto scuro (es. `#13132B`), superfici navy più chiare, testo `#F7F5EE`
+    (16,7:1), testo secondario tipo `#B8B6C8` (9,1:1);
+  - il giallo resta accento (bottoni, badge, numeri), **mai** grande superficie: niente blocco
+    hero giallo pieno, che al buio abbaglia (usare una superficie scura con accenti gialli);
+  - pesca, menta e verde vanno desaturati o scuriti come blocchi, con testo chiaro.
 - **Forme:**
-  - raggi generosi: card 28 px, pannelli 32 px, bottoni e chip "pill";
-  - foto hero ad arco (raggio superiore 200 px);
-  - ombre morbide e calde, usate poco.
+  - raggi molto generosi: pannelli 40 px, card 32 px, immagini nelle card 24 px, passi 28 px;
+  - icone quadrate stondate da 14–16 px;
+  - bottoni, chip, nav e campo di ricerca tutti "pill" (999 px);
+  - nessuna ombra: la profondità viene dai blocchi di colore piatto.
 - **Pattern ricorrenti:**
-  - eyebrow maiuscoletto salvia sopra i titoli;
-  - titoli grandi con parola in corsivo terracotta;
-  - passi numerati con filetto superiore;
-  - banda CTA salvia;
-  - card con badge tondi (es. "Anche in affido", "Senior").
-- **Tono:** editoriale, caldo, rassicurante; molto spazio bianco, foto protagoniste.
+  - logo: badge giallo quadrato stondato con zampa (icona Lucide `paw-print`) + wordmark
+    `arkvel` minuscolo 800;
+  - nav principale come gruppo di pillole su superficie, voce attiva navy piena; "Accedi" pill
+    con bordo navy 2 px;
+  - **hero a blocchi (bento):** blocco giallo grande con badge navy leggermente ruotato (−2°),
+    H1 enorme, sottotitolo e ricerca a pillola bianca; a destra un blocco foto pesca e due
+    stat (una verde, una superficie);
+  - filtri rapidi a chip (Tutti / Cani / Gatti / Altri), attivo navy pieno;
+  - card animale: contenitore superficie con padding 12 px, foto stondata su fondo colorato a
+    rotazione (giallo / pesca / menta), cuore preferiti in un cerchio bianco da 44 px, nome 800;
+    ultima card della griglia navy con CTA gialla "Sfoglia il catalogo";
+  - "come funziona" in un pannello superficie: 4 passi su card bianche con numero in un quadrato
+    colorato;
+  - banda donazione verde con CTA gialla;
+  - icone Lucide a tratto, mai emoji.
+- **Tono:** pop, affettuoso, giocoso ma affidabile; colori pieni e piatti, tipografia grande,
+  tutto stondato. Gli animali restano protagonisti, ma il colore fa da cornice.
+- **Accessibilità della direzione:**
+  - target ≥ 44 px (già nel mockup);
+  - non comunicare stati solo con il colore dei blocchi.
 
 ---
 
@@ -174,6 +218,24 @@ Mockup di riferimento: canvas "ArkVel — Direzioni visive", artboard A
 > - **Più sessioni sulla stessa working copy:** mai in contemporanea. Per lavori paralleli
 >   usare un `git worktree`.
 
+> **Esito `/ui-review` di UI-0 (2026-11-03).** Nessuna regressione: lingua, `<html lang>` e
+> titoli corretti in IT/EN; suite browser 3/3 verde; LCP 560 ms, CLS 0, INP 176 ms sulla home
+> (375 px, CPU 4×, Fast 4G). Problemi già presenti, assegnati alle fasi:
+>
+> | Gravità | Problema | Fase |
+> |---|---|---|
+> | Major | Etichette degli enum in italiano anche nella versione EN (`getLabel()` hard-coded in 27 enum; pubblici: `Species`, `Sex`, `Size`, `EnergyLevel`, `AppointmentType`, `OrganizationType`) → `__('enums.…')` + `lang/{it,en}/enums.php`, con test | **UI-1** (prima che il sito arrivi a visitatori EN) |
+> | Major | Contrasto sotto AA (`stone-400`/`stone-500` su `brand-50`, testo chiaro sul gradiente CTA) | UI-1 (token) → UI-6 (pagine) |
+> | Major | Overflow orizzontale a 320 px causato dalla nav dell'header | UI-3 |
+> | Major | Font mai caricato (manca `@fonts` nel layout) | UI-1 (Fontsource) |
+> | Minor | Nessun selettore di lingua visibile (Major se UI-0 va in produzione prima di UI-3) | UI-3 |
+> | Minor | Echo/Reverb importato su ogni pagina ospite (errori WebSocket in console) → import dinamico solo dove serve | UI-3 |
+> | Minor | Salto di titoli `h1` → `h3` nel catalogo; bottoni preferiti con nome identico | UI-2 (`animal-card` v2) |
+> | Minor | Immagini senza `width`/`height`, foto della scheda = miniatura 400×300 ingrandita, `alt` della galleria tutti uguali | UI-4 |
+> | Nit | Mancano `Vary: Accept-Language` e `Content-Language` | UI-8 (prima di qualsiasi cache o CDN) |
+> | Nit | Suffisso " — ArkVel" hard-coded in `AnimalDetail` e `OrganizationPage` → `public.titles.*` | UI-3 (SEO) |
+> | Nit | Ricerca del catalogo senza label visibile | UI-6b |
+
 Elenco originale della fase:
 - Installare Boost (+ `.mcp.json`), Playwright MCP, Chrome DevTools MCP e il plugin frontend-design.
 - Creare gli agenti `ui-builder` e `design-reviewer` e la skill `/ui-review`.
@@ -185,7 +247,8 @@ Elenco originale della fase:
 - Verificare quali plugin Alpine sono inclusi in Livewire 4.
 
 ### UI-1 · Direzione visiva e design token
-- Scegliere una delle direzioni dei mockup (vedi moodboard).
+- Direzione: **B · Pop affettuoso** (§1-bis). Sostituire i token `brand`/`accent` terracotta/teal
+  e rimuovere Instrument Sans/Bunny Fonts; caricare Bricolage Grotesque via Fontsource.
 - Token in `@theme`:
   - colori OKLCH (brand, accent, neutri, semantici) per tema chiaro e scuro;
   - tipografia fluida (`clamp`), font display + font testo self-hosted;
@@ -206,7 +269,7 @@ Elenco originale della fase:
 ### UI-3 · Shell del sito
 - Header nuovo (trasparente sulla hero, poi solido allo scroll), menu mobile a drawer,
   selettore lingua, menu account (link a `/account` e, per i membri di un ente, a `/manage`).
-- Footer editoriale (newsletter placeholder, link legali, lingue).
+- Footer (newsletter placeholder, link legali, lingue).
 - `wire:navigate` con prefetch al passaggio del mouse; View Transitions tra pagine;
   barra di progresso navigazione.
 - SEO: meta e Open Graph per pagina, JSON-LD (`Organization`, `Animal`→`Thing`/`Product`
@@ -244,7 +307,7 @@ Elenco originale della fase:
   - i test esistenti di `tests/Feature/Adopter` restano verdi.
 
 ### UI-6 · Pagine (un commit per pagina)
-- **UI-6a Home:** hero editoriale con foto grande, griglia bento di animali in evidenza,
+- **UI-6a Home:** hero a blocchi (bento) come da §1-bis, griglia di animali in evidenza con chip filtro,
   numeri chiave, "come funziona l'adozione" in 3-4 passi, storie di adozione (placeholder),
   CTA donazione/enti.
 - **UI-6b Catalogo:**
@@ -322,8 +385,12 @@ inclusi in Livewire 4 e annotalo nel piano. Chiudi aggiornando il piano con lo s
 
 ### UI-1
 ```
-[Contesto comune] Esegui la fase UI-1. Direzione visiva scelta: "A · Editoriale caldo", specifica
-in §1-bis (riferimento visivo: artboard A del canvas linkato lì).
+[Contesto comune] Esegui la fase UI-1. Direzione visiva scelta: "B · Pop affettuoso", specifica
+in §1-bis (riferimento visivo: artboard "B · Pop affettuoso" del canvas linkato lì; la direzione A
+è stata scartata, ignora i token terracotta esistenti). Rispetta la tabella dei contrasti di
+§1-bis e deriva la dark mode secondo le indicazioni lì riportate.
+Risolvi anche i punti assegnati a UI-1 nella tabella "Esito /ui-review di UI-0" (§5 UI-0), in
+particolare le etichette degli enum tradotte IT/EN.
 Usa la skill frontend-design. Definisci i token in resources/css/app.css (@theme, OKLCH,
 light/dark, tipografia fluida, font self-hosted via Fontsource, motion token), dark mode con
 toggle persistito, e la pagina /_styleguide solo in local. Non modificare ancora le pagine.
