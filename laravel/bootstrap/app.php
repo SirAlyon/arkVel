@@ -19,6 +19,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // fallirebbe cercando route('login'). L'account holder (proprietario di un
         // appuntamento) accede dal pannello adottante, quindi mandiamo lì gli ospiti.
         $middleware->redirectGuestsTo(fn (): string => route('filament.adopter.auth.login'));
+
+        // Il webhook Stripe (POST /stripe/webhook) è chiamato da Stripe, senza sessione
+        // né token CSRF: l'autenticità è garantita dalla firma `Stripe-Signature`
+        // verificata nel controller (P4-6). Lo escludiamo quindi dalla protezione CSRF.
+        $middleware->validateCsrfTokens(except: [
+            'stripe/webhook',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

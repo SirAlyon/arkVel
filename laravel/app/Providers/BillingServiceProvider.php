@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Support\Billing\CreatesDonationCheckout;
 use App\Support\Billing\StripeConfig;
+use App\Support\Billing\StripeDonationCheckout;
 use App\Support\Settings\PlatformSettings;
 use Illuminate\Support\ServiceProvider;
 
@@ -25,6 +27,17 @@ use Illuminate\Support\ServiceProvider;
  */
 class BillingServiceProvider extends ServiceProvider
 {
+    /**
+     * Binding del seam di Checkout (Dependency Inversion): l'Action dipende dalla porta
+     * {@see CreatesDonationCheckout}, in produzione servita dall'impl Stripe. Nei test si
+     * sostituisce con un fake deterministico (nessuna rete). Default `bind` (non
+     * singleton): lo StripeClient è costruito a ogni chiamata dalla config effettiva.
+     */
+    public function register(): void
+    {
+        $this->app->bind(CreatesDonationCheckout::class, StripeDonationCheckout::class);
+    }
+
     public function boot(): void
     {
         $stripe = new StripeConfig(app(PlatformSettings::class));

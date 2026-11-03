@@ -54,6 +54,106 @@
         </div>
     </section>
 
+    {{-- Sostieni l'ente (donazione una tantum, P4-6) --}}
+    @if ($donationsEnabled)
+        <section class="border-b border-brand-100 bg-white/60">
+            <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+                <div class="mx-auto max-w-2xl rounded-3xl border border-brand-100 bg-white p-6 shadow-sm sm:p-8">
+                    <h2 class="text-2xl font-bold tracking-tight text-stone-900">
+                        {{ __('donations.public.heading', ['name' => $organization->name]) }}
+                    </h2>
+                    <p class="mt-2 text-stone-600">{{ __('donations.public.subheading') }}</p>
+
+                    @if ($donationError)
+                        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+                            {{ $donationError }}
+                        </div>
+                    @endif
+
+                    <form wire:submit="donate" class="mt-6 space-y-5">
+                        {{-- Importi preset --}}
+                        <div>
+                            <span class="block text-sm font-medium text-stone-700">{{ __('donations.public.amount_label') }}</span>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                @foreach ($donationPresets as $preset)
+                                    <button type="button"
+                                            wire:click="$set('donationAmount', '{{ $preset }}')"
+                                            @class([
+                                                'rounded-xl border px-4 py-2 text-sm font-semibold transition',
+                                                'border-brand-600 bg-brand-600 text-white' => (string) $donationAmount === (string) $preset,
+                                                'border-brand-300 bg-white text-brand-800 hover:bg-brand-50' => (string) $donationAmount !== (string) $preset,
+                                            ])>
+                                        {{ $preset }} €
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        {{-- Importo libero --}}
+                        <div>
+                            <label for="donationAmount" class="block text-sm font-medium text-stone-700">
+                                {{ __('donations.public.custom_amount_label') }}
+                            </label>
+                            <div class="mt-1 flex items-center gap-2">
+                                <input type="number" step="0.01" min="1" id="donationAmount" wire:model="donationAmount"
+                                       class="w-40 rounded-xl border-stone-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                                       placeholder="25" />
+                                <span class="text-stone-500">€</span>
+                            </div>
+                            @error('donationAmount')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        {{-- Dati ospite (solo per non autenticati) --}}
+                        @if ($isGuestDonor)
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label for="donorName" class="block text-sm font-medium text-stone-700">
+                                        {{ __('donations.public.name_label') }}
+                                    </label>
+                                    <input type="text" id="donorName" wire:model="donorName"
+                                           class="mt-1 block w-full rounded-xl border-stone-300 shadow-sm focus:border-brand-500 focus:ring-brand-500" />
+                                    @error('donorName')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div>
+                                    <label for="donorEmail" class="block text-sm font-medium text-stone-700">
+                                        {{ __('donations.public.email_label') }}
+                                    </label>
+                                    <input type="email" id="donorEmail" wire:model="donorEmail"
+                                           class="mt-1 block w-full rounded-xl border-stone-300 shadow-sm focus:border-brand-500 focus:ring-brand-500" />
+                                    @error('donorEmail')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Messaggio facoltativo --}}
+                        <div>
+                            <label for="donationMessage" class="block text-sm font-medium text-stone-700">
+                                {{ __('donations.public.message_label') }}
+                            </label>
+                            <textarea id="donationMessage" wire:model="donationMessage" rows="2"
+                                      class="mt-1 block w-full rounded-xl border-stone-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"></textarea>
+                            @error('donationMessage')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <x-button type="submit" variant="accent" size="lg" wire:loading.attr="disabled" wire:target="donate">
+                            <span wire:loading.remove wire:target="donate">{{ __('donations.public.submit') }}</span>
+                            <span wire:loading wire:target="donate">{{ __('donations.public.submitting') }}</span>
+                        </x-button>
+                        <p class="text-xs text-stone-500">{{ __('donations.public.secure_note') }}</p>
+                    </form>
+                </div>
+            </div>
+        </section>
+    @endif
+
     {{-- Animali dell'ente --}}
     <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <h2 class="text-2xl font-bold tracking-tight text-stone-900">

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 use App\Http\Controllers\CalendarFeedController;
 use App\Http\Controllers\GoogleCalendarConnectController;
+use App\Http\Controllers\StripeWebhookController;
 use App\Livewire\AnimalCatalog;
 use App\Livewire\AnimalDetail;
+use App\Livewire\DonationCancelled;
+use App\Livewire\DonationThankYou;
 use App\Livewire\Home;
 use App\Livewire\OrganizationIndex;
 use App\Livewire\OrganizationPage;
@@ -33,6 +36,25 @@ Route::get('/animali/{animal}', AnimalDetail::class)->name('animals.show');
 
 Route::get('/enti', OrganizationIndex::class)->name('organizations.index');
 Route::get('/enti/{organization:slug}', OrganizationPage::class)->name('organizations.show');
+
+/*
+ | Donazioni una tantum (P4-6): landing di ritorno dal Checkout Stripe.
+ |  - /enti/{slug}/grazie  pagina di ringraziamento (il pagamento può confermarsi
+ |                         con un attimo di ritardo via webhook)
+ |  - /enti/{slug}/annulla back all'ente con un flash localizzato (pagamento annullato)
+ | L'avvio del Checkout avviene sulla pagina pubblica dell'ente (OrganizationPage),
+ | config-gated su StripeConfig::configured().
+ */
+Route::get('/enti/{organization:slug}/grazie', DonationThankYou::class)->name('organizations.donate.thanks');
+Route::get('/enti/{organization:slug}/annulla', DonationCancelled::class)->name('organizations.donate.cancel');
+
+/*
+ | Webhook Stripe (P4-6): conferma dei pagamenti di Checkout. POST pubblico (nessun
+ | login: lo chiama Stripe), escluso dalla CSRF in bootstrap/app.php. La firma è
+ | verificata nel controller contro StripeConfig::webhookSecret() quando impostato;
+ | se vuoto (dev/test) la verifica è saltata. Idempotente e no-op sugli eventi ignoti.
+ */
+Route::post('/stripe/webhook', StripeWebhookController::class)->name('stripe.webhook');
 
 /*
  | Connessione OAuth a Google Calendar (Cal-5).
