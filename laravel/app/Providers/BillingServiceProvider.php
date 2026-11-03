@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Support\Billing\CreatesDonationCheckout;
+use App\Support\Billing\ManagesRecurringDonation;
 use App\Support\Billing\StripeConfig;
 use App\Support\Billing\StripeDonationCheckout;
+use App\Support\Billing\StripeRecurringDonationCheckout;
 use App\Support\Settings\PlatformSettings;
 use Illuminate\Support\ServiceProvider;
 
@@ -36,6 +38,11 @@ class BillingServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(CreatesDonationCheckout::class, StripeDonationCheckout::class);
+
+        // Seam delle donazioni RICORRENTI (P4-7): stessa inversione di dipendenza, in
+        // produzione servita dall'impl Stripe (Checkout mode=subscription + disdetta).
+        // Nei test si sostituisce con un fake deterministico (nessuna rete).
+        $this->app->bind(ManagesRecurringDonation::class, StripeRecurringDonationCheckout::class);
     }
 
     public function boot(): void

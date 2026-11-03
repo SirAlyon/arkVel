@@ -8,6 +8,10 @@ return [
     'public' => [
         'heading' => 'Support :name',
         'subheading' => 'Your donation helps the organization care for its animals. Payment is securely handled by Stripe.',
+        'frequency_label' => 'How often?',
+        'frequency_one_off' => 'One-off',
+        'frequency_monthly' => 'Monthly',
+        'monthly_requires_login' => 'Sign in to donate monthly and manage your donation from your account.',
         'amount_label' => 'Choose an amount',
         'custom_amount_label' => 'Or enter an amount',
         'name_label' => 'Your name (optional)',
@@ -62,5 +66,26 @@ return [
             'pending' => 'Pending',
             'unsuccessful' => 'Unsuccessful',
         ],
+    ],
+
+    // Adopter panel: my recurring donations + charge history (ownership-scoped).
+    'my' => [
+        'title' => 'My donations',
+        'organization' => 'Organization',
+        'amount' => 'Amount',
+        'amount_monthly' => '€:amount / month',
+        'status' => 'Status',
+        'started_at' => 'Active since',
+        'canceled_at' => 'Cancelled on',
+        'cancel' => 'Cancel',
+        'cancel_confirm_heading' => 'Cancel the monthly donation?',
+        'cancel_confirm_body' => 'You will no longer be charged. The recurring donation will be cancelled. Do you want to proceed?',
+        'cancel_confirm_submit' => 'Cancel the donation',
+        'cancel_done' => 'Recurring donation cancelled.',
+        'empty_title' => 'No recurring donations',
+        'empty_body' => 'You have no active monthly donations. From an organization page you can start a recurring donation.',
+        'charges_heading' => 'Charge history',
+        'charges_description' => 'The successful monthly charges of your recurring donations.',
+        'charge_date' => 'Date',
     ],
 ];

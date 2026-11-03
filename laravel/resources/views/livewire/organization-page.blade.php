@@ -71,6 +71,43 @@
                     @endif
 
                     <form wire:submit="donate" class="mt-6 space-y-5">
+                        {{-- Frequenza: una tantum o mensile (ricorrente, solo autenticati) --}}
+                        <div>
+                            <span class="block text-sm font-medium text-stone-700">{{ __('donations.public.frequency_label') }}</span>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <button type="button"
+                                        wire:click="$set('donationFrequency', 'one_off')"
+                                        @class([
+                                            'rounded-xl border px-4 py-2 text-sm font-semibold transition',
+                                            'border-brand-600 bg-brand-600 text-white' => $donationFrequency === 'one_off',
+                                            'border-brand-300 bg-white text-brand-800 hover:bg-brand-50' => $donationFrequency !== 'one_off',
+                                        ])>
+                                    {{ __('donations.public.frequency_one_off') }}
+                                </button>
+
+                                @if ($canDonateMonthly)
+                                    <button type="button"
+                                            wire:click="$set('donationFrequency', 'monthly')"
+                                            @class([
+                                                'rounded-xl border px-4 py-2 text-sm font-semibold transition',
+                                                'border-brand-600 bg-brand-600 text-white' => $donationFrequency === 'monthly',
+                                                'border-brand-300 bg-white text-brand-800 hover:bg-brand-50' => $donationFrequency !== 'monthly',
+                                            ])>
+                                        {{ __('donations.public.frequency_monthly') }}
+                                    </button>
+                                @else
+                                    <span class="rounded-xl border border-dashed border-stone-300 px-4 py-2 text-sm text-stone-400"
+                                          aria-disabled="true">
+                                        {{ __('donations.public.frequency_monthly') }}
+                                    </span>
+                                @endif
+                            </div>
+
+                            @unless ($canDonateMonthly)
+                                <p class="mt-1 text-xs text-stone-500">{{ __('donations.public.monthly_requires_login') }}</p>
+                            @endunless
+                        </div>
+
                         {{-- Importi preset --}}
                         <div>
                             <span class="block text-sm font-medium text-stone-700">{{ __('donations.public.amount_label') }}</span>

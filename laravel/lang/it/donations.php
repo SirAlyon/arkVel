@@ -8,6 +8,10 @@ return [
     'public' => [
         'heading' => 'Sostieni :name',
         'subheading' => 'La tua donazione aiuta l\'ente a prendersi cura degli animali. Il pagamento è gestito in sicurezza da Stripe.',
+        'frequency_label' => 'Con quale frequenza?',
+        'frequency_one_off' => 'Una tantum',
+        'frequency_monthly' => 'Mensile',
+        'monthly_requires_login' => 'Accedi per donare mensilmente e gestire la donazione dal tuo account.',
         'amount_label' => 'Scegli un importo',
         'custom_amount_label' => 'Oppure inserisci un importo',
         'name_label' => 'Il tuo nome (facoltativo)',
@@ -62,5 +66,26 @@ return [
             'pending' => 'In attesa',
             'unsuccessful' => 'Non riuscite',
         ],
+    ],
+
+    // Pannello adottante: le mie donazioni ricorrenti + storico addebiti (ownership).
+    'my' => [
+        'title' => 'Le mie donazioni',
+        'organization' => 'Ente',
+        'amount' => 'Importo',
+        'amount_monthly' => ':amount € / mese',
+        'status' => 'Stato',
+        'started_at' => 'Attiva dal',
+        'canceled_at' => 'Disdetta il',
+        'cancel' => 'Disdici',
+        'cancel_confirm_heading' => 'Disdire la donazione mensile?',
+        'cancel_confirm_body' => 'Non ti verrà più addebitato nulla. La donazione ricorrente verrà disdetta. Vuoi procedere?',
+        'cancel_confirm_submit' => 'Disdici la donazione',
+        'cancel_done' => 'Donazione ricorrente disdetta.',
+        'empty_title' => 'Nessuna donazione ricorrente',
+        'empty_body' => 'Non hai donazioni mensili attive. Dalla pagina di un ente puoi avviare una donazione ricorrente.',
+        'charges_heading' => 'Storico addebiti',
+        'charges_description' => 'Gli addebiti mensili andati a buon fine delle tue donazioni ricorrenti.',
+        'charge_date' => 'Data',
     ],
 ];

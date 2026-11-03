@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $organization_id
+ * @property int|null $recurring_donation_id
  * @property int|null $donor_user_id
  * @property string|null $donor_name
  * @property string|null $donor_email
@@ -43,6 +44,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Organization $organization
+ * @property-read RecurringDonation|null $recurringDonation
  * @property-read User|null $donor
  */
 class Donation extends Model
@@ -55,6 +57,7 @@ class Donation extends Model
      */
     protected $fillable = [
         'organization_id',
+        'recurring_donation_id',
         'donor_user_id',
         'donor_name',
         'donor_email',
@@ -89,6 +92,16 @@ class Donation extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Abbonamento ricorrente che ha generato questo addebito (null per le una tantum).
+     *
+     * @return BelongsTo<RecurringDonation, $this>
+     */
+    public function recurringDonation(): BelongsTo
+    {
+        return $this->belongsTo(RecurringDonation::class);
     }
 
     /**

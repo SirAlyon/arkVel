@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Donations\ReconcileDonationFromStripe;
+use App\Actions\Donations\ReconcileSubscriptionFromStripe;
 use App\Support\Billing\StripeConfig;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -12,31 +13,40 @@ use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
 
 /**
- * Riceve i webhook di Stripe per il flusso donazioni (P4-6): POST /stripe/webhook.
+ * Riceve i webhook di Stripe per i flussi donazioni (P4-6 una tantum / P4-7 ricorrenti):
+ * POST /stripe/webhook.
  *
- * Controller SOTTILE: verifica la firma, estrae l'oggetto `session` dell'evento Checkout
- * e delega la riconciliazione di stato a {@see ReconcileDonationFromStripe} (unico punto
- * di transizione). Nessuna logica di dominio qui.
+ * Controller SOTTILE: verifica la firma, estrae l'oggetto evento e INSTRADA alla Action di
+ * riconciliazione giusta (unico punto di transizione per ciascun flusso). Nessuna logica
+ * di dominio qui.
+ *
+ * INSTRADAMENTO (una tantum vs ricorrente, senza collisioni):
+ *  - checkout.session.* → si RAMIFICA su `session.mode`:
+ *      · mode='subscription' → {@see ReconcileSubscriptionFromStripe} (attivazione ricorrente);
+ *      · altrimenti (mode='payment' o assente) → {@see ReconcileDonationFromStripe} (una tantum).
+ *  - invoice.* e customer.subscription.* → {@see ReconcileSubscriptionFromStripe}.
+ *  - ogni altro evento → inoltrato all'Action una tantum, che fa no-op sugli eventi non
+ *    pertinenti (comportamento P4-6 invariato).
  *
  * SICUREZZA DELLA FIRMA (documentata di proposito):
  *  - Quando {@see StripeConfig::webhookSecret()} è VALORIZZATO, l'header `Stripe-Signature`
  *    è verificato con lo schema Stripe (`t=...,v1=hmac`): firma errata/assente → 400. È il
  *    comportamento di produzione, che impedisce a chiunque di falsificare un pagamento.
  *  - Quando il segreto è VUOTO (dev/test/installazione non ancora configurata del tutto) la
- *    verifica è SALTATA e il payload è decodificato così com'è. Questo permette lo sviluppo
- *    locale (Stripe CLI senza segreto) e i test senza firme reali. In produzione il segreto
+ *    verifica è SALTATA e il payload è decodificato così com'è. In produzione il segreto
  *    va impostato: documentato in {@see StripeConfig}.
  *
- * IDEMPOTENZA ed effetti collaterali isolati: Stripe può riconsegnare lo stesso evento;
- * la riconciliazione è idempotente (grafo di stato) e l'unico effetto è l'aggiornamento di
- * stato/paid_at della donazione. Eventi sconosciuti → 200 no-op (Stripe non deve ritentare).
- * La rotta è esclusa dalla CSRF: i webhook non portano token di sessione.
+ * IDEMPOTENZA ed effetti collaterali isolati: Stripe può riconsegnare lo stesso evento; le
+ * Action di riconciliazione sono idempotenti (grafo di stato + unicità del provider_ref).
+ * Eventi sconosciuti → 200 no-op. La rotta è esclusa dalla CSRF: i webhook non portano
+ * token di sessione.
  */
 final class StripeWebhookController extends Controller
 {
     public function __construct(
         private readonly StripeConfig $config,
-        private readonly ReconcileDonationFromStripe $reconcile,
+        private readonly ReconcileDonationFromStripe $reconcileDonation,
+        private readonly ReconcileSubscriptionFromStripe $reconcileSubscription,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -52,20 +62,48 @@ final class StripeWebhookController extends Controller
 
         $type = is_string($event['type'] ?? null) ? $event['type'] : '';
 
-        /** @var array<string, mixed> $session */
-        $session = $event['data']['object'] ?? [];
+        /** @var array<string, mixed> $object */
+        $object = $event['data']['object'] ?? [];
 
-        $sessionId = is_string($session['id'] ?? null) ? $session['id'] : null;
-
-        $metadataDonationId = $session['metadata']['donation_id'] ?? null;
-        $donationId = is_numeric($metadataDonationId) ? (int) $metadataDonationId : null;
-
-        // Delega: l'Action ignora gli eventi non pertinenti (no-op) ed è idempotente.
-        $this->reconcile->handle($type, $sessionId, $donationId);
+        $this->route($type, $object);
 
         // 200 sempre su payload accettato: evita ritentativi di Stripe per eventi che non
         // ci riguardano o già riconciliati.
         return response('OK', 200);
+    }
+
+    /**
+     * Instrada l'evento alla riconciliazione corretta. Delega idempotente: le Action
+     * ignorano gli eventi non pertinenti (no-op).
+     *
+     * @param  array<string, mixed>  $object
+     */
+    private function route(string $type, array $object): void
+    {
+        $isSubscriptionLifecycle = str_starts_with($type, 'invoice.')
+            || str_starts_with($type, 'customer.subscription.');
+
+        if ($isSubscriptionLifecycle) {
+            $this->reconcileSubscription->handle($type, $object);
+
+            return;
+        }
+
+        if (str_starts_with($type, 'checkout.session.')
+            && (is_string($object['mode'] ?? null) ? $object['mode'] : null) === 'subscription') {
+            $this->reconcileSubscription->handle($type, $object);
+
+            return;
+        }
+
+        // Flusso una tantum (checkout.session.* mode payment/assente, o eventi ignoti): il
+        // matching avviene per id sessione o metadata.donation_id.
+        $sessionId = is_string($object['id'] ?? null) ? $object['id'] : null;
+
+        $metadataDonationId = $object['metadata']['donation_id'] ?? null;
+        $donationId = is_numeric($metadataDonationId) ? (int) $metadataDonationId : null;
+
+        $this->reconcileDonation->handle($type, $sessionId, $donationId);
     }
 
     /**

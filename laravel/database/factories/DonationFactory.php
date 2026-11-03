@@ -8,6 +8,7 @@ use App\Enums\DonationStatus;
 use App\Enums\DonationType;
 use App\Models\Donation;
 use App\Models\Organization;
+use App\Models\RecurringDonation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -53,6 +54,20 @@ class DonationFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'type' => DonationType::Recurring,
+        ]);
+    }
+
+    /**
+     * Addebito collegato a un abbonamento ricorrente: type=recurring + FK valorizzata,
+     * ereditando ente e donatore dalla ricorrente (coerenza del registro).
+     */
+    public function forRecurringDonation(RecurringDonation $recurring): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'type' => DonationType::Recurring,
+            'recurring_donation_id' => $recurring->getKey(),
+            'organization_id' => $recurring->organization_id,
+            'donor_user_id' => $recurring->user_id,
         ]);
     }
 

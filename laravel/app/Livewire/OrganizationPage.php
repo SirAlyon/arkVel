@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Actions\Donations\StartDonationCheckout;
+use App\Actions\Donations\StartRecurringDonationCheckout;
 use App\Enums\OrganizationStatus;
 use App\Exceptions\DonationsNotConfigured;
 use App\Models\Animal;
@@ -39,6 +40,12 @@ class OrganizationPage extends Component
     use WithPagination;
 
     public Organization $organization;
+
+    /**
+     * Frequenza scelta: 'one_off' (una tantum, P4-6) oppure 'monthly' (ricorrente, P4-7).
+     * La mensile è riservata agli utenti autenticati (serve un account per gestirla).
+     */
+    public string $donationFrequency = 'one_off';
 
     /**
      * Importo scelto in EURO come stringa dal form (preset o libero). Validato in
@@ -83,16 +90,32 @@ class OrganizationPage extends Component
      * Validazione MIRATA ai campi donazione (importo sempre; nome/email solo per gli
      * ospiti). Delega a {@see StartDonationCheckout} e redirige all'URL di Checkout.
      */
-    public function donate(StartDonationCheckout $startDonationCheckout, StripeConfig $stripeConfig): mixed
-    {
+    public function donate(
+        StartDonationCheckout $startDonationCheckout,
+        StartRecurringDonationCheckout $startRecurringDonationCheckout,
+        StripeConfig $stripeConfig,
+    ): mixed {
         if (! $stripeConfig->configured()) {
             $this->donationError = __('donations.public.not_configured');
 
             return null;
         }
 
-        $user = Auth::user();
-        $isGuest = ! $user instanceof User;
+        // Donatore tipizzato una volta sola (User|null): evita narrowing ambiguo a valle
+        // e mantiene i rami puliti per la static analysis.
+        $authenticated = Auth::user();
+        $donor = $authenticated instanceof User ? $authenticated : null;
+        $isGuest = $donor === null;
+        $isMonthly = $this->donationFrequency === 'monthly';
+
+        // Le ricorrenti NON sono per ospiti: serve un account per gestirle/disdirle. La
+        // UI nasconde già l'opzione mensile agli ospiti; ri-verifichiamo qui (la UI non è
+        // il confine) e rifiutiamo con un avviso localizzato.
+        if ($isMonthly && $isGuest) {
+            $this->donationError = __('donations.public.monthly_requires_login');
+
+            return null;
+        }
 
         $validated = $this->validate(
             $this->donationRules($isGuest),
@@ -104,15 +127,22 @@ class OrganizationPage extends Component
         $amountCents = (int) round(((float) $validated['donationAmount']) * 100);
 
         try {
-            $checkoutUrl = $startDonationCheckout->handle(
-                organization: $this->organization,
-                amountCents: $amountCents,
-                currency: 'eur',
-                donor: $isGuest ? null : $user,
-                donorName: $isGuest && $this->donorName !== '' ? $this->donorName : null,
-                donorEmail: $isGuest && $this->donorEmail !== '' ? $this->donorEmail : null,
-                message: $this->donationMessage !== '' ? $this->donationMessage : null,
-            );
+            $checkoutUrl = $isMonthly
+                ? $startRecurringDonationCheckout->handle(
+                    organization: $this->organization,
+                    amountCents: $amountCents,
+                    currency: 'eur',
+                    donor: $donor,
+                )
+                : $startDonationCheckout->handle(
+                    organization: $this->organization,
+                    amountCents: $amountCents,
+                    currency: 'eur',
+                    donor: $donor,
+                    donorName: $isGuest && $this->donorName !== '' ? $this->donorName : null,
+                    donorEmail: $isGuest && $this->donorEmail !== '' ? $this->donorEmail : null,
+                    message: $this->donationMessage !== '' ? $this->donationMessage : null,
+                );
         } catch (DonationsNotConfigured) {
             $this->donationError = __('donations.public.not_configured');
 
@@ -138,6 +168,9 @@ class OrganizationPage extends Component
             'donationsEnabled' => app(StripeConfig::class)->configured(),
             'donationPresets' => [5, 10, 25, 50],
             'isGuestDonor' => ! Auth::user() instanceof User,
+            // La donazione mensile è disponibile solo agli utenti autenticati: serve un
+            // account per gestirla/disdirla dal pannello /account.
+            'canDonateMonthly' => Auth::user() instanceof User,
         ]);
 
         $view->title($this->organization->name.' — ArkVel'); // @phpstan-ignore method.notFound
