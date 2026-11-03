@@ -21,6 +21,13 @@ return [
         'skip_to_content' => 'Skip to content',
     ],
 
+    'theme' => [
+        'label' => 'Theme',
+        'light' => 'Light',
+        'dark' => 'Dark',
+        'system' => 'Automatic',
+    ],
+
     'footer' => [
         'tagline' => 'ArkVel connects people with animals looking for a home, backed by the transparency of verified shelters, rescues and associations.',
         'links' => 'Links',

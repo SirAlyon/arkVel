@@ -21,6 +21,13 @@ return [
         'skip_to_content' => 'Vai al contenuto',
     ],
 
+    'theme' => [
+        'label' => 'Tema',
+        'light' => 'Chiaro',
+        'dark' => 'Scuro',
+        'system' => 'Automatico',
+    ],
+
     'footer' => [
         'tagline' => 'ArkVel connette persone e animali in cerca di casa, con la trasparenza di canili, rifugi e associazioni verificate.',
         'links' => 'Collegamenti',
