@@ -12,6 +12,9 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)->in('Feature');
 pest()->extend(TestCase::class)->in('Unit');
+// Suite browser: fuori dai testsuite di phpunit.xml, quindi esclusa dalla run standard
+// (container php e CI). Si lancia con `docker compose run --rm browser-tests`.
+pest()->extend(TestCase::class)->in('Browser');
 
 /*
 |--------------------------------------------------------------------------

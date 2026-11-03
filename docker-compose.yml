@@ -86,6 +86,21 @@ services:
       redis:
         condition: service_started
 
+  # Test browser (Pest 4 Browser + Playwright/Chromium) su immagine Debian dedicata:
+  # Playwright non supporta Alpine. Non parte con `docker compose up`; si usa con
+  #   docker compose run --rm browser-tests
+  # Richiede `npm ci` già eseguito in laravel/ (client playwright in node_modules).
+  browser-tests:
+    profiles: ["testing"]
+    build:
+      context: .
+      dockerfile: Dockerfile.browser
+    container_name: arkvel-browser-tests
+    volumes:
+      - ./laravel/:/var/www/html/arkvel
+    working_dir: /var/www/html/arkvel
+    command: ["./vendor/bin/pest", "tests/Browser"]
+
   nginx:
     build:
       context: ./nginx/

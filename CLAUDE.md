@@ -20,7 +20,11 @@ docker compose exec -T php composer <cmd>
 docker compose exec -T php ./vendor/bin/pint
 docker compose exec -T php ./vendor/bin/phpstan analyse --no-progress
 docker compose exec -T php ./vendor/bin/pest
+docker compose --profile testing run --rm browser-tests   # test browser (Pest 4 + Playwright)
 ```
+
+I test browser (`laravel/tests/Browser`) girano solo nel servizio `browser-tests` (immagine
+Debian: Playwright non supporta l'Alpine del container `php`) e sono esclusi dalla run standard.
 
 Se lo stack non è attivo: `docker compose up -d`. App su http://localhost:8090,
 Mailpit http://localhost:8025, Meilisearch http://localhost:7700.
@@ -136,10 +140,17 @@ sotto-agenti specializzati. Non esiste (né serve) un "agente orchestratore" sep
 - `filament-builder` — costruisce Resource/Page/Widget Filament 5 idiomatici.
 - `test-author` — scrive/estende test Pest ed esegue la suite.
 - `standards-reviewer` — revisione read-only del diff contro SOLID/OOP/standard di progetto.
+- `ui-builder` — costruisce la UI pubblica Livewire (componenti `x-ui.*`, pagine) secondo
+  [docs/PIANO-UI-FRONTEND.md](docs/PIANO-UI-FRONTEND.md). Non tocca Filament.
+- `design-reviewer` — revisione visiva e di accessibilità read-only (Playwright MCP, screenshot multi-viewport, WCAG 2.2 AA).
 
 **Skill** (in `.claude/skills/`) — invoca con `/<nome>`:
 - `/new-feature` — workflow completo: capire → progettare → implementare → testare → revisionare → quality gate.
 - `/quality-gate` — esegue pint + phpstan + pest e riporta l'esito.
+- `/ui-review` — revisione visiva/accessibilità delle pagine pubbliche toccate (via `design-reviewer`).
+
+**MCP** (`.mcp.json` in root): `laravel-boost` (doc per-versione, schema DB, log browser),
+`playwright` (navigazione e screenshot), `chrome-devtools` (performance, console, rete).
 
 Per lavori ampi e parallelizzabili si può usare l'orchestrazione a workflow (fan-out
 di più agenti); farlo solo su richiesta esplicita.
