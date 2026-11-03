@@ -59,6 +59,7 @@ final class ContrastPairs
                 ['danger', 'canvas'],
                 ['danger', 'surface'],
                 ['on-danger', 'danger'],
+                ['on-danger', 'danger-hover'],
                 ['on-danger-subtle', 'danger-subtle'],
                 ['info', 'canvas'],
                 ['on-info-subtle', 'info-subtle'],

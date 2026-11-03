@@ -1,0 +1,102 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ | Styleguide · gruppo "actions" (resources/views/styleguide/groups/actions.blade.php).
+ */
+
+return [
+    'icon' => [
+        'title' => 'Icon',
+        'description' => 'Stroked Lucide icons in the text colour. Never emoji.',
+        'a11y_decorative' => 'Decorative by default (aria-hidden): the action is named by the nearby text or by the control’s aria-label.',
+        'a11y_label' => 'With a label it becomes a named image (role="img"), only when the icon carries information on its own.',
+        'sizes' => 'Sizes',
+        'set' => 'Recurring icons',
+        'labelled' => 'Named icon',
+        'verified' => 'Verified organization',
+        'labelled_hint' => 'Screen readers announce “Verified organization”.',
+    ],
+
+    'button' => [
+        'title' => 'Button',
+        'description' => 'Pill, 700 text. With href it becomes a link that looks the same. The spinner appears on its own when Livewire sets data-loading on the button that started the request.',
+        'a11y_target' => 'At least a 44 px target in every size; 3 px focus ring, which takes the block text colour on coloured blocks.',
+        'a11y_icon_only' => 'Icon only: the label is required and becomes the accessible name.',
+        'a11y_loading' => 'Loading: aria-busy, disabled, and the spinner announces “Loading”.',
+        'a11y_link' => 'Disabled link: no href and aria-disabled, so it leaves the tab order.',
+        'variants' => 'Variants',
+        'variant_primary' => 'Primary',
+        'variant_secondary' => 'Secondary',
+        'variant_highlight' => 'Highlight',
+        'variant_ghost' => 'Ghost',
+        'variant_danger' => 'Danger',
+        'sizes' => 'Sizes',
+        'size_sm' => 'Small · 44',
+        'size_md' => 'Medium · 48',
+        'size_lg' => 'Large · 56',
+        'icons' => 'With icon and icon only',
+        'search' => 'Search',
+        'next' => 'Next',
+        'close' => 'Close',
+        'favorite' => 'Add to favourites',
+        'states' => 'States',
+        'disabled' => 'Disabled',
+        'save' => 'Save',
+        'as_link' => 'Link as a button',
+        'link_disabled' => 'Disabled link',
+        'livewire' => 'Waiting with Livewire',
+        'livewire_hint' => 'The button below simulates data-loading for 1.5 seconds, as Livewire would during a request.',
+        'simulate' => 'Send the application',
+        'on_blocks' => 'On a dark background',
+        'on_leaf' => 'On the green band',
+        'donate' => 'Donate now',
+    ],
+
+    'link' => [
+        'title' => 'Link',
+        'description' => 'Links in text: underlined and bold, link colour.',
+        'a11y_underline' => 'Always underlined: they are not recognised by colour alone.',
+        'a11y_external' => 'External: icon and hidden text “(opens in a new tab)”.',
+        'inline' => 'In text',
+        'sentence_before' => 'Found the one for you already? Browse',
+        'catalog' => 'the animal catalogue',
+        'sentence_after' => 'and apply in a few steps.',
+        'external_title' => 'External',
+        'inherit' => 'On coloured blocks',
+    ],
+
+    'badge' => [
+        'title' => 'Badge',
+        'description' => 'Non-interactive labels for states and attributes.',
+        'a11y' => 'The text always carries the meaning; the icon reinforces it but is decorative.',
+        'variants' => 'Variants',
+        'variant_neutral' => 'Neutral',
+        'variant_primary' => 'Primary',
+        'variant_highlight' => 'Highlight',
+        'variant_stamp' => 'Stamp',
+        'variant_success' => 'Adopted',
+        'variant_warning' => 'Pending',
+        'variant_danger' => 'Cancelled',
+        'variant_info' => 'New',
+        'on_surface' => 'On surface',
+    ],
+
+    'tag' => [
+        'title' => 'Chip',
+        'description' => 'Pill chips with a line-strong border: choice filters (active is solid navy), removable active filters and static labels.',
+        'a11y_pressed' => 'Filters: real buttons with aria-pressed, reachable with Tab and activated with Enter or Space.',
+        'a11y_remove' => 'Removable: the 44 px × button is named “Remove <label>”.',
+        'filters' => 'Quick filters',
+        'filters_label' => 'Filter by species',
+        'all' => 'All',
+        'dogs' => 'Dogs',
+        'cats' => 'Cats',
+        'others' => 'Others',
+        'removable' => 'Active filters',
+        'static' => 'Static',
+        'size' => 'Medium size',
+        'age' => '2 years',
+    ],
+];

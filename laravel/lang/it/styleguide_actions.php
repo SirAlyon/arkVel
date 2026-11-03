@@ -1,0 +1,102 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ | Styleguide · gruppo "actions" (resources/views/styleguide/groups/actions.blade.php).
+ */
+
+return [
+    'icon' => [
+        'title' => 'Icona',
+        'description' => 'Icone Lucide a tratto, nel colore del testo. Mai emoji.',
+        'a11y_decorative' => 'Decorativa per default (aria-hidden): il nome dell’azione lo dà il testo vicino o l’aria-label del controllo.',
+        'a11y_label' => 'Con label diventa un’immagine con nome (role="img"), solo se l’icona porta informazione da sola.',
+        'sizes' => 'Dimensioni',
+        'set' => 'Icone ricorrenti',
+        'labelled' => 'Icona con nome',
+        'verified' => 'Ente verificato',
+        'labelled_hint' => 'Lo screen reader legge «Ente verificato».',
+    ],
+
+    'button' => [
+        'title' => 'Bottone',
+        'description' => 'Pill, testo 700. Con href diventa un link con lo stesso aspetto. Lo spinner compare da solo quando Livewire mette data-loading sul bottone che ha lanciato la richiesta.',
+        'a11y_target' => 'Target di almeno 44 px in tutte le dimensioni; focus ad anello di 3 px, che sui blocchi colorati prende il colore del testo del blocco.',
+        'a11y_icon_only' => 'Solo icona: la label è obbligatoria e diventa il nome accessibile.',
+        'a11y_loading' => 'In attesa: aria-busy, disattivato, e lo spinner annuncia «Caricamento in corso».',
+        'a11y_link' => 'Link disattivato: niente href e aria-disabled, quindi fuori dall’ordine di tabulazione.',
+        'variants' => 'Varianti',
+        'variant_primary' => 'Primario',
+        'variant_secondary' => 'Secondario',
+        'variant_highlight' => 'In evidenza',
+        'variant_ghost' => 'Discreto',
+        'variant_danger' => 'Pericolo',
+        'sizes' => 'Dimensioni',
+        'size_sm' => 'Piccolo · 44',
+        'size_md' => 'Medio · 48',
+        'size_lg' => 'Grande · 56',
+        'icons' => 'Con icona e solo icona',
+        'search' => 'Cerca',
+        'next' => 'Avanti',
+        'close' => 'Chiudi',
+        'favorite' => 'Aggiungi ai preferiti',
+        'states' => 'Stati',
+        'disabled' => 'Disattivato',
+        'save' => 'Salva',
+        'as_link' => 'Link come bottone',
+        'link_disabled' => 'Link disattivato',
+        'livewire' => 'Attesa con Livewire',
+        'livewire_hint' => 'Il bottone qui sotto simula data-loading per 1,5 secondi, come farebbe Livewire durante una richiesta.',
+        'simulate' => 'Invia la candidatura',
+        'on_blocks' => 'Su fondo scuro',
+        'on_leaf' => 'Sulla banda verde',
+        'donate' => 'Dona ora',
+    ],
+
+    'link' => [
+        'title' => 'Link',
+        'description' => 'Link nel testo: sottolineati e in grassetto, colore link.',
+        'a11y_underline' => 'Sempre sottolineati: non si riconoscono dal solo colore.',
+        'a11y_external' => 'Esterni: icona e testo nascosto «(si apre in una nuova scheda)».',
+        'inline' => 'Nel testo',
+        'sentence_before' => 'Hai già trovato chi fa per te? Sfoglia',
+        'catalog' => 'il catalogo degli animali',
+        'sentence_after' => 'e candidati in pochi passi.',
+        'external_title' => 'Esterno',
+        'inherit' => 'Sui blocchi colorati',
+    ],
+
+    'badge' => [
+        'title' => 'Badge',
+        'description' => 'Etichette non interattive per stati e attributi.',
+        'a11y' => 'Il testo dice sempre il significato; l’icona lo rinforza ma è decorativa.',
+        'variants' => 'Varianti',
+        'variant_neutral' => 'Neutro',
+        'variant_primary' => 'Primario',
+        'variant_highlight' => 'In evidenza',
+        'variant_stamp' => 'Bollino',
+        'variant_success' => 'Adottato',
+        'variant_warning' => 'In attesa',
+        'variant_danger' => 'Annullato',
+        'variant_info' => 'Novità',
+        'on_surface' => 'Su superficie',
+    ],
+
+    'tag' => [
+        'title' => 'Chip',
+        'description' => 'Chip pill con bordo line-strong: filtri a scelta (attivo navy pieno), filtri attivi rimovibili ed etichette statiche.',
+        'a11y_pressed' => 'Filtri: veri bottoni con aria-pressed, raggiungibili con Tab e attivabili con Invio o Spazio.',
+        'a11y_remove' => 'Rimovibili: il bottone × da 44 px si chiama «Rimuovi <etichetta>».',
+        'filters' => 'Filtri rapidi',
+        'filters_label' => 'Filtra per specie',
+        'all' => 'Tutti',
+        'dogs' => 'Cani',
+        'cats' => 'Gatti',
+        'others' => 'Altri',
+        'removable' => 'Filtri attivi',
+        'static' => 'Statiche',
+        'size' => 'Taglia media',
+        'age' => '2 anni',
+    ],
+];

@@ -13,6 +13,38 @@ return [
     'language' => 'Language',
     'toc' => 'Sections',
 
+    'pages' => 'Styleguide pages',
+    'tokens' => 'Tokens',
+    'a11y' => 'Accessibility',
+    'show_code' => 'Show code',
+    'examples' => 'Examples',
+    'groups' => [
+        'actions' => [
+            'title' => 'Actions',
+            'intro' => 'Icons, buttons, links, badges and chips: the basic elements to act and label.',
+        ],
+        'forms' => [
+            'title' => 'Forms',
+            'intro' => 'Fields, labels, help and errors: input, textarea, select, checkbox, radio and switch.',
+        ],
+        'pickers' => [
+            'title' => 'Pickers',
+            'intro' => 'Guided choices: searchable combobox and date picker (Cally).',
+        ],
+        'overlays' => [
+            'title' => 'Overlays',
+            'intro' => 'Dialog, side sheet, dropdown menu, tooltip and toast notifications.',
+        ],
+        'content' => [
+            'title' => 'Content',
+            'intro' => 'Tabs, accordion, skeleton, empty states and avatars.',
+        ],
+        'domain' => [
+            'title' => 'Domain',
+            'intro' => 'ArkVel components: animal and organization cards, stats, section headings and CTA bands.',
+        ],
+    ],
+
     'sections' => [
         'preview' => 'Preview',
         'colors' => 'Colors',

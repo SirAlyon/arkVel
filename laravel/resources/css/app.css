@@ -223,6 +223,7 @@
     --color-warning-subtle: var(--color-sun-100);
     --color-on-warning-subtle: var(--color-sun-900);
     --color-danger: var(--color-cherry-600);
+    --color-danger-hover: var(--color-cherry-700);
     --color-on-danger: var(--color-white);
     --color-danger-subtle: var(--color-cherry-50);
     --color-on-danger-subtle: var(--color-cherry-800);
@@ -347,6 +348,7 @@
         --color-warning-subtle: var(--color-sun-950);
         --color-on-warning-subtle: var(--color-sun-100);
         --color-danger: var(--color-cherry-300);
+        --color-danger-hover: var(--color-cherry-200);
         --color-on-danger: var(--color-navy-950);
         --color-danger-subtle: var(--color-cherry-950);
         --color-on-danger-subtle: var(--color-cherry-100);

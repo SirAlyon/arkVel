@@ -13,6 +13,38 @@ return [
     'language' => 'Lingua',
     'toc' => 'Sezioni',
 
+    'pages' => 'Pagine della styleguide',
+    'tokens' => 'Token',
+    'a11y' => 'Accessibilità',
+    'show_code' => 'Mostra il codice',
+    'examples' => 'Esempi',
+    'groups' => [
+        'actions' => [
+            'title' => 'Azioni',
+            'intro' => 'Icone, bottoni, link, badge e chip: gli elementi base con cui si agisce e si etichetta.',
+        ],
+        'forms' => [
+            'title' => 'Moduli',
+            'intro' => 'Campi, etichette, aiuti ed errori: input, area di testo, select, checkbox, radio e interruttore.',
+        ],
+        'pickers' => [
+            'title' => 'Selettori',
+            'intro' => 'Scelte guidate: combobox con ricerca e selettore di date (Cally).',
+        ],
+        'overlays' => [
+            'title' => 'Livelli',
+            'intro' => 'Dialog, pannello laterale, menu a tendina, tooltip e notifiche toast.',
+        ],
+        'content' => [
+            'title' => 'Contenuti',
+            'intro' => 'Schede, accordion, skeleton, stati vuoti e avatar.',
+        ],
+        'domain' => [
+            'title' => 'Dominio',
+            'intro' => 'I componenti di ArkVel: card animale ed ente, numeri, titoli di sezione e bande CTA.',
+        ],
+    ],
+
     'sections' => [
         'preview' => 'Anteprima',
         'colors' => 'Colori',

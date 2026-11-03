@@ -45,3 +45,29 @@ it('is translated in English', function (): void {
         ->assertSee('Light')
         ->assertDontSee('Trova il tuo nuovo migliore amico.');
 });
+
+it('documents each component group on its own page', function (): void {
+    styleguideInEnvironment('local');
+
+    $this->get(route('styleguide.group', 'actions'))
+        ->assertOk()
+        ->assertSee('<meta name="robots" content="noindex, nofollow">', escape: false)
+        ->assertSee('aria-current="page"', escape: false)
+        ->assertSeeInOrder(['id="icon"', 'id="button"', 'id="link"', 'id="badge"', 'id="tag"'], escape: false);
+
+    $this->get(route('styleguide'))
+        ->assertOk()
+        ->assertSee(route('styleguide.group', 'actions'), escape: false);
+});
+
+it('answers 404 for unknown component groups', function (string $group): void {
+    styleguideInEnvironment('local');
+
+    $this->get('/_styleguide/'.$group)->assertNotFound();
+})->with(['unknown', 'colors', 'Actions']);
+
+it('hides the component pages outside the local environment', function (): void {
+    styleguideInEnvironment('production');
+
+    $this->get('/_styleguide/actions')->assertNotFound();
+});

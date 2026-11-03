@@ -6,6 +6,7 @@ use App\Http\Controllers\CalendarFeedController;
 use App\Http\Controllers\GoogleCalendarConnectController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\StyleguideGroupController;
 use App\Http\Middleware\EnsureLocalEnvironment;
 use App\Livewire\AnimalCatalog;
 use App\Livewire\AnimalDetail;
@@ -40,12 +41,17 @@ Route::get('/', Home::class)->name('home');
 Route::post('/lingua/{locale}', LocaleController::class)->name('locale.update');
 
 /*
- | Styleguide del design system (token, tipografia, forme, motion): solo in `local`,
+ | Styleguide del design system (token e componenti x-ui): solo in `local`,
  | altrove 404 (EnsureLocalEnvironment). Vedi docs/PIANO-UI-FRONTEND.md §5 UI-1.
  */
-Route::view('/_styleguide', 'styleguide')
-    ->middleware(EnsureLocalEnvironment::class)
-    ->name('styleguide');
+Route::middleware(EnsureLocalEnvironment::class)->group(function (): void {
+    Route::view('/_styleguide', 'styleguide')->name('styleguide');
+
+    // Una pagina per gruppo di componenti x-ui (App\Support\Styleguide\StyleguideGroups).
+    Route::get('/_styleguide/{group}', StyleguideGroupController::class)
+        ->where('group', '[a-z-]+')
+        ->name('styleguide.group');
+});
 
 Route::get('/animali', AnimalCatalog::class)->name('catalog');
 Route::get('/animali/{animal}', AnimalDetail::class)->name('animals.show');
