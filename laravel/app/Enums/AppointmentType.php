@@ -22,11 +22,7 @@ enum AppointmentType: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Visit => 'Visita',
-            self::Interview => 'Colloquio',
-            self::HomeCheck => 'Controllo domiciliare',
-        };
+        return __('enums.appointment_type.'.$this->value);
     }
 
     public function getColor(): string

@@ -23,10 +23,7 @@ enum DonationType: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::OneOff => 'Una tantum',
-            self::Recurring => 'Ricorrente',
-        };
+        return __('enums.donation_type.'.$this->value);
     }
 
     public function getColor(): string

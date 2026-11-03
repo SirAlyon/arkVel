@@ -14,10 +14,6 @@ enum Size: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Small => 'Piccola',
-            self::Medium => 'Media',
-            self::Large => 'Grande',
-        };
+        return __('enums.size.'.$this->value);
     }
 }

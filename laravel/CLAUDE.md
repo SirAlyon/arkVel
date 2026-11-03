@@ -29,7 +29,7 @@ app/
 - **Model**: `protected function casts(): array` (stile L11+), `$fillable` esplicito,
   relazioni tipizzate con return type (`: HasMany`, `: BelongsTo`).
 - **Factory** per ogni Model (servono ai test e ai seeder).
-- **Enum**: label in italiano via `HasLabel`; colori via `HasColor` per gli stati.
+- **Enum**: label tradotte via `HasLabel` → `__('enums.<enum_snake>.<value>')` in `lang/{it,en}/enums.php` (il test `EnumLabelsTranslationTest` verifica che ogni case abbia la chiave in entrambe le lingue); colori via `HasColor` per gli stati.
 - **Stati**: transizioni solo tramite la macchina a stati; ogni transizione logga
   (activitylog) e notifica dove previsto.
 - **Filament 5**: una Resource per Model, componenti riusabili, RelationManager per

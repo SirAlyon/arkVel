@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use Filament\Support\Contracts\HasLabel;
+use Illuminate\Support\Str;
 
 /**
  * Ruoli globali della piattaforma (spatie/laravel-permission).
@@ -35,13 +36,9 @@ enum RoleName: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::SuperAdmin => 'Super Amministratore',
-            self::OrgOwner => 'Titolare ente',
-            self::OrgStaff => 'Staff ente',
-            self::OrgVolunteer => 'Volontario ente',
-            self::Adopter => 'Adottante',
-        };
+        // Il value (nome del ruolo spatie) contiene spazi: la chiave di traduzione
+        // usa il nome del case in snake_case.
+        return __('enums.role_name.'.Str::snake($this->name));
     }
 
     /**

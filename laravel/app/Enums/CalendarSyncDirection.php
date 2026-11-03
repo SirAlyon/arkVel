@@ -25,9 +25,6 @@ enum CalendarSyncDirection: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Push => 'Solo invio (ArkVel → esterno)',
-            self::Both => 'Due vie (invio e ricezione)',
-        };
+        return __('enums.calendar_sync_direction.'.$this->value);
     }
 }

@@ -19,9 +19,6 @@ enum RentOrOwn: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Own => 'Di proprietà',
-            self::Rent => 'In affitto',
-        };
+        return __('enums.rent_or_own.'.$this->value);
     }
 }

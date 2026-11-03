@@ -28,11 +28,7 @@ enum CalendarConnectionStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Active => 'Attiva',
-            self::Error => 'Errore',
-            self::Disconnected => 'Disconnessa',
-        };
+        return __('enums.calendar_connection_status.'.$this->value);
     }
 
     public function getColor(): string

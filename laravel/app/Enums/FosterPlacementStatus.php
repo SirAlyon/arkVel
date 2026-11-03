@@ -24,10 +24,7 @@ enum FosterPlacementStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Active => 'In corso',
-            self::Ended => 'Concluso',
-        };
+        return __('enums.foster_placement_status.'.$this->value);
     }
 
     public function getColor(): string

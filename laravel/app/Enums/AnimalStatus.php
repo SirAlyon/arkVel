@@ -20,16 +20,7 @@ enum AnimalStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Draft => 'Bozza',
-            self::Available => 'Disponibile',
-            self::Reserved => 'Prenotato',
-            self::AdoptionPending => 'Adozione in corso',
-            self::Adopted => 'Adottato',
-            self::Fostered => 'In affido',
-            self::MedicalHold => 'Fermo sanitario',
-            self::NotAvailable => 'Non disponibile',
-        };
+        return __('enums.animal_status.'.$this->value);
     }
 
     public function getColor(): string

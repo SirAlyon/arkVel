@@ -30,10 +30,6 @@ enum CalendarProvider: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Google => 'Google Calendar',
-            self::CalDav => 'CalDAV',
-            self::Log => 'Demo (solo log)',
-        };
+        return __('enums.calendar_provider.'.$this->value);
     }
 }

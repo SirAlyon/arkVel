@@ -24,12 +24,7 @@ enum FollowUpStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Pending => 'Da pianificare',
-            self::Scheduled => 'Pianificato',
-            self::Completed => 'Completato',
-            self::NotNeeded => 'Non necessario',
-        };
+        return __('enums.follow_up_status.'.$this->value);
     }
 
     public function getColor(): string

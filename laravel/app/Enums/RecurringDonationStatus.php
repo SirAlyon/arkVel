@@ -33,12 +33,7 @@ enum RecurringDonationStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Pending => 'In attesa',
-            self::Active => 'Attiva',
-            self::PastDue => 'Insoluto',
-            self::Canceled => 'Disdetta',
-        };
+        return __('enums.recurring_donation_status.'.$this->value);
     }
 
     public function getColor(): string

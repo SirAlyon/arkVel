@@ -28,17 +28,7 @@ enum ApplicationStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Submitted => 'Inviata',
-            self::UnderReview => 'In valutazione',
-            self::Interview => 'Colloquio / verifica',
-            self::Approved => 'Approvata',
-            self::AdoptionPending => 'Adozione in corso',
-            self::Completed => 'Completata',
-            self::Rejected => 'Respinta',
-            self::Withdrawn => 'Ritirata',
-            self::Waitlisted => 'Lista d\'attesa',
-        };
+        return __('enums.application_status.'.$this->value);
     }
 
     public function getColor(): string

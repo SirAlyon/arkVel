@@ -16,12 +16,6 @@ enum OrganizationType: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::CanileComunale => 'Canile comunale',
-            self::CanilePrivato => 'Canile privato',
-            self::Rifugio => 'Rifugio',
-            self::Associazione => 'Associazione',
-            self::Societa => 'Società',
-        };
+        return __('enums.organization_type.'.$this->value);
     }
 }

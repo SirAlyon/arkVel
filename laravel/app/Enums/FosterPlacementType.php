@@ -23,12 +23,7 @@ enum FosterPlacementType: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::PreAdoption => 'Pre-adozione',
-            self::Medical => 'Sanitario',
-            self::Emergency => 'Emergenza',
-            self::LongTerm => 'Lungo termine',
-        };
+        return __('enums.foster_placement_type.'.$this->value);
     }
 
     public function getColor(): string

@@ -21,11 +21,6 @@ enum HousingType: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Apartment => 'Appartamento',
-            self::House => 'Casa indipendente',
-            self::Farm => 'Casa rurale / con terreno',
-            self::Other => 'Altro',
-        };
+        return __('enums.housing_type.'.$this->value);
     }
 }

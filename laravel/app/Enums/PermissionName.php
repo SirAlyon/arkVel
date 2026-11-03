@@ -38,28 +38,6 @@ enum PermissionName: string implements HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::OrganizationUpdate => 'Modifica ente',
-            self::OrganizationManageStaff => 'Gestisci staff ente',
-            self::AnimalView => 'Visualizza animali',
-            self::AnimalCreate => 'Crea animali',
-            self::AnimalUpdate => 'Modifica animali',
-            self::AnimalDelete => 'Elimina animali',
-            self::MedicalRecordView => 'Visualizza cartelle sanitarie',
-            self::MedicalRecordCreate => 'Crea cartelle sanitarie',
-            self::MedicalRecordUpdate => 'Modifica cartelle sanitarie',
-            self::MedicalRecordDelete => 'Elimina cartelle sanitarie',
-            self::ApplicationView => 'Visualizza candidature',
-            self::ApplicationManage => 'Gestisci candidature',
-            self::FosterApplicationView => 'Visualizza richieste di affido',
-            self::FosterApplicationManage => 'Gestisci richieste di affido',
-            self::AppointmentView => 'Visualizza appuntamenti',
-            self::AppointmentManage => 'Gestisci appuntamenti',
-            self::CalendarManage => 'Gestisci sincronizzazione calendario',
-            self::MessageView => 'Visualizza messaggi',
-            self::MessageManage => 'Gestisci messaggi',
-            self::DonationView => 'Visualizza donazioni',
-            self::DonationManage => 'Gestisci donazioni',
-        };
+        return __('enums.permission_name.'.$this->value);
     }
 }

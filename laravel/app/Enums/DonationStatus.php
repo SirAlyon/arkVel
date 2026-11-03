@@ -33,13 +33,7 @@ enum DonationStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Pending => 'In attesa',
-            self::Completed => 'Completata',
-            self::Failed => 'Fallita',
-            self::Refunded => 'Rimborsata',
-            self::Canceled => 'Annullata',
-        };
+        return __('enums.donation_status.'.$this->value);
     }
 
     public function getColor(): string

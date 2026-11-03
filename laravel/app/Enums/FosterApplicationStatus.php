@@ -28,16 +28,7 @@ enum FosterApplicationStatus: string implements HasColor, HasLabel
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::Submitted => 'Inviata',
-            self::UnderReview => 'In valutazione',
-            self::Approved => 'Approvata',
-            self::Rejected => 'Respinta',
-            self::Waitlisted => 'Lista d\'attesa',
-            self::Active => 'Affido in corso',
-            self::Completed => 'Completato',
-            self::Withdrawn => 'Ritirata',
-        };
+        return __('enums.foster_application_status.'.$this->value);
     }
 
     public function getColor(): string
