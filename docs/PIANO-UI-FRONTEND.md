@@ -4,7 +4,7 @@
 > open-source / gratuito**. I pannelli Filament (`/account`, `/manage`, `/admin`) **non si toccano**,
 > con un'unica eccezione concordata: lo spostamento di login/registrazione adottante (fase UI-5).
 >
-> Stato: proposta approvata il 2026-11-03. Ogni fase va lanciata in una chat nuova con il
+> Stato: proposta approvata il 2026-11-03. UI-0 e UI-1 completate. Ogni fase va lanciata in una chat nuova con il
 > super-prompt in fondo al documento.
 
 ---
@@ -15,7 +15,8 @@
   (arriva tramite Filament), Alpine (incluso in Livewire), Echo/Reverb.
 - **Token attuali:** palette `brand` (terracotta) e `accent` (teal), neutri `stone`,
   font Instrument Sans via Bunny Fonts (configurato in Vite ma mai caricato nel layout: manca
-  `@fonts`). Tutto da sostituire in UI-1 con la direzione B (§1-bis).
+  `@fonts`). Sostituiti in UI-1 con la direzione B (§1-bis); `brand-*`/`accent-*` restano solo
+  come alias temporanei (vedi §5 UI-1).
 - **Componenti Blade:** `site-header`, `site-footer`, `animal-card`, `badge`, `button`,
   `filter-select`. Icone SVG inline (~32), nessuna libreria UI.
 - **Pagine Livewire pubbliche:** `Home`, `AnimalCatalog` (Scout/Meilisearch), `AnimalDetail`
@@ -224,10 +225,10 @@ Mockup di riferimento: canvas "ArkVel — Direzioni visive", artboard **B · Pop
 >
 > | Gravità | Problema | Fase |
 > |---|---|---|
-> | Major | Etichette degli enum in italiano anche nella versione EN (`getLabel()` hard-coded in 27 enum; pubblici: `Species`, `Sex`, `Size`, `EnergyLevel`, `AppointmentType`, `OrganizationType`) → `__('enums.…')` + `lang/{it,en}/enums.php`, con test | **UI-1** (prima che il sito arrivi a visitatori EN) |
-> | Major | Contrasto sotto AA (`stone-400`/`stone-500` su `brand-50`, testo chiaro sul gradiente CTA) | UI-1 (token) → UI-6 (pagine) |
+> | Major | Etichette degli enum in italiano anche nella versione EN (`getLabel()` hard-coded in 27 enum; pubblici: `Species`, `Sex`, `Size`, `EnergyLevel`, `AppointmentType`, `OrganizationType`) → `__('enums.…')` + `lang/{it,en}/enums.php`, con test | **UI-1** ✅ risolto |
+> | Major | Contrasto sotto AA (`stone-400`/`stone-500` su `brand-50`, testo chiaro sul gradiente CTA) | UI-1 (token) ✅ token AA verificati da test → UI-6 (pagine) |
 > | Major | Overflow orizzontale a 320 px causato dalla nav dell'header | UI-3 |
-> | Major | Font mai caricato (manca `@fonts` nel layout) | UI-1 (Fontsource) |
+> | Major | Font mai caricato (manca `@fonts` nel layout) | UI-1 ✅ risolto (Fontsource) |
 > | Minor | Nessun selettore di lingua visibile (Major se UI-0 va in produzione prima di UI-3) | UI-3 |
 > | Minor | Echo/Reverb importato su ogni pagina ospite (errori WebSocket in console) → import dinamico solo dove serve | UI-3 |
 > | Minor | Salto di titoli `h1` → `h3` nel catalogo; bottoni preferiti con nome identico | UI-2 (`animal-card` v2) |
@@ -247,6 +248,136 @@ Elenco originale della fase:
 - Verificare quali plugin Alpine sono inclusi in Livewire 4.
 
 ### UI-1 · Direzione visiva e design token
+
+> **Stato: completata il 2026-11-03** (branch `feat/ui-1-tokens`, partito da
+> `feat/ui-0-foundations`; 4 commit, quality gate verde a ogni commit: 1428 test, suite
+> browser 8/8).
+>
+> **Cosa è stato fatto:**
+> - **Enum tradotti IT/EN:**
+>   - i 26 enum con `HasLabel` leggono da `lang/{it,en}/enums.php`; i testi IT sono invariati,
+>     quindi i pannelli Filament non cambiano;
+>   - `AppLocale` resta con gli endonimi;
+>   - `EnumLabelsTranslationTest` scopre gli enum dal filesystem e fallisce se un case non
+>     ha la chiave in entrambe le lingue.
+> - **Token** in `resources/css/app.css` (`@theme static`):
+>   - **palette OKLCH 50-950:** `navy`, `dusk` (neutri freddi), `sand` (neutri caldi), `sun`,
+>     `peach`, `leaf` (verde e menta), `cherry` (errori). I colori del mockup sono ancorati
+>     esatti: `navy-900` #1B1B3A, `navy-700` #3A3A70, `navy-950` #13132B, `dusk-700` #4A4A68,
+>     `dusk-300` #B8B6C8, `sand-100` #F3F1EA, `sand-200` #E4E1D6, `sand-50` #F7F5EE,
+>     `sun-300` #FFD23F, `peach-300` #FFB4A2, `peach-800` #5A2A20, `leaf-200` #B7E4C7,
+>     `leaf-700` #2D6A4F;
+>   - **semantici** (da usare nei componenti; cambiano in `.dark`):
+>     - fondi e testo: `canvas`, `surface`, `surface-raised`, `fg`, `fg-muted`;
+>     - bordi: `line` solo decorativo, `line-strong` per input e controlli (≥ 3:1);
+>     - azioni: `primary`/`primary-hover`/`on-primary`, `highlight`/`on-highlight` (CTA
+>       gialla), `link`, `focus`, `stamp`/`on-stamp` (bollino della hero), `inverse`/`on-inverse`
+>       (card scura);
+>     - blocchi: `block-sun`, `block-peach`, `block-mint`, `block-leaf`, ciascuno con `on-*`;
+>     - stati: `success`, `warning`, `danger`, `info`, ciascuno con `-subtle` e `on-*-subtle`,
+>       più `on-danger`;
+>   - **tipografia fluida:** `text-display` (48→96 px, 800, −0.045em), `text-h1`…`text-h5`,
+>     `text-lead`, `text-body` (17 px / 1.5), `text-small`, `text-caption`;
+>   - **forme:** `rounded-panel` 40, `rounded-card` 32, `rounded-step` 28, `rounded-media` 24,
+>     `rounded-icon` 14, `rounded-icon-lg` 16 px. Nessuna ombra, tranne `shadow-overlay` per i
+>     livelli flottanti;
+>   - **spazi:** `gutter`, `panel`, `section` (fluidi), `max-w-page` (1240 px);
+>   - **motion:** `ease-out`, `ease-in-out`, `ease-pop`, `--duration-instant`…`--duration-slow`
+>     (≤ 300 ms) e `--duration-reveal`, tutte a ~0 con `prefers-reduced-motion`;
+>   - **focus:** anello di 3 px. Dentro `bg-inverse`, `bg-stamp` e `bg-block-*` prende il
+>     colore `on-*` del blocco (l'anello è disegnato sul fondo del contenitore).
+> - **Contrasti verificati da test:**
+>   - `App\Support\DesignTokens\ContrastPairs` elenca le 41 coppie ammesse (`ContrastKind`
+>     Text ≥ 4,5 / NonText ≥ 3);
+>   - `ColorContrastTest` legge `app.css` e le verifica in light e dark (82 casi), insieme ai
+>     colori di riferimento del piano e alle coppie vietate (giallo su verde, `line`).
+> - **Font:** Bricolage Grotesque Variable con asse `opsz`, da
+>   `@fontsource-variable/bricolage-grotesque` 5.3 (subset latin 77 KB woff2). Instrument Sans
+>   e Bunny Fonts rimossi: risolve il Major "font mai caricato".
+> - **Dark mode:**
+>   - classe `.dark` su `<html>` (`@custom-variant dark`), applicata prima del primo paint da
+>     `partials/theme-script` (localStorage `arkvel-theme` = light, dark o system);
+>   - segue `prefers-color-scheme`, `livewire:navigated` e le altre schede;
+>   - `<x-ui.theme-toggle>` (chiaro / scuro / automatico) con `aria-pressed`, solo icone sotto i
+>     640 px; più selettori sulla stessa pagina restano sincronizzati.
+> - **`/_styleguide`** (route `styleguide`, middleware `EnsureLocalEnvironment`: 404 fuori da
+>   `local`). Contiene:
+>   - anteprima bento della direzione;
+>   - token semantici e palette con valori calcolati;
+>   - tabella dei contrasti calcolata dal browser sul tema attivo;
+>   - tipografia, forme, spazi, motion;
+>   - selettori di tema e lingua.
+> - **Test:** feature (ambienti, sezioni, EN, toggle), unit (contrasti) e browser (tema di
+>   sistema, persistenza al reload, sincronizzazione, contrasti in light e dark, axe senza
+>   problemi critical/serious).
+>
+> **Dark derivata** (§1-bis), ritoccata dopo la review: ogni livello è un gradino di navy più
+> chiaro, perché la prima versione (surface su canvas 1,09:1) era quasi invisibile:
+>
+> | Token | Valore |
+> |---|---|
+> | `canvas` | navy-950 #13132B |
+> | `surface` | navy-800 |
+> | `surface-raised` | navy-700 |
+> | `inverse` | navy-600, testo `sand-50` (niente card crema abbagliante) |
+> | `fg` / `fg-muted` | `sand-50` / `dusk-300` |
+> | `line-strong` | `dusk-400` (≥ 3,7:1 su tutte le superfici) |
+> | `primary`, `highlight`, `focus`, `link`, `stamp` | giallo `sun-300` con testo navy |
+> | `block-sun` | navy-800, cioè la hero è una superficie scura con accenti gialli |
+> | `block-peach` | peach-800, testo `peach-100` |
+> | `block-mint` | leaf-900, testo `leaf-100` |
+> | `block-leaf` | leaf-700, testo bianco (più chiaro della menta, così restano distinguibili) |
+>
+> **Esito `/ui-review` della styleguide e review degli standard (2026-11-03).**
+>
+> - **Misure:** LCP 1,04 s, CLS 0,0001, INP 80 ms (375 px, CPU 4×). Nessun overflow da 320 a
+>   1440 px; tutte le coppie della tabella superano la soglia in light e dark (35 al momento della
+>   review, 41 dopo l'aggiunta dei focus sui blocchi).
+> - **Corretti nella fase:**
+>   - focus invisibile sulle CTA dentro i blocchi navy e verdi: navy su navy 1:1;
+>   - ricerca a pillola senza contorno ≥ 3:1: ora ha un bordo `on-block-sun`, e su mobile non
+>     va più a capo;
+>   - dark: surface quasi invisibile sul canvas, card `inverse` crema abbagliante, menta e
+>     verde indistinguibili;
+>   - chip con il bordo decorativo;
+>   - aree scorrevoli non raggiungibili da tastiera;
+>   - stringhe della styleguide non tradotte;
+>   - transizione dell'anello di focus e dello stato iniziale del toggle;
+>   - test con helper globali generici;
+>   - test dei contrasti dark che poteva passare su risultati non aggiornati.
+> - **Aperti:**
+>
+>   | Gravità | Punto | Fase |
+>   |---|---|---|
+>   | Minor | `block-peach` in dark (#5A2A20) si legge marrone ruggine più che pesca. Alternativa da valutare a occhio: un corallo-rosa intorno a `oklch(40% 0.11 22)` | UI-2 (quando le card animale lo usano) |
+>   | Minor | Il toggle ha `aria-pressed="false"` su tutti i bottoni finché Alpine non parte (si nota solo in local, con `livewire.js` non minificato). Si può leggere lo stato già nello script del tema | UI-3 |
+>   | Nit | Skip link e `preload` del woff2 latin nella shell pubblica | UI-3 |
+>   | Nit | `x-ui.icon` (Lucide) al posto delle icone SVG inline del toggle (`{!! !!}` con markup costante) | UI-2 |
+>   | Nit | Gli override del focus valgono sulle classi esatte `bg-inverse`, `bg-stamp`, `bg-block-*`. Una variante con opacità (`bg-inverse/90`) non li eredita: i componenti `x-ui` devono usare le classi piene | UI-2 |
+>   | Nit | Con una CSP, gli script inline (tema, styleguide) richiederanno un nonce | UI-8 |
+>
+> **Note tecniche utili alle fasi successive:**
+> - **Alias legacy:**
+>   - le pagine attuali usano ancora `brand-*` e `accent-*`. Ora sono alias della nuova
+>     palette: `brand-50/100/200` → `sand`, `brand-300`…`950` → `navy`, `accent-*` → `leaf`
+>     scalato di un passo (bianco su `accent-600` = 6,4:1);
+>   - **vanno rimossi in UI-6** quando le pagine migrano; poi `grep brand-\|accent-` deve
+>     restituire zero risultati;
+>   - `text-stone-500` su `bg-brand-50` resta a 4,38:1: è il Major di contrasto di UI-0, da
+>     chiudere in UI-6.
+> - **Dark mode opt-in:** `app.blade.php` **non** include ancora `partials.theme-script`, perché
+>   le pagine legacy usano colori fissi. Va incluso in UI-3 insieme alla shell con i token
+>   semantici (`bg-canvas text-fg` sul body).
+> - **Alpine fuori da Livewire:** una vista senza componenti Livewire (come la styleguide) deve
+>   includere `@livewireStyles`/`@livewireScripts` per avere Alpine.
+> - **Nuovo colore o coppia:** aggiungere la coppia in `ContrastPairs` e lasciare che
+>   `ColorContrastTest` la verifichi. Il test legge solo valori `oklch(L% C H)` e riferimenti
+>   `var(--color-…)`.
+> - **Browser MCP occupati:** se Playwright o Chrome DevTools MCP rispondono "Browser is already
+>   in use", Playwright dal host funziona con Chrome di sistema:
+>   `require('laravel/node_modules/playwright').chromium.launch({ channel: 'chrome' })`.
+
+Elenco originale della fase:
 - Direzione: **B · Pop affettuoso** (§1-bis). Sostituire i token `brand`/`accent` terracotta/teal
   e rimuovere Instrument Sans/Bunny Fonts; caricare Bricolage Grotesque via Fontsource.
 - Token in `@theme`:
