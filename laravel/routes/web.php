@@ -6,6 +6,7 @@ use App\Http\Controllers\CalendarFeedController;
 use App\Http\Controllers\GoogleCalendarConnectController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Middleware\EnsureLocalEnvironment;
 use App\Livewire\AnimalCatalog;
 use App\Livewire\AnimalDetail;
 use App\Livewire\DonationCancelled;
@@ -37,6 +38,14 @@ Route::get('/', Home::class)->name('home');
  | {locale} è risolto sull'enum AppLocale: un codice non supportato risponde 404.
  */
 Route::post('/lingua/{locale}', LocaleController::class)->name('locale.update');
+
+/*
+ | Styleguide del design system (token, tipografia, forme, motion): solo in `local`,
+ | altrove 404 (EnsureLocalEnvironment). Vedi docs/PIANO-UI-FRONTEND.md §5 UI-1.
+ */
+Route::view('/_styleguide', 'styleguide')
+    ->middleware(EnsureLocalEnvironment::class)
+    ->name('styleguide');
 
 Route::get('/animali', AnimalCatalog::class)->name('catalog');
 Route::get('/animali/{animal}', AnimalDetail::class)->name('animals.show');
