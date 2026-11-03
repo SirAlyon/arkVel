@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\CalendarFeedController;
 use App\Http\Controllers\GoogleCalendarConnectController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Livewire\AnimalCatalog;
 use App\Livewire\AnimalDetail;
@@ -30,6 +31,12 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::get('/', Home::class)->name('home');
+
+/*
+ | Selettore lingua: salva la scelta in sessione (letta da SetLocale) e torna indietro.
+ | {locale} è risolto sull'enum AppLocale: un codice non supportato risponde 404.
+ */
+Route::post('/lingua/{locale}', LocaleController::class)->name('locale.update');
 
 Route::get('/animali', AnimalCatalog::class)->name('catalog');
 Route::get('/animali/{animal}', AnimalDetail::class)->name('animals.show');

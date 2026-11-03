@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Lingua dell'interfaccia del sito pubblico (sessione → Accept-Language → default).
+        // Solo sul gruppo `web`: i pannelli Filament hanno uno stack proprio.
+        $middleware->web(append: [SetLocale::class]);
+
         // Le rotte web protette da `auth` (es. il download .ics di un appuntamento)
         // vivono FUORI dai pannelli Filament, che hanno un proprio login. Non esiste
         // una rotta `login` generica: senza questo redirect il middleware `auth`

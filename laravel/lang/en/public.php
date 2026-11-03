@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 return [
+    'titles' => [
+        'home' => 'ArkVel — Adopt a friend',
+        'catalog' => 'Catalog — ArkVel',
+        'organizations' => 'Organizations — ArkVel',
+    ],
+
     'meta' => [
         'default_description' => 'ArkVel — find your next four-legged friend among animals available for adoption from shelters, rescues and associations.',
     ],

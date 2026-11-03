@@ -12,7 +12,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\View as ViewFacade;
-use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -58,16 +57,19 @@ class AnimalCatalog extends Component
         $this->resetPage();
     }
 
-    #[Title('Catalogo — ArkVel')]
     public function render(): View
     {
-        return ViewFacade::make('livewire.animal-catalog', [
+        $view = ViewFacade::make('livewire.animal-catalog', [
             'animals' => $this->buildSearch(),
             'speciesOptions' => Species::cases(),
             'sizeOptions' => Size::cases(),
             'sexOptions' => Sex::cases(),
             'hasActiveFilters' => $this->hasActiveFilters(),
         ]);
+
+        $view->title(__('public.titles.catalog')); // @phpstan-ignore method.notFound
+
+        return $view;
     }
 
     /**

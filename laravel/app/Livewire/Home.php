@@ -9,7 +9,6 @@ use App\Models\Organization;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\View as ViewFacade;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
@@ -21,7 +20,6 @@ use Livewire\Component;
  */
 class Home extends Component
 {
-    #[Title('ArkVel — Adotta un amico')]
     public function render(): View
     {
         /** @var Collection<int, Animal> $featured */
@@ -47,10 +45,14 @@ class Home extends Component
             $featured = $featured->concat($fillers);
         }
 
-        return ViewFacade::make('livewire.home', [
+        $view = ViewFacade::make('livewire.home', [
             'featuredAnimals' => $featured,
             'availableCount' => Animal::query()->publiclyVisible()->count(),
             'organizationCount' => Organization::query()->verified()->count(),
         ]);
+
+        $view->title(__('public.titles.home')); // @phpstan-ignore method.notFound
+
+        return $view;
     }
 }

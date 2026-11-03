@@ -10,7 +10,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\View as ViewFacade;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -23,7 +22,6 @@ class OrganizationIndex extends Component
 {
     use WithPagination;
 
-    #[Title('Enti — ArkVel')]
     public function render(): View
     {
         /** @var LengthAwarePaginator<int, Organization> $organizations */
@@ -36,8 +34,12 @@ class OrganizationIndex extends Component
             ->orderBy('name')
             ->paginate(12);
 
-        return ViewFacade::make('livewire.organization-index', [
+        $view = ViewFacade::make('livewire.organization-index', [
             'organizations' => $organizations,
         ]);
+
+        $view->title(__('public.titles.organizations')); // @phpstan-ignore method.notFound
+
+        return $view;
     }
 }
