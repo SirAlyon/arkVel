@@ -9,6 +9,7 @@ use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -114,3 +115,33 @@ it('renders the favorite toggle on a publicly visible animal detail page', funct
     Livewire::test(AnimalDetail::class, ['animal' => $animal])
         ->assertSeeLivewire(FavoriteButton::class);
 });
+
+it('names the toggle after the animal so buttons in a grid are distinct', function () {
+    $user = User::factory()->create();
+    $animal = visibleAnimal();
+    $animal->forceFill(['name' => 'Fido'])->save();
+
+    Livewire::actingAs($user)
+        ->test(FavoriteButton::class, ['animal' => $animal])
+        ->assertSet('animalName', 'Fido')
+        ->assertSeeHtml('aria-label="Salva Fido nei preferiti"')
+        ->assertSeeHtml('aria-pressed="false"')
+        ->call('toggle')
+        // Toggle APG: il nome resta fisso, lo stato lo dice aria-pressed.
+        ->assertSeeHtml('aria-label="Salva Fido nei preferiti"')
+        ->assertSeeHtml('aria-pressed="true"');
+});
+
+it('translates the accessible name of the toggle', function () {
+    app()->setLocale('en');
+    $animal = visibleAnimal();
+    $animal->forceFill(['name' => 'Luna'])->save();
+
+    Livewire::test(FavoriteButton::class, ['animal' => $animal])
+        ->assertSeeHtml('aria-label="Save Luna to favorites"');
+});
+
+it('does not let the client tamper with the animal name', function () {
+    Livewire::test(FavoriteButton::class, ['animal' => visibleAnimal()])
+        ->set('animalName', 'Altro');
+})->throws(CannotUpdateLockedPropertyException::class);

@@ -33,11 +33,20 @@ class FavoriteButton extends Component
     #[Locked]
     public int $animalId;
 
+    /**
+     * Nome dell'animale, solo per il nome accessibile del bottone ("Salva Fido nei
+     * preferiti", vedi x-ui.animal-card.favorite): in una griglia di card i bottoni
+     * devono avere nomi distinti.
+     */
+    #[Locked]
+    public string $animalName = '';
+
     public bool $favorited = false;
 
     public function mount(Animal $animal): void
     {
         $this->animalId = $animal->getKey();
+        $this->animalName = $animal->name;
         $this->favorited = $this->resolveFavorited();
     }
 

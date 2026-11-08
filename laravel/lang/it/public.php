@@ -79,7 +79,6 @@ return [
     ],
 
     'favorites' => [
-        'add' => 'Aggiungi ai preferiti',
         'remove' => 'Rimuovi dai preferiti',
         'title' => 'I miei preferiti',
         'view' => 'Vedi la scheda',

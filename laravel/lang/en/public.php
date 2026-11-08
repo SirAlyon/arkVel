@@ -79,7 +79,6 @@ return [
     ],
 
     'favorites' => [
-        'add' => 'Add to favorites',
         'remove' => 'Remove from favorites',
         'title' => 'My favorites',
         'view' => 'View details',
