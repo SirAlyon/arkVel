@@ -28,4 +28,8 @@ return [
     'select' => [
         'placeholder' => 'Scegli un’opzione',
     ],
+
+    'error_summary' => [
+        'title' => 'C’è un problema da correggere|Ci sono :count problemi da correggere',
+    ],
 ];

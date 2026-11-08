@@ -3,6 +3,8 @@
  | <x-site.account-links>). URL e criteri da App\Support\Site\AccountLinks.
  |
  | - `user`: l'utente autenticato (lo passa <x-site.header>), null per l'ospite;
+ | - `login-current` / `register-current`: aria-current dei link Accedi e Registrati
+ |   (`page` su quelle pagine, null altrove);
  | - ospite: "Accedi" (pill con bordo, come nel mockup) e, da lg, "Registrati" (CTA navy).
  |   `max-lg:hidden` e non `hidden lg:inline-flex`: la classe inline-flex di base del
  |   bottone viene dopo `.hidden` nel CSS e lo mostrerebbe sempre;
@@ -17,6 +19,8 @@
     'links',
     'user' => null,
     'canManage' => false,
+    'loginCurrent' => null,
+    'registerCurrent' => null,
 ])
 
 @php
@@ -29,9 +33,9 @@
 
 @if ($user === null)
     <div {{ $attributes->class('flex items-center gap-2') }} data-account-guest>
-        <x-ui.button variant="secondary" size="sm" :href="$links->login()" data-account-login>{{ __('public.account.login') }}</x-ui.button>
+        <x-ui.button variant="secondary" size="sm" :href="$links->login()" :aria-current="$loginCurrent" data-account-login>{{ __('public.account.login') }}</x-ui.button>
         @if ($register = $links->register())
-            <x-ui.button size="sm" :href="$register" class="max-lg:hidden" data-account-register>{{ __('public.account.register') }}</x-ui.button>
+            <x-ui.button size="sm" :href="$register" class="max-lg:hidden" :aria-current="$registerCurrent" data-account-register>{{ __('public.account.register') }}</x-ui.button>
         @endif
     </div>
 @else

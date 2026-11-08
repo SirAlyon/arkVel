@@ -19,9 +19,9 @@ use Livewire\Component;
  * ESCLUSIVAMENTE sulla wishlist dell'utente autenticato
  * ({@see User::favorites()}), quindi non c'è alcuna azione cross-utente da
  * autorizzare a livello di riga: nessuna Policy sulla pivot. I due confini sono:
- *  - GUEST: non può mettere preferiti. Il toggle di un ospite lo devia alla login
- *    del pannello adopter (`filament.adopter.auth.login`, unica rotta di login
- *    dell'app), da cui potrà autenticarsi/registrarsi e tornare a scegliere.
+ *  - GUEST: non può mettere preferiti. Il toggle di un ospite lo devia alla pagina
+ *    di accesso pubblica (`login`, /accedi), da cui potrà autenticarsi/registrarsi e
+ *    tornare a scegliere.
  *  - SCOPING: attach/detach passano dalla relazione dell'utente corrente; lo
  *    stato mostrato riflette solo la sua wishlist.
  *
@@ -54,11 +54,9 @@ class FavoriteButton extends Component
     {
         $user = Auth::user();
 
-        // Ospite: nessun preferito creato. Devia alla login dell'adopter panel
-        // (non esiste una rotta `login` globale: l'unica login è quella del
-        // pannello, su /account/login).
+        // Ospite: nessun preferito creato. Devia alla pagina di accesso pubblica.
         if (! $user instanceof User) {
-            return $this->redirectRoute('filament.adopter.auth.login', navigate: true);
+            return $this->redirectRoute('login', navigate: true);
         }
 
         // Self-owned: toggle atomico sulla SOLA wishlist dell'utente corrente.

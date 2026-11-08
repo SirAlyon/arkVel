@@ -374,27 +374,15 @@
             <form method="get" action="{{ route('styleguide.group', 'forms') }}#example-form-errors" novalidate data-demo="form" class="flex max-w-2xl flex-col gap-6">
                 <input type="hidden" name="demo" value="errors">
 
-                @if ($demoErrors !== [])
-                    {{-- Destinazione del frammento dell'action: essendo focalizzabile (tabindex -1),
-                         il browser gli dà il focus al caricamento, senza JavaScript. --}}
-                    <div
-                        id="example-form-errors"
-                        tabindex="-1"
-                        data-demo="error-summary"
-                        aria-labelledby="example-form-summary"
-                        class="flex flex-col gap-3 rounded-card bg-danger-subtle p-5 text-on-danger-subtle"
-                    >
-                        <h3 id="example-form-summary" class="flex items-center gap-2 text-h5">
-                            <x-ui.icon name="circle-alert" />
-                            {{ $t('example.summary', ['count' => count($demoErrors)]) }}
-                        </h3>
-                        <ul class="flex list-disc flex-col gap-1 ps-6">
-                            @foreach ($demoErrors as $id => $message)
-                                <li><x-ui.link :href="'#'.$id" variant="inherit" x-on:click.prevent="document.getElementById($el.hash.slice(1))?.focus()">{{ $message }}</x-ui.link></li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+                {{-- Destinazione del frammento dell'action: essendo focalizzabile (tabindex -1),
+                     il browser gli dà il focus al caricamento, anche senza JavaScript. --}}
+                <x-ui.error-summary
+                    id="example-form-errors"
+                    data-demo="error-summary"
+                    :heading-level="3"
+                    :title="$t('example.summary', ['count' => count($demoErrors)])"
+                    :messages="$demoErrors"
+                />
 
                 <div class="grid gap-6 md:grid-cols-2">
                     <x-ui.field name="full_name" for="apply-name" :label="$t('example.name')" :error="$demoError('apply-name')" required class="md:col-span-2">

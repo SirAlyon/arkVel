@@ -48,6 +48,15 @@ final readonly class SiteNavigation
     }
 
     /**
+     * aria-current per un link fuori dalla navigazione principale (es. Accedi e Registrati
+     * dell'header): `page` sulla sua route, altrimenti null (attributo omesso).
+     */
+    public function pageState(string $route): ?string
+    {
+        return $this->request->routeIs($route) ? 'page' : null;
+    }
+
+    /**
      * @param  list<string>  $section
      */
     private function currentState(string $route, array $section): ?string

@@ -69,7 +69,7 @@ it('redirects a guest to the adopter login and creates no thread', function () {
     Livewire::test(AnimalDetail::class, ['animal' => $animal])
         ->set('contactBody', 'Vorrei saperne di più su Argo.')
         ->call('contact')
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 
     expect(MessageThread::query()->count())->toBe(0)
         ->and(session('url.intended'))->toBe(route('animals.show', $animal));

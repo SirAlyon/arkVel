@@ -31,7 +31,7 @@ it('redirects a guest to the adopter login and creates no favorite', function ()
     Livewire::test(FavoriteButton::class, ['animal' => $animal])
         ->assertSet('favorited', false)
         ->call('toggle')
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 
     expect($animal->favoritedBy()->count())->toBe(0);
 });

@@ -177,12 +177,12 @@ class AnimalDetail extends Component
     {
         $user = Auth::user();
 
-        // OSPITE: instrada alla login del pannello adottante, memorizzando questa
+        // OSPITE: instrada alla pagina di accesso pubblica, memorizzando questa
         // scheda come intended-URL per tornarci dopo l'autenticazione.
         if (! $user instanceof User) {
             session()->put('url.intended', route('animals.show', $this->animal));
 
-            return $this->redirectRoute('filament.adopter.auth.login', navigate: false);
+            return $this->redirectRoute('login', navigate: false);
         }
 
         // Autorizzazione: chiunque può candidarsi (SubmitApplication impone le
@@ -229,12 +229,12 @@ class AnimalDetail extends Component
     {
         $user = Auth::user();
 
-        // OSPITE: instrada alla login del pannello adottante, memorizzando questa
+        // OSPITE: instrada alla pagina di accesso pubblica, memorizzando questa
         // scheda come intended-URL per tornarci dopo l'autenticazione.
         if (! $user instanceof User) {
             session()->put('url.intended', route('animals.show', $this->animal));
 
-            return $this->redirectRoute('filament.adopter.auth.login', navigate: false);
+            return $this->redirectRoute('login', navigate: false);
         }
 
         // Autorizzazione: chiunque può richiedere l'affido (SubmitFosterApplication
@@ -285,12 +285,12 @@ class AnimalDetail extends Component
     {
         $user = Auth::user();
 
-        // OSPITE: instrada alla login del pannello adottante, memorizzando questa
+        // OSPITE: instrada alla pagina di accesso pubblica, memorizzando questa
         // scheda come intended-URL per tornarci dopo l'autenticazione.
         if (! $user instanceof User) {
             session()->put('url.intended', route('animals.show', $this->animal));
 
-            return $this->redirectRoute('filament.adopter.auth.login', navigate: false);
+            return $this->redirectRoute('login', navigate: false);
         }
 
         // Autorizzazione: chiunque autenticato può prenotare (RequestAppointment
@@ -343,12 +343,12 @@ class AnimalDetail extends Component
     {
         $user = Auth::user();
 
-        // OSPITE: instrada alla login del pannello adottante, memorizzando questa
+        // OSPITE: instrada alla pagina di accesso pubblica, memorizzando questa
         // scheda come intended-URL per tornarci dopo l'autenticazione.
         if (! $user instanceof User) {
             session()->put('url.intended', route('animals.show', $this->animal));
 
-            return $this->redirectRoute('filament.adopter.auth.login', navigate: false);
+            return $this->redirectRoute('login', navigate: false);
         }
 
         // Autorizzazione: chiunque autenticato può avviare una conversazione (le

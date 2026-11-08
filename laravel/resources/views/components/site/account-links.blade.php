@@ -3,6 +3,7 @@
  | drawer un menu a tendina annidato non serve). URL da App\Support\Site\AccountLinks.
  |
  | - `user`: l'utente autenticato (lo passa <x-site.header>), null per l'ospite;
+ | - `login-current` / `register-current`: aria-current dei link Accedi e Registrati;
  | - ospite: "Accedi" e "Registrati", bottoni a tutta larghezza (≥ 44 px);
  | - autenticato: nome con avatar (decorativo: il nome è scritto accanto), link all'area
  |   adottante, alla gestione dell'ente (`can-manage`) e uscita (POST con @csrf alla route
@@ -12,6 +13,8 @@
     'links',
     'user' => null,
     'canManage' => false,
+    'loginCurrent' => null,
+    'registerCurrent' => null,
 ])
 
 @php
@@ -23,9 +26,9 @@
     <h3 id="site-menu-account" class="text-h5">{{ __('public.footer.account') }}</h3>
 
     @if ($user === null)
-        <x-ui.button variant="secondary" size="sm" :href="$links->login()" icon="log-in" class="w-full" data-account-login>{{ __('public.account.login') }}</x-ui.button>
+        <x-ui.button variant="secondary" size="sm" :href="$links->login()" icon="log-in" class="w-full" :aria-current="$loginCurrent" data-account-login>{{ __('public.account.login') }}</x-ui.button>
         @if ($register = $links->register())
-            <x-ui.button size="sm" :href="$register" icon="user-plus" class="w-full" data-account-register>{{ __('public.account.register') }}</x-ui.button>
+            <x-ui.button size="sm" :href="$register" icon="user-plus" class="w-full" :aria-current="$registerCurrent" data-account-register>{{ __('public.account.register') }}</x-ui.button>
         @endif
     @else
         <p class="flex min-w-0 items-center gap-3 font-semibold">

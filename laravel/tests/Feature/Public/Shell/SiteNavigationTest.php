@@ -71,10 +71,10 @@ describe('AccountLinks', function (): void {
     it('points to the adopter panel until the public auth pages exist (UI-5)', function (): void {
         $links = new AccountLinks;
 
-        expect($links->login())->toBe(route('filament.adopter.auth.login'))
-            ->and($links->register())->toBe(route('filament.adopter.auth.register'))
+        expect($links->login())->toBe(route('login'))
+            ->and($links->register())->toBe(route('register'))
             ->and($links->account())->toBe(route('filament.adopter.home'))
-            ->and($links->logout())->toBe(route('logout.public'))
+            ->and($links->logout())->toBe(route('logout'))
             ->and($links->manage())->toBe(route('filament.shelter.tenant'));
     });
 

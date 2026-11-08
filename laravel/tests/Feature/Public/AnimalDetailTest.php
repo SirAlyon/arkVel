@@ -58,7 +58,7 @@ it('shows the adoption CTA to a guest and sends them to the adopter login', func
 
     Livewire::test(AnimalDetail::class, ['animal' => $animal])
         ->call('apply')
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 
     expect(session('url.intended'))->toBe(route('animals.show', $animal));
 });

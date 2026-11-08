@@ -329,3 +329,11 @@ describe('styleguide page', function (): void {
             ->assertSee('No results');
     });
 });
+
+it('gives the empty state title and description ids derived from its id', function (): void {
+    $html = Blade::render('<x-ui.empty-state id="sent" icon="mail" title="Inviata" description="Controlla la posta." />');
+
+    expect($html)->toContain('id="sent"')
+        ->toContain('<h2 id="sent-title" class="text-h4 text-fg">Inviata</h2>')
+        ->toContain('<p id="sent-description" class="text-fg-muted">Controlla la posta.</p>');
+});

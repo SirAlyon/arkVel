@@ -71,7 +71,7 @@ it('redirects a guest to the adopter login and creates no appointment', function
         ->set('appointmentType', AppointmentType::Visit->value)
         ->set('appointmentScheduledAt', now()->addDays(3)->startOfHour()->format('Y-m-d\TH:i'))
         ->call('book')
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 
     expect(Appointment::query()->count())->toBe(0)
         ->and(session('url.intended'))->toBe(route('animals.show', $animal));

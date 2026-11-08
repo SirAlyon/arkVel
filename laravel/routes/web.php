@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Auth\SendEmailVerificationController;
+use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CalendarFeedController;
 use App\Http\Controllers\GoogleCalendarConnectController;
 use App\Http\Controllers\LocaleController;
@@ -13,6 +15,11 @@ use App\Http\Controllers\StyleguideGroupController;
 use App\Http\Middleware\EnsureLocalEnvironment;
 use App\Livewire\AnimalCatalog;
 use App\Livewire\AnimalDetail;
+use App\Livewire\Auth\ForgotPasswordPage;
+use App\Livewire\Auth\LoginPage;
+use App\Livewire\Auth\RegisterPage;
+use App\Livewire\Auth\ResetPasswordPage;
+use App\Livewire\Auth\VerifyEmailPage;
 use App\Livewire\DonationCancelled;
 use App\Livewire\DonationThankYou;
 use App\Livewire\Home;
@@ -47,13 +54,45 @@ Route::get('/sitemap.xml', SitemapController::class)->withoutMiddleware('web')->
 Route::get('/robots.txt', RobotsTxtController::class)->withoutMiddleware('web')->name('seo.robots');
 
 /*
+ | Autenticazione dell'adottante sul sito pubblico (UI-5): pagine Livewire con le route
+ | standard di Laravel (login, register, password.*, verification.*), usate anche dal
+ | middleware `auth` (redirectGuestsTo) e `verified` e dal pannello /account, che non ha
+ | più login, registrazione, reset né prompt di verifica propri. /manage e /admin tengono
+ | il login di Filament. La logica è nelle Action di app/Actions/Auth.
+ |
+ |  - /accedi, /registrati, /password-dimenticata, /reimposta-password/{token}: solo
+ |    ospiti (`guest`: chi è già dentro va a /account, come le pagine di Filament);
+ |  - /verifica-email: avviso per l'utente da verificare; il link della mail
+ |    (/verifica-email/{id}/{hash}) è firmato e limitato, come il reinvio (POST).
+ | Rate limit dei moduli: nelle Action (per email + IP, per IP o per utente).
+ */
+Route::middleware('guest')->group(function (): void {
+    Route::get('/accedi', LoginPage::class)->name('login');
+    Route::get('/registrati', RegisterPage::class)->name('register');
+    Route::get('/password-dimenticata', ForgotPasswordPage::class)->name('password.request');
+    Route::get('/reimposta-password/{token}', ResetPasswordPage::class)->name('password.reset');
+});
+
+Route::middleware('auth')->group(function (): void {
+    Route::get('/verifica-email', VerifyEmailPage::class)->name('verification.notice');
+
+    Route::get('/verifica-email/{id}/{hash}', VerifyEmailController::class)
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
+
+    Route::post('/verifica-email/reinvia', SendEmailVerificationController::class)
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+});
+
+/*
  | Uscita dal sito pubblico: chiude la sessione e torna alla home (POST con CSRF).
  | Non passa dai pannelli Filament (il logout del pannello adottante attraversa il suo
- | authMiddleware, che darebbe il ruolo Adopter anche allo staff degli enti).
+ | authMiddleware, che darebbe il ruolo Adopter anche allo staff degli enti). La usa anche
+ | la voce "Esci" del menu utente del pannello /account (AdopterPanelProvider).
  | Per un ospite (sessione già scaduta) è un no-op che porta alla home.
- | UI-5: diventerà la route `logout` insieme a `login` e `register`.
  */
-Route::post('/esci', LogoutController::class)->name('logout.public');
+Route::post('/esci', LogoutController::class)->name('logout');
 
 /*
  | Selettore lingua: salva la scelta in sessione (letta da SetLocale) e torna indietro.

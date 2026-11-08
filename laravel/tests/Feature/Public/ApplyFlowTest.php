@@ -57,7 +57,7 @@ it('redirects a guest to the adopter login and creates no application', function
 
     Livewire::test(AnimalDetail::class, ['animal' => $animal])
         ->call('apply')
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 
     expect(AdoptionApplication::query()->count())->toBe(0)
         ->and(session('url.intended'))->toBe(route('animals.show', $animal));

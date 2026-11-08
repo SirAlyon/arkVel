@@ -16,6 +16,8 @@ final class BrowserScripts
      * dei colpevoli come stringhe "tag.classe WxH", vuoto se va tutto bene.
      * I link nel testo (`a` dentro un paragrafo) sono esclusi, come prevede la regola;
      * i link testuali isolati (`[data-text-link]`, x-ui.link) devono arrivare a 24 px.
+     * Gli elementi dentro un contenitore `inert` (es. il campo esca del honeypot) non sono
+     * interattivi e restano fuori.
      */
     public static function undersizedTargets(string $scope, int $minimum = 44): string
     {
@@ -23,7 +25,7 @@ final class BrowserScripts
 
         return <<<JS
             [...document.querySelectorAll({$scope})].flatMap((root) => [...root.querySelectorAll('button, a[href], input:not([type=hidden]), select, textarea, summary, [role=button], [role=tab], [role=switch], [role=option], [role=menuitem], [tabindex]:not([tabindex="-1"])')])
-                .filter((element) => element.checkVisibility() && !element.closest('p, li > p, pre'))
+                .filter((element) => element.checkVisibility() && !element.closest('p, li > p, pre, [inert]'))
                 .filter((element) => !['checkbox', 'radio'].includes(element.type) || element.closest('label') === null)
                 .map((element) => [element, element.getBoundingClientRect()])
                 .filter(([element, box]) => { const min = element.matches('[data-text-link]') ? 24 : {$minimum}; return box.width < min || box.height < min; })

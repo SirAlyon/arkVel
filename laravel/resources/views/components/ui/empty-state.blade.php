@@ -10,7 +10,10 @@
  |   blocco. Il significato lo porta sempre il testo, mai il solo colore;
  | - `heading-level` (default 2): livello del titolo (h2…h6) secondo la pagina;
  | - `framed` (default true): pannello su superficie; false per usarlo dentro una card;
- | - slot `actions`: uno o più <x-ui.button>.
+ | - slot `actions`: uno o più <x-ui.button>;
+ | - `id` sul blocco: titolo e descrizione ricevono `<id>-title` e `<id>-description`, da
+ |   collegare con aria-labelledby/aria-describedby (es. un blocco di conferma che prende il
+ |   focus e va letto per intero).
  |
  | Il blocco `sun` in dark è navy-800 come la superficie: sui pannelli `framed` le varianti
  | usano mint e peach, che restano distinguibili in entrambi i temi.
@@ -53,6 +56,10 @@
     $title ??= $preset !== null ? __('ui_content.empty_state.'.$variant.'.title') : null;
     $description ??= $preset !== null && $slot->isEmpty() ? __('ui_content.empty_state.'.$variant.'.description') : null;
     $level = min(6, max(2, (int) $headingLevel));
+    $rootId = $attributes->get('id');
+    // Attributi pronti (con lo spazio davanti) per non lasciare doppi spazi senza id.
+    $titleIdAttribute = $rootId ? ' id="'.e($rootId).'-title"' : '';
+    $descriptionIdAttribute = $rootId ? ' id="'.e($rootId).'-description"' : '';
 @endphp
 
 <div
@@ -68,12 +75,12 @@
 
     <div class="flex max-w-prose flex-col gap-2">
         @if ($title)
-            <h{{ $level }} class="text-h4 text-fg">{{ $title }}</h{{ $level }}>
+            <h{{ $level }}{!! $titleIdAttribute !!} class="text-h4 text-fg">{{ $title }}</h{{ $level }}>
         @endif
         @if ($description)
-            <p class="text-fg-muted">{{ $description }}</p>
+            <p{!! $descriptionIdAttribute !!} class="text-fg-muted">{{ $description }}</p>
         @elseif ($slot->isNotEmpty())
-            <div class="text-fg-muted">{{ $slot }}</div>
+            <div{!! $descriptionIdAttribute !!} class="text-fg-muted">{{ $slot }}</div>
         @endif
     </div>
 

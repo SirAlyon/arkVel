@@ -24,6 +24,8 @@ use Illuminate\Contracts\Translation\Translator;
  *  - liste paginate (catalogo, enti, pagina ente): una pagina oltre l'ultima (`?page=999`)
  *    è vuota, quindi `noindex` (altrimenti sarebbe un soft 404 indicizzabile);
  *  - landing di ritorno da Stripe (grazie/annullo): `noindex`;
+ *  - pagine di autenticazione (accesso, registrazione, password, verifica email): `noindex`
+ *    e senza breadcrumb;
  *  - ogni pagina con breadcrumb aggiunge il proprio `BreadcrumbList` al JSON-LD.
  */
 final readonly class PublicPageSeo
@@ -167,6 +169,22 @@ final readonly class PublicPageSeo
             heading: __('donations.public.cancel_title'),
             description: __('seo.descriptions.donation_cancelled', ['name' => $organization->name]),
             url: route('organizations.donate.cancel', $organization),
+        );
+    }
+
+    /**
+     * Pagine di autenticazione del sito pubblico (/accedi, /registrati, …): fuori
+     * dall'indice, senza breadcrumb. Il canonical è sempre un URL della route senza dati
+     * personali o segreti (la pagina di reimpostazione, che ha il token nell'URL, passa
+     * quello della richiesta del link).
+     */
+    public function auth(string $heading, string $description, string $canonical): SeoData
+    {
+        return $this->make(
+            title: __('seo.titles.page', ['title' => $heading]),
+            description: $description,
+            canonical: $canonical,
+            noindex: true,
         );
     }
 

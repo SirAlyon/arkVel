@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 uses(RefreshDatabase::class);
 
 /*
- | Uscita dalla shell pubblica (POST /esci, logout.public): non passa dal pannello adottante
+ | Uscita dalla shell pubblica (POST /esci, logout): non passa dal pannello adottante
  | (il cui authMiddleware darebbe il ruolo Adopter a chiunque) e torna alla home.
  */
 
@@ -21,7 +21,7 @@ it('logs out, invalidates the session and goes back home', function (): void {
 
     $this->actingAs($user)
         ->withSession(['secret' => 'x'])
-        ->post(route('logout.public'))
+        ->post(route('logout'))
         ->assertRedirect(route('home'))
         ->assertSessionMissing('secret');
 
@@ -39,7 +39,7 @@ it('does not give the Adopter role to the staff of an organization', function ()
         ->all();
     $before = $roles();
 
-    $this->actingAs($staff)->post(route('logout.public'))->assertRedirect(route('home'));
+    $this->actingAs($staff)->post(route('logout'))->assertRedirect(route('home'));
 
     $this->assertGuest();
     expect($roles())->toBe($before);
@@ -48,12 +48,12 @@ it('does not give the Adopter role to the staff of an organization', function ()
 it('is served from the header and the mobile menu of the public shell', function (): void {
     $html = (string) $this->actingAs(User::factory()->create())->get(route('home'))->getContent();
 
-    expect(substr_count($html, 'action="'.route('logout.public').'"'))->toBe(2)
+    expect(substr_count($html, 'action="'.route('logout').'"'))->toBe(2)
         ->and($html)->not->toContain(route('filament.adopter.auth.logout'));
 });
 
 it('just goes home for a guest', function (): void {
-    $this->post(route('logout.public'))->assertRedirect(route('home'));
+    $this->post(route('logout'))->assertRedirect(route('home'));
 
     $this->assertGuest();
 });

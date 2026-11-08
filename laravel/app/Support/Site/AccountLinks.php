@@ -6,31 +6,28 @@ namespace App\Support\Site;
 
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Support\Facades\Route;
 
 /**
  * URL dell'area personale usati dalla shell pubblica (header, menu mobile, footer), in un
  * solo punto.
  *
- * Oggi accesso e registrazione dell'adottante sono le pagine del pannello Filament `/account`
- * (AdopterPanelProvider). In UI-5 diventano le route pubbliche Livewire `login` e `register`
- * (docs/PIANO-UI-FRONTEND.md §5 UI-5): basterà cambiare login() e register() qui, senza
- * toccare le viste. L'uscita è già una route pubblica (`logout.public`).
+ * Accesso e registrazione dell'adottante sono le pagine pubbliche Livewire `login` (/accedi)
+ * e `register` (/registrati) dalla fase UI-5 (docs/PIANO-UI-FRONTEND.md §5 UI-5): il pannello
+ * Filament /account non ha più pagine di autenticazione proprie. Anche l'uscita è una route
+ * pubblica (`logout`, POST /esci).
  */
 final readonly class AccountLinks
 {
-    /** Pagina di accesso dell'adottante. UI-5: route('login'). */
+    /** Pagina di accesso dell'adottante (/accedi). */
     public function login(): string
     {
-        return route('filament.adopter.auth.login');
+        return route('login');
     }
 
-    /** Registrazione dell'adottante, se il pannello la offre. UI-5: route('register'). */
-    public function register(): ?string
+    /** Registrazione dell'adottante (/registrati). */
+    public function register(): string
     {
-        return Route::has('filament.adopter.auth.register')
-            ? route('filament.adopter.auth.register')
-            : null;
+        return route('register');
     }
 
     /** Area adottante (/account). */
@@ -42,12 +39,11 @@ final readonly class AccountLinks
     /**
      * Uscita (POST con token CSRF): la route pubblica, non quella del pannello adottante,
      * che passerebbe dal suo authMiddleware (EnsureAdopterRole darebbe il ruolo Adopter
-     * anche allo staff degli enti) e poi rimanderebbe al login di Filament.
-     * UI-5: route('logout').
+     * anche allo staff degli enti).
      */
     public function logout(): string
     {
-        return route('logout.public');
+        return route('logout');
     }
 
     /** Gestione dell'ente (/manage): Filament porta al primo ente operabile. */

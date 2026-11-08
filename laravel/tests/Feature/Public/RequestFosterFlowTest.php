@@ -61,7 +61,7 @@ it('redirects a guest to the adopter login and creates no foster application', f
 
     Livewire::test(AnimalDetail::class, ['animal' => $animal])
         ->call('requestFoster')
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 
     expect(FosterApplication::query()->count())->toBe(0)
         ->and(session('url.intended'))->toBe(route('animals.show', $animal));

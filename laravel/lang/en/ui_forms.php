@@ -28,4 +28,8 @@ return [
     'select' => [
         'placeholder' => 'Choose an option',
     ],
+
+    'error_summary' => [
+        'title' => 'There is a problem to fix|There are :count problems to fix',
+    ],
 ];

@@ -102,8 +102,8 @@ it('shows login and sign-up to guests', function (): void {
     $header = siteHeaderOf(test()->get(route('home')));
 
     expect($header)
-        ->toContain('href="'.route('filament.adopter.auth.login').'"')
-        ->toContain('href="'.route('filament.adopter.auth.register').'"')
+        ->toContain('href="'.route('login').'"')
+        ->toContain('href="'.route('register').'"')
         ->toContain('Accedi')
         ->toContain('Registrati')
         ->not->toContain('data-account-menu')
@@ -122,7 +122,7 @@ it('shows the account menu with the adopter area and logout to a signed-in adopt
         ->toContain('Giulia<span class="sr-only">, Il tuo account</span>')
         ->toContain('Giulia Bianchi')
         ->toContain('href="'.route('filament.adopter.home').'"')
-        ->toContain('action="'.route('logout.public').'"')
+        ->toContain('action="'.route('logout').'"')
         ->toContain('data-account-logout')
         ->toContain('data-avatar=')
         ->not->toContain('data-account-login')
@@ -191,4 +191,20 @@ it('translates the header into English', function (): void {
         ->toContain('Sign up')
         ->toContain('Open the menu')
         ->toContain('aria-label="arkvel, home page"');
+});
+
+it('marks the sign-in and sign-up links of the current auth page with aria-current', function (string $route, string $current, string $other): void {
+    $header = siteHeaderOf(test()->get(route($route)));
+
+    // Menu da md in su e menu mobile: due link ciascuno.
+    expect(preg_match_all('/aria-current="page"[^>]*data-account-'.$current.'/', $header))->toBe(2)
+        ->and(preg_match_all('/aria-current="page"[^>]*data-account-'.$other.'/', $header))->toBe(0);
+})->with([
+    'sign in' => ['login', 'login', 'register'],
+    'sign up' => ['register', 'register', 'login'],
+]);
+
+it('does not mark the sign-in and sign-up links elsewhere', function (): void {
+    expect(siteHeaderOf(test()->get(route('home'))))
+        ->not->toMatch('/aria-current="page"[^>]*data-account-(login|register)/');
 });

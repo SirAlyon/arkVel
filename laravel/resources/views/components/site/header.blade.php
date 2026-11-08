@@ -29,6 +29,9 @@
     $items = $navigation->primary();
     $user = $guest ? null : auth()->user();
     $canManage = $accountLinks->canManage($user);
+    // Accedi / Registrati annunciano la pagina corrente (su /accedi e /registrati).
+    $loginCurrent = $navigation->pageState('login');
+    $registerCurrent = $navigation->pageState('register');
 @endphp
 
 <header
@@ -59,7 +62,7 @@
             </div>
 
             <div class="hidden md:block" data-header-account>
-                <x-site.account-menu :links="$accountLinks" :user="$user" :can-manage="$canManage" />
+                <x-site.account-menu :links="$accountLinks" :user="$user" :can-manage="$canManage" :login-current="$loginCurrent" :register-current="$registerCurrent" />
             </div>
 
             <x-ui.drawer name="site-menu" :title="__('public.nav.menu')" data-site-menu>
@@ -82,7 +85,7 @@
                     </ul>
                 </nav>
 
-                <x-site.account-links :links="$accountLinks" :user="$user" :can-manage="$canManage" class="border-t-2 border-line pt-6" />
+                <x-site.account-links :links="$accountLinks" :user="$user" :can-manage="$canManage" :login-current="$loginCurrent" :register-current="$registerCurrent" class="border-t-2 border-line pt-6" />
 
                 <section aria-labelledby="site-menu-preferences" class="flex flex-col gap-3 border-t-2 border-line pt-6">
                     <h3 id="site-menu-preferences" class="text-h5">{{ __('public.footer.preferences') }}</h3>

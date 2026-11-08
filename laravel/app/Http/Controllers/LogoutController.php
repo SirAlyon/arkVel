@@ -9,7 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
- * `POST /esci` (logout.public): uscita dalla shell del sito pubblico, poi la home.
+ * `POST /esci` (logout): uscita dalla shell del sito pubblico, poi la home.
  * La logica è in {@see LogoutUser}.
  */
 class LogoutController extends Controller

@@ -109,5 +109,5 @@ it('redirects a guest to login', function () {
     $appointment = icsAppointment($org);
 
     $this->get(route('appointments.ics', $appointment))
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 });

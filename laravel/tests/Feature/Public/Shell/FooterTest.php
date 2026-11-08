@@ -33,8 +33,8 @@ it('links the catalog, the organizations and the adopter area', function (): voi
         ->toMatch('/href="'.preg_quote(route('catalog'), '/').'"[^>]*wire:navigate\.hover/')
         ->toMatch('/href="'.preg_quote(route('organizations.index'), '/').'"[^>]*wire:navigate\.hover/')
         ->toContain('href="'.route('filament.adopter.home').'"')
-        ->toContain('href="'.route('filament.adopter.auth.login').'"')
-        ->toContain('href="'.route('filament.adopter.auth.register').'"');
+        ->toContain('href="'.route('login').'"')
+        ->toContain('href="'.route('register').'"');
 });
 
 it('hides login and sign-up from signed-in users', function (): void {
@@ -42,8 +42,8 @@ it('hides login and sign-up from signed-in users', function (): void {
 
     expect($footer)
         ->toContain('href="'.route('filament.adopter.home').'"')
-        ->not->toContain(route('filament.adopter.auth.login'))
-        ->not->toContain(route('filament.adopter.auth.register'));
+        ->not->toContain(route('login'))
+        ->not->toContain(route('register'));
 });
 
 it('shows the newsletter as a disabled placeholder that says it is coming soon', function (): void {
