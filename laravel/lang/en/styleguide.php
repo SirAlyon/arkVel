@@ -44,6 +44,14 @@ return [
             'title' => 'Domain',
             'intro' => 'ArkVel components: animal and organization cards, stats, section headings and CTA bands.',
         ],
+        'shell' => [
+            'title' => 'Shell',
+            'intro' => 'Public site navigation: menu items, language switcher, header and footer.',
+        ],
+        'media' => [
+            'title' => 'Media',
+            'intro' => 'Responsive images (AVIF, WebP, JPEG) with a blurred placeholder, and a gallery with a lightbox.',
+        ],
     ],
 
     'sections' => [

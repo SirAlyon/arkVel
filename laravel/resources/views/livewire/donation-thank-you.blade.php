@@ -19,7 +19,7 @@
         </p>
 
         <div class="mt-8">
-            <x-button :href="route('organizations.show', $organization)" variant="outline">
+            <x-button :href="route('organizations.show', $organization)" wire:navigate.hover variant="outline">
                 {{ __('donations.public.back_to_organization') }}
             </x-button>
         </div>

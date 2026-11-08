@@ -10,7 +10,7 @@
                 @php
                     $location = collect([$organization->city, $organization->region])->filter()->implode(', ');
                 @endphp
-                <a href="{{ route('organizations.show', $organization) }}" wire:key="org-{{ $organization->id }}"
+                <a href="{{ route('organizations.show', $organization) }}" wire:navigate.hover wire:key="org-{{ $organization->id }}"
                    class="group flex flex-col rounded-2xl border border-brand-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-brand-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
                     <div class="flex items-start gap-3">
                         <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-600" aria-hidden="true">

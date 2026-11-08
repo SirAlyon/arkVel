@@ -104,6 +104,8 @@ final class ContrastPairs
                 // Controlli di modulo selezionati (checkbox, radio, switch acceso).
                 ['primary', 'canvas'],
                 ['primary', 'surface'],
+                // Voce di navigazione attiva e opzione premuta nei livelli (drawer del menu).
+                ['primary', 'surface-raised'],
                 // Link nel riepilogo degli errori di un modulo (fondo danger-subtle).
                 ['focus', 'danger-subtle'],
                 ...array_map(

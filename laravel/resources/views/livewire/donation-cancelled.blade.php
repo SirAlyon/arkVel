@@ -15,7 +15,7 @@
         </p>
 
         <div class="mt-8">
-            <x-button :href="route('organizations.show', $organization)" variant="primary">
+            <x-button :href="route('organizations.show', $organization)" wire:navigate.hover variant="primary">
                 {{ __('donations.public.cancel_retry') }}
             </x-button>
         </div>

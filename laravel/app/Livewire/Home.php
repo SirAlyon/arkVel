@@ -6,6 +6,8 @@ namespace App\Livewire;
 
 use App\Models\Animal;
 use App\Models\Organization;
+use App\Support\Seo\InteractsWithSeo;
+use App\Support\Seo\PublicPageSeo;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\View as ViewFacade;
@@ -20,6 +22,8 @@ use Livewire\Component;
  */
 class Home extends Component
 {
+    use InteractsWithSeo;
+
     public function render(): View
     {
         /** @var Collection<int, Animal> $featured */
@@ -51,8 +55,6 @@ class Home extends Component
             'organizationCount' => Organization::query()->verified()->count(),
         ]);
 
-        $view->title(__('public.titles.home')); // @phpstan-ignore method.notFound
-
-        return $view;
+        return $this->withSeo($view, app(PublicPageSeo::class)->home());
     }
 }

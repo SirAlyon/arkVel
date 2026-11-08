@@ -7,12 +7,6 @@
     {{-- Intestazione ente --}}
     <section class="border-b border-brand-100 bg-gradient-to-br from-brand-100 via-brand-50 to-accent-50">
         <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-            <nav class="mb-5 flex items-center gap-2 text-sm text-stone-500" aria-label="{{ __('public.detail.breadcrumb') }}">
-                <a href="{{ route('organizations.index') }}" class="hover:text-brand-700">{{ __('public.nav.organizations') }}</a>
-                <span aria-hidden="true">/</span>
-                <span class="text-stone-700">{{ $organization->name }}</span>
-            </nav>
-
             <x-badge color="accent">{{ $organization->type->getLabel() }}</x-badge>
             <h1 class="mt-3 text-3xl font-bold tracking-tight text-stone-900">{{ $organization->name }}</h1>
 

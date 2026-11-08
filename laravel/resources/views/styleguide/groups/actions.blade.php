@@ -1,5 +1,5 @@
 {{--
- | Styleguide · gruppo "actions": icon, button, link, badge, tag.
+ | Styleguide · gruppo "actions": icon, button, link, badge, tag, breadcrumb.
  | Testi in lang/{it,en}/styleguide_actions.php. Modello per le pagine degli altri gruppi:
  | un <x-styleguide.component> per componente, un <x-styleguide.example> per variante o stato.
 --}}
@@ -159,6 +159,28 @@
         <x-styleguide.example :title="$t('tag.static')" background="canvas">
             <x-ui.tag icon="ruler">{{ $t('tag.size') }}</x-ui.tag>
             <x-ui.tag icon="cake">{{ $t('tag.age') }}</x-ui.tag>
+        </x-styleguide.example>
+    </x-styleguide.component>
+
+    <x-styleguide.component id="breadcrumb" :title="$t('breadcrumb.title')" :description="$t('breadcrumb.description')" :a11y="[$t('breadcrumb.a11y_landmark'), $t('breadcrumb.a11y_current'), $t('breadcrumb.a11y_target')]">
+        <x-styleguide.example :title="$t('breadcrumb.trail')">
+            <x-slot:code>@verbatim<x-ui.breadcrumb :items="[['name' => __('seo.breadcrumb.home'), 'url' => route('home')], …]" />@endverbatim</x-slot:code>
+            <x-ui.breadcrumb data-demo="breadcrumb" :items="[
+                ['name' => $t('breadcrumb.home'), 'url' => '#breadcrumb'],
+                ['name' => $t('breadcrumb.catalog'), 'url' => '#breadcrumb'],
+                ['name' => $t('breadcrumb.animal'), 'url' => '#breadcrumb'],
+            ]" />
+        </x-styleguide.example>
+
+        <x-styleguide.example :title="$t('breadcrumb.long')" background="surface">
+            <div class="w-full max-w-xs">
+                <x-ui.breadcrumb data-demo="breadcrumb-long" :items="[
+                    ['name' => $t('breadcrumb.home'), 'url' => '#breadcrumb'],
+                    ['name' => $t('breadcrumb.organizations'), 'url' => '#breadcrumb'],
+                    ['name' => $t('breadcrumb.organization'), 'url' => '#breadcrumb'],
+                    ['name' => $t('breadcrumb.animal'), 'url' => '#breadcrumb'],
+                ]" />
+            </div>
         </x-styleguide.example>
     </x-styleguide.component>
 </x-styleguide.layout>

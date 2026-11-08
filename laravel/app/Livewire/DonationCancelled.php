@@ -6,6 +6,8 @@ namespace App\Livewire;
 
 use App\Enums\OrganizationStatus;
 use App\Models\Organization;
+use App\Support\Seo\InteractsWithSeo;
+use App\Support\Seo\PublicPageSeo;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\View as ViewFacade;
 use Livewire\Component;
@@ -21,6 +23,8 @@ use Livewire\Component;
  */
 class DonationCancelled extends Component
 {
+    use InteractsWithSeo;
+
     public Organization $organization;
 
     public function mount(Organization $organization): void
@@ -34,8 +38,6 @@ class DonationCancelled extends Component
     {
         $view = ViewFacade::make('livewire.donation-cancelled');
 
-        $view->title(__('donations.public.cancel_title').' — ArkVel'); // @phpstan-ignore method.notFound
-
-        return $view;
+        return $this->withSeo($view, app(PublicPageSeo::class)->donationCancelled($this->organization));
     }
 }

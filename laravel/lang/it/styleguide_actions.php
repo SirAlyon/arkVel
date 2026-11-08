@@ -100,4 +100,19 @@ return [
         'size' => 'Taglia media',
         'age' => '2 anni',
     ],
+
+    'breadcrumb' => [
+        'title' => 'Breadcrumb',
+        'description' => 'Il percorso dalla home alla pagina corrente, sopra il contenuto (mai sulla home). Lo rende il layout dai metadati SEO della pagina.',
+        'a11y_landmark' => 'Un <nav> con nome «Percorso di navigazione» e una lista ordinata: lo screen reader annuncia quante voci ci sono.',
+        'a11y_current' => 'L’ultima voce è la pagina corrente: testo con aria-current="page", non un link. I separatori sono decorativi (aria-hidden).',
+        'a11y_target' => 'Link testuali sottolineati con target di almeno 24 px; i nomi lunghi si accorciano con i puntini (il nome intero resta nel title) senza scroll orizzontale.',
+        'trail' => 'Percorso',
+        'long' => 'Nomi lunghi in poco spazio',
+        'home' => 'Home',
+        'catalog' => 'Catalogo',
+        'organizations' => 'Enti',
+        'organization' => 'Associazione Amici a Quattro Zampe della Valle del Serchio',
+        'animal' => 'Argo',
+    ],
 ];

@@ -56,6 +56,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Trusted Hosts
+    |--------------------------------------------------------------------------
+    |
+    | Host accettati oltre a quello di APP_URL (separati da virgola), es. il
+    | dominio "www." o l'host degli health check del bilanciatore. Le richieste
+    | con un altro header Host rispondono 400 (fuori da local e dai test).
+    | Vedi App\Support\Http\TrustedHosts.
+    |
+    */
+
+    'trusted_hosts' => array_values(array_filter(array_map(
+        trim(...),
+        explode(',', (string) env('APP_TRUSTED_HOSTS', '')),
+    ))),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

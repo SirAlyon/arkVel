@@ -1,11 +1,4 @@
 <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-    {{-- Breadcrumb --}}
-    <nav class="mb-6 flex items-center gap-2 text-sm text-stone-500" aria-label="{{ __('public.detail.breadcrumb') }}">
-        <a href="{{ route('catalog') }}" class="hover:text-brand-700">{{ __('public.nav.catalog') }}</a>
-        <span aria-hidden="true">/</span>
-        <span class="text-stone-700">{{ $animal->name }}</span>
-    </nav>
-
     <div class="grid grid-cols-1 gap-10 lg:grid-cols-2">
         {{-- Galleria --}}
         <div>
@@ -348,7 +341,7 @@
 
             {{-- Ente --}}
             @if ($animal->organization)
-                <a href="{{ route('organizations.show', $animal->organization) }}"
+                <a href="{{ route('organizations.show', $animal->organization) }}" wire:navigate.hover
                    class="mt-5 flex items-center gap-3 rounded-2xl border border-brand-100 bg-white p-4 transition hover:border-brand-200 hover:shadow-sm">
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600" aria-hidden="true">
                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-3v-4H7v4H4a1 1 0 0 1-1-1V4Zm3 2h2v2H6V6Zm6 0h2v2h-2V6ZM6 9h2v2H6V9Zm6 0h2v2h-2V9Z"/></svg>

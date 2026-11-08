@@ -16,7 +16,7 @@ final class StyleguideGroups
     /**
      * @var list<string>
      */
-    public const array ALL = ['actions', 'forms', 'pickers', 'overlays', 'content', 'domain'];
+    public const array ALL = ['actions', 'forms', 'pickers', 'overlays', 'content', 'domain', 'shell', 'media'];
 
     /**
      * @return list<string>

@@ -19,7 +19,7 @@
 
     {{-- Overlay-link a piena card: rende cliccabile l'intera superficie senza --}}
     {{-- annidare interattivi. Il toggle preferiti resta sopra (z superiore). --}}
-    <a href="{{ route('animals.show', $animal) }}"
+    <a href="{{ route('animals.show', $animal) }}" wire:navigate.hover
        class="absolute inset-0 z-10 rounded-2xl focus:outline-none"
        aria-label="{{ $animal->name }}"></a>
 

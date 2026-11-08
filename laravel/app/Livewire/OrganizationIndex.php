@@ -6,6 +6,8 @@ namespace App\Livewire;
 
 use App\Models\Animal;
 use App\Models\Organization;
+use App\Support\Seo\InteractsWithSeo;
+use App\Support\Seo\PublicPageSeo;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,6 +22,7 @@ use Livewire\WithPagination;
  */
 class OrganizationIndex extends Component
 {
+    use InteractsWithSeo;
     use WithPagination;
 
     public function render(): View
@@ -38,8 +41,6 @@ class OrganizationIndex extends Component
             'organizations' => $organizations,
         ]);
 
-        $view->title(__('public.titles.organizations')); // @phpstan-ignore method.notFound
-
-        return $view;
+        return $this->withSeo($view, app(PublicPageSeo::class)->organizations($organizations->currentPage(), $organizations->lastPage()));
     }
 }

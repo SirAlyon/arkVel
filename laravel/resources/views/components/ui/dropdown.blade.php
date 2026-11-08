@@ -5,7 +5,9 @@
  | - trigger: un <x-ui.button> con aria-haspopup="menu", aria-expanded e aria-controls;
  |   `label` è il testo (o, con `icon-only`, il nome accessibile), `icon`, `variant`
  |   (default secondary) e `size` passano al bottone; gli attributi wire:* / x-* restano sul
- |   contenitore;
+ |   contenitore; `sr-label`: testo solo per gli screen reader aggiunto DOPO la label
+ |   visibile, quando questa da sola non dice lo scopo (es. il nome dell'utente → «Giulia,
+ |   Il tuo account»: il nome visibile resta all'inizio, WCAG 2.5.3);
  | - menu role="menu" con voci <x-ui.dropdown.item> (role="menuitem", link o bottoni) e
  |   <x-ui.dropdown.separator>;
  | - tastiera: Invio / Spazio / ↓ aprono sulla prima voce, ↑ sull'ultima; nel menu ↑ ↓
@@ -22,6 +24,7 @@
 --}}
 @props([
     'label',
+    'srLabel' => null,
     'icon' => null,
     'iconOnly' => false,
     'variant' => 'secondary',
@@ -59,7 +62,7 @@
         x-on:keydown.down.prevent="show('first')"
         x-on:keydown.up.prevent="show('last')"
         data-dropdown-trigger
-    >@unless ($iconOnly){{ $label }}@endunless</x-ui.button>
+    >@unless ($iconOnly){{ $label }}@if (filled($srLabel))<span class="sr-only">, {{ $srLabel }}</span>@endif@endunless</x-ui.button>
 
     <div
         x-ref="menu"

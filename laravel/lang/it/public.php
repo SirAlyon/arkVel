@@ -17,8 +17,15 @@ return [
         'primary' => 'Navigazione principale',
         'catalog' => 'Catalogo',
         'organizations' => 'Enti',
-        'account' => 'Area adottante',
         'skip_to_content' => 'Vai al contenuto',
+        'logo' => ':name, pagina iniziale',
+        'menu' => 'Menu',
+        'open_menu' => 'Apri il menu',
+        'navigated' => 'Pagina caricata: :title',
+    ],
+
+    'language' => [
+        'label' => 'Lingua',
     ],
 
     'theme' => [
@@ -28,10 +35,34 @@ return [
         'system' => 'Automatico',
     ],
 
+    'account' => [
+        'menu' => 'Il tuo account',
+        'login' => 'Accedi',
+        'register' => 'Registrati',
+        'dashboard' => 'Area adottante',
+        'manage' => 'Gestione ente',
+        'logout' => 'Esci',
+    ],
+
     'footer' => [
         'tagline' => 'ArkVel connette persone e animali in cerca di casa, con la trasparenza di canili, rifugi e associazioni verificate.',
         'links' => 'Collegamenti',
         'rights' => 'Tutti i diritti riservati.',
+        'explore' => 'Esplora',
+        'account' => 'Account',
+        'legal' => 'Note legali',
+        'privacy' => 'Informativa privacy',
+        'terms' => 'Termini di servizio',
+        'coming_soon' => 'In arrivo',
+        'preferences' => 'Preferenze',
+        'copyright' => '© :year ArkVel.',
+        'newsletter' => [
+            'title' => 'Newsletter',
+            'body' => 'Storie di adozione e novità dagli enti, una volta al mese.',
+            'email' => 'Email',
+            'help' => 'L\'iscrizione non è ancora attiva: la newsletter è in arrivo.',
+            'submit' => 'Iscriviti',
+        ],
     ],
 
     'home' => [
@@ -88,7 +119,6 @@ return [
     ],
 
     'detail' => [
-        'breadcrumb' => 'Percorso di navigazione',
         'sex' => 'Sesso',
         'size' => 'Taglia',
         'energy' => 'Energia',

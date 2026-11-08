@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Livewire\AnimalDetail;
 use App\Models\Animal;
 use App\Models\Organization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -45,12 +47,18 @@ it('shows the description in the current locale', function () {
         ->assertDontSee('A very sweet dog');
 });
 
-it('shows the adoption CTA linking to the account area for a guest', function () {
+it('shows the adoption CTA to a guest and sends them to the adopter login', function () {
     $org = Organization::factory()->verified()->create();
     $animal = Animal::factory()->available()->forOrganization($org)->create();
 
     $this->get(route('animals.show', $animal))
         ->assertOk()
         ->assertSee(__('public.detail.cta_button'))
-        ->assertSee('href="/account"', false);
+        ->assertSee('wire:click="apply"', false);
+
+    Livewire::test(AnimalDetail::class, ['animal' => $animal])
+        ->call('apply')
+        ->assertRedirect(route('filament.adopter.auth.login'));
+
+    expect(session('url.intended'))->toBe(route('animals.show', $animal));
 });

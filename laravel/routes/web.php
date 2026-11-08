@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Http\Controllers\CalendarFeedController;
 use App\Http\Controllers\GoogleCalendarConnectController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\LogoutController;
+use App\Http\Controllers\RobotsTxtController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\StyleguideGroupController;
 use App\Http\Middleware\EnsureLocalEnvironment;
@@ -33,6 +36,24 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::get('/', Home::class)->name('home');
+
+/*
+ | SEO (UI-3): sitemap delle pagine pubbliche indicizzabili e robots.txt generato
+ | (l'URL della sitemap deve essere assoluto e viene da APP_URL). Vedi App\Support\Seo.
+ | Fuori dallo stack `web` (sessione, cookie, CSRF, SetLocale): sono documenti statici per
+ | i crawler, uguali per tutti, e non devono aprire una sessione né impostare cookie.
+ */
+Route::get('/sitemap.xml', SitemapController::class)->withoutMiddleware('web')->name('seo.sitemap');
+Route::get('/robots.txt', RobotsTxtController::class)->withoutMiddleware('web')->name('seo.robots');
+
+/*
+ | Uscita dal sito pubblico: chiude la sessione e torna alla home (POST con CSRF).
+ | Non passa dai pannelli Filament (il logout del pannello adottante attraversa il suo
+ | authMiddleware, che darebbe il ruolo Adopter anche allo staff degli enti).
+ | Per un ospite (sessione già scaduta) è un no-op che porta alla home.
+ | UI-5: diventerà la route `logout` insieme a `login` e `register`.
+ */
+Route::post('/esci', LogoutController::class)->name('logout.public');
 
 /*
  | Selettore lingua: salva la scelta in sessione (letta da SetLocale) e torna indietro.

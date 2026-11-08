@@ -44,6 +44,14 @@ return [
             'title' => 'Dominio',
             'intro' => 'I componenti di ArkVel: card animale ed ente, numeri, titoli di sezione e bande CTA.',
         ],
+        'shell' => [
+            'title' => 'Shell',
+            'intro' => 'Navigazione del sito pubblico: voci di menu, selettore della lingua, header e footer.',
+        ],
+        'media' => [
+            'title' => 'Media',
+            'intro' => 'Immagini responsive (AVIF, WebP, JPEG) con placeholder sfocato e galleria con lightbox.',
+        ],
     ],
 
     'sections' => [

@@ -21,6 +21,8 @@ use App\Models\Appointment;
 use App\Models\FosterApplication;
 use App\Models\MessageThread;
 use App\Models\User;
+use App\Support\Seo\InteractsWithSeo;
+use App\Support\Seo\PublicPageSeo;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -56,6 +58,8 @@ use Livewire\Component;
  */
 class AnimalDetail extends Component
 {
+    use InteractsWithSeo;
+
     public Animal $animal;
 
     /**
@@ -425,11 +429,7 @@ class AnimalDetail extends Component
             'appointmentTypes' => AppointmentType::cases(),
         ]);
 
-        // `title()` è una macro di Livewire sulla View (full-page component):
-        // imposta il <title> passandolo al layout.
-        $view->title($this->animal->name.' — ArkVel'); // @phpstan-ignore method.notFound
-
-        return $view;
+        return $this->withSeo($view, app(PublicPageSeo::class)->animal($this->animal));
     }
 
     /**

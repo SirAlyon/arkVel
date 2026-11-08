@@ -14,10 +14,10 @@
                     {{ __('public.home.subheadline') }}
                 </p>
                 <div class="mt-8 flex flex-wrap items-center gap-3">
-                    <x-button :href="route('catalog')" variant="primary" size="lg">
+                    <x-button :href="route('catalog')" wire:navigate.hover variant="primary" size="lg">
                         {{ __('public.home.cta_primary') }}
                     </x-button>
-                    <x-button :href="route('organizations.index')" variant="outline" size="lg">
+                    <x-button :href="route('organizations.index')" wire:navigate.hover variant="outline" size="lg">
                         {{ __('public.home.cta_secondary') }}
                     </x-button>
                 </div>
@@ -43,7 +43,7 @@
                 <h2 class="text-2xl font-bold tracking-tight text-stone-900">{{ __('public.home.featured_title') }}</h2>
                 <p class="mt-1 text-stone-500">{{ __('public.home.featured_subtitle') }}</p>
             </div>
-            <a href="{{ route('catalog') }}" class="hidden shrink-0 text-sm font-semibold text-brand-700 hover:text-brand-800 sm:inline">
+            <a href="{{ route('catalog') }}" wire:navigate.hover class="hidden shrink-0 text-sm font-semibold text-brand-700 hover:text-brand-800 sm:inline">
                 {{ __('public.home.see_all') }} &rarr;
             </a>
         </div>

@@ -12,6 +12,8 @@ use App\Models\Animal;
 use App\Models\Organization;
 use App\Models\User;
 use App\Support\Billing\StripeConfig;
+use App\Support\Seo\InteractsWithSeo;
+use App\Support\Seo\PublicPageSeo;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -37,6 +39,7 @@ use Livewire\WithPagination;
  */
 class OrganizationPage extends Component
 {
+    use InteractsWithSeo;
     use WithPagination;
 
     public Organization $organization;
@@ -173,9 +176,7 @@ class OrganizationPage extends Component
             'canDonateMonthly' => Auth::user() instanceof User,
         ]);
 
-        $view->title($this->organization->name.' — ArkVel'); // @phpstan-ignore method.notFound
-
-        return $view;
+        return $this->withSeo($view, app(PublicPageSeo::class)->organization($this->organization, $animals->currentPage(), $animals->lastPage()));
     }
 
     /**

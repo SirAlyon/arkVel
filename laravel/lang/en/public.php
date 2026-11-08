@@ -17,8 +17,15 @@ return [
         'primary' => 'Primary navigation',
         'catalog' => 'Catalog',
         'organizations' => 'Organizations',
-        'account' => 'Adopter area',
         'skip_to_content' => 'Skip to content',
+        'logo' => ':name, home page',
+        'menu' => 'Menu',
+        'open_menu' => 'Open the menu',
+        'navigated' => 'Page loaded: :title',
+    ],
+
+    'language' => [
+        'label' => 'Language',
     ],
 
     'theme' => [
@@ -28,10 +35,34 @@ return [
         'system' => 'Automatic',
     ],
 
+    'account' => [
+        'menu' => 'Your account',
+        'login' => 'Log in',
+        'register' => 'Sign up',
+        'dashboard' => 'Adopter area',
+        'manage' => 'Manage organization',
+        'logout' => 'Log out',
+    ],
+
     'footer' => [
         'tagline' => 'ArkVel connects people with animals looking for a home, backed by the transparency of verified shelters, rescues and associations.',
         'links' => 'Links',
         'rights' => 'All rights reserved.',
+        'explore' => 'Explore',
+        'account' => 'Account',
+        'legal' => 'Legal',
+        'privacy' => 'Privacy policy',
+        'terms' => 'Terms of service',
+        'coming_soon' => 'Coming soon',
+        'preferences' => 'Preferences',
+        'copyright' => '© :year ArkVel.',
+        'newsletter' => [
+            'title' => 'Newsletter',
+            'body' => 'Adoption stories and news from organizations, once a month.',
+            'email' => 'Email',
+            'help' => 'Sign-up isn\'t open yet: the newsletter is coming soon.',
+            'submit' => 'Subscribe',
+        ],
     ],
 
     'home' => [
@@ -88,7 +119,6 @@ return [
     ],
 
     'detail' => [
-        'breadcrumb' => 'Breadcrumb',
         'sex' => 'Sex',
         'size' => 'Size',
         'energy' => 'Energy',

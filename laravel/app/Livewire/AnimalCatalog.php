@@ -8,6 +8,8 @@ use App\Enums\Sex;
 use App\Enums\Size;
 use App\Enums\Species;
 use App\Models\Animal;
+use App\Support\Seo\InteractsWithSeo;
+use App\Support\Seo\PublicPageSeo;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +31,7 @@ use Livewire\WithPagination;
  */
 class AnimalCatalog extends Component
 {
+    use InteractsWithSeo;
     use WithPagination;
 
     #[Url(as: 'q')]
@@ -59,17 +62,23 @@ class AnimalCatalog extends Component
 
     public function render(): View
     {
+        $animals = $this->buildSearch();
+
         $view = ViewFacade::make('livewire.animal-catalog', [
-            'animals' => $this->buildSearch(),
+            'animals' => $animals,
             'speciesOptions' => Species::cases(),
             'sizeOptions' => Size::cases(),
             'sexOptions' => Sex::cases(),
             'hasActiveFilters' => $this->hasActiveFilters(),
         ]);
 
-        $view->title(__('public.titles.catalog')); // @phpstan-ignore method.notFound
-
-        return $view;
+        return $this->withSeo($view, app(PublicPageSeo::class)->catalog(
+            search: $this->search,
+            hasFacetFilters: $this->hasFacetFilters(),
+            page: $animals->currentPage(),
+            total: $animals->total(),
+            lastPage: $animals->lastPage(),
+        ));
     }
 
     /**
@@ -109,8 +118,15 @@ class AnimalCatalog extends Component
 
     private function hasActiveFilters(): bool
     {
-        return $this->search !== ''
-            || $this->species !== ''
+        return $this->search !== '' || $this->hasFacetFilters();
+    }
+
+    /**
+     * Specie, taglia o sesso attivi (la ricerca libera esclusa).
+     */
+    private function hasFacetFilters(): bool
+    {
+        return $this->species !== ''
             || $this->size !== ''
             || $this->sex !== '';
     }

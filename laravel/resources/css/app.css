@@ -275,6 +275,9 @@
 
     /* ── Spazi e layout ─────────────────────────────────────────────────── */
     --container-page: 77.5rem;
+    /* Larghezza massima di una voce intermedia del breadcrumb (x-ui.breadcrumb): oltre,
+       i puntini. In ch, così segue la dimensione del testo. */
+    --container-crumb: 10ch;
     --spacing-gutter: clamp(1rem, 0.6rem + 1.6vw, 1.5rem);
     --spacing-panel: clamp(1.5rem, 0.6rem + 3.6vw, 3.5rem);
     --spacing-section: clamp(2.5rem, 1.5rem + 4vw, 4rem);
@@ -411,4 +414,48 @@
             scroll-behavior: auto !important;
         }
     }
+}
+
+/*
+ | Shell pubblica (UI-3): View Transitions di wire:navigate e barra di progresso.
+ |
+ | - <main wire:transition.navigate> è la regione animata (nome `livewire-navigate`):
+ |   dissolvenza con un piccolo spostamento, durate ed easing dai token. Header e footer
+ |   restano fermi (Livewire spegne la transizione della radice). Con
+ |   prefers-reduced-motion Livewire salta la transizione e le durate sono comunque ~0;
+ |   Firefox ignora i tipi di transizione e usa la dissolvenza predefinita.
+ | - Barra di progresso di Livewire (nprogress): il colore è il token primary
+ |   (config/livewire.php → --livewire-progress-bar-color). Qui solo la forma: 3 px,
+ |   niente bagliore (peg) né spinner, coerente con "nessuna ombra". `html` alza la
+ |   specificità sopra lo stile che Livewire inietta a runtime.
+ */
+@keyframes site-navigate-out {
+    to {
+        opacity: 0;
+        transform: translateY(-0.5rem);
+    }
+}
+
+@keyframes site-navigate-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.5rem);
+    }
+}
+
+html:active-view-transition-type(navigate)::view-transition-old(livewire-navigate) {
+    animation: site-navigate-out var(--duration-fast) var(--ease-in-out) both;
+}
+
+html:active-view-transition-type(navigate)::view-transition-new(livewire-navigate) {
+    animation: site-navigate-in var(--duration-base) var(--ease-out) both;
+}
+
+html #nprogress .bar {
+    height: 3px;
+}
+
+html #nprogress .peg,
+html #nprogress .spinner {
+    display: none;
 }
