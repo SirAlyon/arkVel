@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Organizations\AddOrganizationMember;
 use App\Enums\MembershipRole;
-use App\Livewire\AnimalDetail;
+use App\Livewire\AnimalDetail\ContactOrganizationForm;
 use App\Models\Animal;
 use App\Models\Message;
 use App\Models\MessageThread;
@@ -66,7 +66,7 @@ it('shows the contact CTA on the public animal page', function () {
 it('redirects a guest to the adopter login and creates no thread', function () {
     [$animal] = verifiedOrgAnimalWithMessageStaff();
 
-    Livewire::test(AnimalDetail::class, ['animal' => $animal])
+    Livewire::test(ContactOrganizationForm::class, ['animal' => $animal])
         ->set('contactBody', 'Vorrei saperne di più su Argo.')
         ->call('contact')
         ->assertRedirect(route('login'));
@@ -83,7 +83,7 @@ it('starts a conversation and notifies the org staff for an authenticated adopte
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
         ->set('contactBody', 'Vorrei saperne di più su Argo.')
         ->call('contact')
         ->assertHasNoErrors()
@@ -111,7 +111,7 @@ it('validates the contact form and creates no thread on empty input', function (
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
         ->call('contact')
         ->assertHasErrors(['contactBody']);
 
@@ -127,14 +127,14 @@ it('reuses the existing thread on a second contact (no duplicate)', function () 
 
     // Primo contatto: crea il thread.
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
         ->set('contactBody', 'Primo messaggio.')
         ->call('contact')
         ->assertHasNoErrors();
 
     // Secondo contatto per la stessa terna: posta sul thread esistente.
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
         ->set('contactBody', 'Secondo messaggio.')
         ->call('contact')
         ->assertHasNoErrors()

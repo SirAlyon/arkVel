@@ -6,7 +6,7 @@ use App\Actions\Organizations\AddOrganizationMember;
 use App\Enums\AppointmentStatus;
 use App\Enums\AppointmentType;
 use App\Enums\MembershipRole;
-use App\Livewire\AnimalDetail;
+use App\Livewire\AnimalDetail\AppointmentBooking;
 use App\Models\Animal;
 use App\Models\Appointment;
 use App\Models\Organization;
@@ -67,7 +67,7 @@ it('shows the booking CTA on the public animal page', function () {
 it('redirects a guest to the adopter login and creates no appointment', function () {
     [$animal] = verifiedOrgAnimalWithAppointmentStaff();
 
-    Livewire::test(AnimalDetail::class, ['animal' => $animal])
+    Livewire::test(AppointmentBooking::class, ['animal' => $animal])
         ->set('appointmentType', AppointmentType::Visit->value)
         ->set('appointmentScheduledAt', now()->addDays(3)->startOfHour()->format('Y-m-d\TH:i'))
         ->call('book')
@@ -86,7 +86,7 @@ it('books a visit and notifies the org staff for an authenticated user', functio
     $when = now()->addDays(3)->startOfHour();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(AppointmentBooking::class, ['animal' => $animal])
         ->set('appointmentType', AppointmentType::Visit->value)
         ->set('appointmentScheduledAt', $when->format('Y-m-d\TH:i'))
         ->set('appointmentNotes', 'Arrivo con la famiglia.')
@@ -117,7 +117,7 @@ it('surfaces a localized error for a past slot and creates no appointment', func
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(AppointmentBooking::class, ['animal' => $animal])
         ->set('appointmentType', AppointmentType::Visit->value)
         ->set('appointmentScheduledAt', now()->subDay()->startOfHour()->format('Y-m-d\TH:i'))
         ->call('book')
@@ -144,7 +144,7 @@ it('surfaces a localized error for an overlapping slot and keeps a single appoin
         ->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(AppointmentBooking::class, ['animal' => $animal])
         ->set('appointmentType', AppointmentType::Visit->value)
         ->set('appointmentScheduledAt', $when->format('Y-m-d\TH:i'))
         ->call('book')
@@ -162,7 +162,7 @@ it('validates the booking form and creates no appointment on empty input', funct
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(AppointmentBooking::class, ['animal' => $animal])
         ->call('book')
         ->assertHasErrors(['appointmentType', 'appointmentScheduledAt']);
 

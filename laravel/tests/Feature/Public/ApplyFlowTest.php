@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Actions\Organizations\AddOrganizationMember;
 use App\Enums\ApplicationStatus;
 use App\Enums\MembershipRole;
-use App\Livewire\AnimalDetail;
+use App\Livewire\AnimalDetail\AdoptionApplicationForm;
 use App\Models\AdopterProfile;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
@@ -55,7 +55,7 @@ function verifiedOrgAnimalWithStaff(): array
 it('redirects a guest to the adopter login and creates no application', function () {
     [$animal] = verifiedOrgAnimalWithStaff();
 
-    Livewire::test(AnimalDetail::class, ['animal' => $animal])
+    Livewire::test(AdoptionApplicationForm::class, ['animal' => $animal])
         ->call('apply')
         ->assertRedirect(route('login'));
 
@@ -73,7 +73,7 @@ it('redirects an authenticated user without a complete profile to the profile pa
     AdopterProfile::factory()->forUser($user)->withoutConsent()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(AdoptionApplicationForm::class, ['animal' => $animal])
         ->call('apply')
         ->assertRedirect(route('filament.adopter.pages.manage-adopter-profile'));
 
@@ -88,7 +88,7 @@ it('redirects an authenticated user with no profile at all to the profile page',
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(AdoptionApplicationForm::class, ['animal' => $animal])
         ->call('apply')
         ->assertRedirect(route('filament.adopter.pages.manage-adopter-profile'));
 
@@ -104,7 +104,7 @@ it('submits the application and notifies the org staff for a user with a complet
     AdopterProfile::factory()->forUser($user)->complete()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(AdoptionApplicationForm::class, ['animal' => $animal])
         ->call('apply')
         ->assertSet('hasApplied', true)
         ->assertSet('applyMessageIsError', false)
@@ -134,7 +134,7 @@ it('surfaces a friendly duplicate message on a second apply and keeps a single a
     AdoptionApplication::factory()->submitted()->forAnimal($animal)->forAdopter($user)->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(AdoptionApplicationForm::class, ['animal' => $animal])
         ->call('apply')
         ->assertSet('hasApplied', true)
         ->assertSet('applyMessageIsError', false)
