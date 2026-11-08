@@ -4,7 +4,7 @@
 > open-source / gratuito**. I pannelli Filament (`/account`, `/manage`, `/admin`) **non si toccano**,
 > con un'unica eccezione concordata: lo spostamento di login/registrazione adottante (fase UI-5).
 >
-> Stato: proposta approvata il 2026-11-03. UI-0, UI-1, UI-2, UI-3 e UI-4 completate. Ogni fase va lanciata in una chat nuova con il
+> Stato: proposta approvata il 2026-11-03. UI-0…UI-5 completate. Ogni fase va lanciata in una chat nuova con il
 > super-prompt in fondo al documento.
 
 ---
@@ -628,6 +628,52 @@ Elenco originale della fase:
 - Galleria scheda animale: Embla + PhotoSwipe (import dinamico).
 
 ### UI-5 · Auth pubblica in Livewire (login/registrazione adottante)
+
+> **Stato: completata il 2026-11-08** (branch `feat/ui-5-auth`, partito da `feat/ui-4-images`;
+> 2223 test, browser 142/142). Rivista da una review di sicurezza (confronto con le pagine
+> Filament sostituite) e da `/ui-review`, corrette prima del commit.
+>
+> **Com'era con Filament (analisi iniziale):** pagine native del pannello adottante (nessuna
+> custom), nessun observer su `User`; la registrazione creava solo l'utente (niente profilo né
+> consensi) e mandava la mail di verifica; il ruolo Adopter lo assegnava `EnsureAdopterRole` alla
+> prima richiesta del pannello; il reset diceva se l'email non esisteva; rate limit 5/min sul
+> login per IP, 2/min su registrazione e reset.
+>
+> **Cosa è stato fatto:**
+> - **Pagine** (`app/Livewire/Auth`, layout pubblico, `themeable`, `noindex`): `/accedi`
+>   (`login`), `/registrati` (`register`), `/password-dimenticata` (`password.request`),
+>   `/reimposta-password/{token}` (`password.reset`), `/verifica-email` (`verification.notice`),
+>   `verification.verify` firmato e `verification.send`; logout `POST /esci` ora si chiama `logout`.
+> - **Action** in `app/Actions/Auth` con DTO in `app/Data/Auth` (email normalizzata minuscola):
+>   `AuthenticateUser`, `RegisterAdopter` (crea l'utente, assegna il ruolo Adopter, registra la
+>   presa visione dell'informativa con versione in activitylog), `SendPasswordResetLink`,
+>   `ResetPassword` (nessun login automatico), `VerifyUserEmail`, `SendEmailVerification`,
+>   `AssignAdopterRole` (estratta da `EnsureAdopterRole`).
+> - **Sicurezza:** rate limit per email+IP e per IP sul login (anti password spraying), limite
+>   per IP su ogni invio della registrazione **prima** della validazione (niente enumerazione degli
+>   iscritti), honeypot con tempo minimo, reset con risposta sempre uguale, `IntendedUrl` (solo
+>   redirect interni), sessione rigenerata, password svuotate dopo un errore, `GuestOnly` anche
+>   sulle richieste Livewire, `TRUSTED_PROXIES` da env per avere gli IP reali dietro un proxy.
+> - **Destinazione dopo il login** (`App\Support\Auth\PostLoginDestination`): Super Admin →
+>   `/admin`, membro di un ente operabile → `/manage`, altri → `/account`. Lo staff non riceve
+>   più il ruolo Adopter entrando dal sito pubblico.
+> - **Pannello adottante** (unica modifica Filament, solo configurazione): rimossi login,
+>   registrazione, reset e verifica; `AuthenticateAdopter` manda gli ospiti a `/accedi`,
+>   `EnsureEmailIsVerified` gli utenti non verificati a `/verifica-email`; middleware di auth
+>   **persistenti** (altrimenti Livewire non li riapplica su `/livewire/update`). `/manage` e
+>   `/admin` mantengono il login Filament.
+> - **Mail** di verifica e reset (`app/Notifications/Auth`) con testi `auth_public.mail.*` nella
+>   lingua dell'utente; `/manage` continua a usare le notifiche Filament.
+> - `App\Support\Site\AccountLinks` punta alle nuove route; nuovo `x-ui.error-summary`.
+>
+> **Aperti:**
+>
+> | Gravità | Punto | Fase |
+> |---|---|---|
+> | **Blocker per la produzione** | Manca la pagina dell'informativa privacy (e dei termini): la registrazione registra la presa visione con `config('arkvel.privacy_policy_version')`, il link comparirà da solo quando esisterà la route `legal.privacy` (`App\Support\Site\LegalLinks`) | prima del rilascio |
+> | Minor | Le registrazioni fatte dai pannelli Filament (es. `/manage`) non normalizzano l'email in minuscolo: un account con maiuscole non accederebbe da `/accedi`. Oggi non ci sono dati legacy; una migrazione che porta le email in minuscolo chiude il punto | UI-8 |
+> | Nit | I link di verifica/reset già inviati con le vecchie URL del pannello (`/account/email-verification/…`) rispondono 404 dopo il deploy (scadono in 60 minuti) | — |
+> | Nit | `pest --parallel` si è bloccato una volta su un worker: la suite seriale impiega ~20 minuti | UI-8 |
 - Pagine Livewire pubbliche col nuovo design:
   - `/accedi` (`login`), `/registrati` (`register`), `/password-dimenticata` (`password.request`);
   - `/reimposta-password/{token}` (`password.reset`);
