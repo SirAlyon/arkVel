@@ -4,7 +4,7 @@
 > open-source / gratuito**. I pannelli Filament (`/account`, `/manage`, `/admin`) **non si toccano**,
 > con un'unica eccezione concordata: lo spostamento di login/registrazione adottante (fase UI-5).
 >
-> Stato: proposta approvata il 2026-11-03. UI-0 e UI-1 completate. Ogni fase va lanciata in una chat nuova con il
+> Stato: proposta approvata il 2026-11-03. UI-0, UI-1 e UI-2 completate. Ogni fase va lanciata in una chat nuova con il
 > super-prompt in fondo al documento.
 
 ---
@@ -231,7 +231,7 @@ Mockup di riferimento: canvas "ArkVel — Direzioni visive", artboard **B · Pop
 > | Major | Font mai caricato (manca `@fonts` nel layout) | UI-1 ✅ risolto (Fontsource) |
 > | Minor | Nessun selettore di lingua visibile (Major se UI-0 va in produzione prima di UI-3) | UI-3 |
 > | Minor | Echo/Reverb importato su ogni pagina ospite (errori WebSocket in console) → import dinamico solo dove serve | UI-3 |
-> | Minor | Salto di titoli `h1` → `h3` nel catalogo; bottoni preferiti con nome identico | UI-2 (`animal-card` v2) |
+> | Minor | Salto di titoli `h1` → `h3` nel catalogo; bottoni preferiti con nome identico | UI-2 ✅ `x-ui.animal-card` con `heading-level` e preferito «Salva <nome> nei preferiti» (anche il Livewire `FavoriteButton`); il catalogo adotta la card in UI-6b |
 > | Minor | Immagini senza `width`/`height`, foto della scheda = miniatura 400×300 ingrandita, `alt` della galleria tutti uguali | UI-4 |
 > | Nit | Mancano `Vary: Accept-Language` e `Content-Language` | UI-8 (prima di qualsiasi cache o CDN) |
 > | Nit | Suffisso " — ArkVel" hard-coded in `AnimalDetail` e `OrganizationPage` → `public.titles.*` | UI-3 (SEO) |
@@ -324,7 +324,7 @@ Elenco originale della fase:
 > | `line-strong` | `dusk-400` (≥ 3,7:1 su tutte le superfici) |
 > | `primary`, `highlight`, `focus`, `link`, `stamp` | giallo `sun-300` con testo navy |
 > | `block-sun` | navy-800, cioè la hero è una superficie scura con accenti gialli |
-> | `block-peach` | peach-800, testo `peach-100` |
+> | `block-peach` | peach-700, testo `peach-100` (5,86:1; era peach-800, che si leggeva marrone: cambiato in UI-2) |
 > | `block-mint` | leaf-900, testo `leaf-100` |
 > | `block-leaf` | leaf-700, testo bianco (più chiaro della menta, così restano distinguibili) |
 >
@@ -349,11 +349,11 @@ Elenco originale della fase:
 >
 >   | Gravità | Punto | Fase |
 >   |---|---|---|
->   | Minor | `block-peach` in dark (#5A2A20) si legge marrone ruggine più che pesca. Alternativa da valutare a occhio: un corallo-rosa intorno a `oklch(40% 0.11 22)` | UI-2 (quando le card animale lo usano) |
+>   | Minor | `block-peach` in dark (#5A2A20) si legge marrone ruggine più che pesca. Alternativa da valutare a occhio: un corallo-rosa intorno a `oklch(40% 0.11 22)` | UI-2 ✅ ora peach-700 (vedi §5 UI-2: resta un Nit estetico) |
 >   | Minor | Il toggle ha `aria-pressed="false"` su tutti i bottoni finché Alpine non parte (si nota solo in local, con `livewire.js` non minificato). Si può leggere lo stato già nello script del tema | UI-3 |
 >   | Nit | Skip link e `preload` del woff2 latin nella shell pubblica | UI-3 |
->   | Nit | `x-ui.icon` (Lucide) al posto delle icone SVG inline del toggle (`{!! !!}` con markup costante) | UI-2 |
->   | Nit | Gli override del focus valgono sulle classi esatte `bg-inverse`, `bg-stamp`, `bg-block-*`. Una variante con opacità (`bg-inverse/90`) non li eredita: i componenti `x-ui` devono usare le classi piene | UI-2 |
+>   | Nit | `x-ui.icon` (Lucide) al posto delle icone SVG inline del toggle (`{!! !!}` con markup costante) | UI-2 ✅ |
+>   | Nit | Gli override del focus valgono sulle classi esatte `bg-inverse`, `bg-stamp`, `bg-block-*`. Una variante con opacità (`bg-inverse/90`) non li eredita: i componenti `x-ui` devono usare le classi piene | UI-2 ✅ rispettato in tutta la libreria; i livelli flottanti (`.ui-layer`, `.ui-picker-layer`) rimettono il focus del tema |
 >   | Nit | Con una CSP, gli script inline (tema, styleguide) richiederanno un nonce | UI-8 |
 >
 > **Note tecniche utili alle fasi successive:**
@@ -388,6 +388,106 @@ Elenco originale della fase:
 - Pagina `/_styleguide` solo in `local` (route condizionata all'ambiente).
 
 ### UI-2 · Libreria componenti `x-ui.*`
+
+> **Stato: completata il 2026-11-08** (branch `feat/ui-2-components`, partito da `main`; un commit
+> per gruppo di componenti, ognuno verificato in isolamento: pint, phpstan, Pest completo e
+> suite browser. A fine fase: 1737 test, suite browser 78/78).
+>
+> **Cosa è stato fatto:**
+> - **Dipendenze (§2):** `mallardduck/blade-lucide-icons` 2.0 (icone Lucide) e `cally` 0.9 (date
+>   picker, import dinamico). `blade-ui-kit/blade-icons` c'era già, tramite Filament.
+> - **Libreria `x-ui.*`** in `resources/views/components/ui/`, sei gruppi:
+>   - **actions:** `icon`, `button` (5 varianti, 3 dimensioni ≥ 44 px, link, solo icona, attesa
+>     con `data-loading` di Livewire), `link`, `badge`, `tag` (filtro con `aria-pressed`,
+>     rimovibile);
+>   - **forms:** `field` (componente a classe `App\View\Components\Ui\Field`), `input`,
+>     `textarea`, `select`, `checkbox(-group)`, `radio(-group)`, `switch`;
+>   - **pickers:** `combobox` (APG, x-anchor, ricerca lato server), `date-picker` (Cally,
+>     popover o inline);
+>   - **overlays:** `dialog`, `drawer` (laterale o bottom sheet), `dropdown`, `tooltip`, `toast`
+>     + `toaster`;
+>   - **content:** `tabs`, `accordion`, `skeleton`, `empty-state`, `avatar` (+ gruppo);
+>   - **domain:** `animal-card` v2 (+ `favorite`, `cta`, `skeleton`), `organization-card`,
+>     `stat`, `section-heading`, `cta-band`.
+> - `x-ui.theme-toggle` usa `x-ui.icon`. Il Livewire `FavoriteButton` usa
+>   `x-ui.animal-card.favorite`: nome fisso «Salva <nome> nei preferiti» e stato in
+>   `aria-pressed` (toggle APG), senza cambiare comportamento.
+> - **Token:** nuovo `danger-hover`; in dark `block-peach` passa a peach-700. Coppie nuove in
+>   `ContrastPairs`: `on-danger`/`danger-hover`, `primary` su `canvas` e `surface` (controlli
+>   selezionati), `focus` su `danger-subtle`, `danger` su `surface-raised`.
+> - **Styleguide:** una pagina per gruppo (`/_styleguide/{group}`, `StyleguideGroups`), con
+>   layout e componenti di documentazione `x-styleguide.*` (sezione, esempio con codice, note di
+>   accessibilità). Ogni componente ha esempi per variante e stato, anche su fondi colorati e in
+>   dark.
+> - **Test:** per ogni gruppo un file di rendering (`tests/Feature/Ui/Components`) e uno browser
+>   (`tests/Browser/Components`: axe in light e dark, tastiera, target ≥ 44 px, overflow a
+>   mobile). Unit per `App\Support\Ui` (`ControlAttributes`, `FieldControl`, `ResolvedControl`).
+>   Helper condiviso `Tests\Support\Ui\BrowserScripts`.
+> - **Docker:** `icu-data-full` nell'immagine `php`: senza, `Number::format(locale: 'it')`
+>   formattava all'inglese.
+>
+> **Note tecniche utili alle fasi successive:**
+> - **Shell (UI-3):** il layout pubblico deve caricare `@vite(['resources/css/app.css',
+>   'resources/js/app.js', 'resources/js/ui.js'])`, includere `partials.theme-script` e un solo
+>   `<x-ui.toaster />` in fondo al `<body>`. Da Livewire un toast si lancia con
+>   `$this->dispatch('toast', type: 'success', title: …)`; anche `session('toast')` viene letto.
+> - **JS dei componenti:** `resources/js/ui.js` carica ogni `resources/js/ui/<gruppo>.js` (glob
+>   che esclude i nomi con spazio); i moduli registrano store e `Alpine.data()` su `alpine:init`.
+>   Il CSS di un gruppo (`resources/css/ui/<gruppo>.css`) è importato dal suo modulo JS.
+> - **Moduli:** dentro `x-ui.field` i controlli prendono id, name, `required`, aiuto ed errore dal
+>   field con `@aware(['uiField' => null])`. Un id, name o `required` proprio e diverso lancia
+>   un'eccezione (usare `for` / `name` / `required` del field). `@aware` non attraversa un
+>   componente Livewire figlio: il field va dentro la vista Livewire. Fuori da un field l'errore
+>   si legge anche dalla chiave `wire:model`.
+> - **Livelli flottanti:** menu, tooltip, liste di combobox e calendario sono `popover="manual"`
+>   nel top layer, posizionati con `x-anchor` (`.fixed`). Un dialog modale rende inerte tutto il
+>   resto, anche i popover esterni: per questo ogni dialog e drawer ha il suo outlet dei toast.
+> - **Card animale:** link esteso sul nome (pseudo-elemento), preferito come fratello sopra
+>   (z-index), `heading-level` da allineare alla gerarchia della pagina. Foto con `<img>`
+>   semplice e proporzioni fisse: `x-ui.picture` arriva in UI-4.
+> - **Workflow multi-agente:** i gruppi sono stati costruiti in parallelo sulla stessa working
+>   copy (Docker monta solo `./laravel`, quindi niente worktree), con file di proprietà per
+>   gruppo (viste, pagina di styleguide, `lang/*/ui_<gruppo>.php` e `styleguide_<gruppo>.php`,
+>   test, modulo JS) e build + test browser serializzati da uno script con lock.
+> - **Copie di sincronizzazione:** il client di sync della cartella ricrea copie `"file 2.ext"`,
+>   soprattutto dopo `git stash`. Le migrazioni duplicate rompono i test e un modulo JS duplicato
+>   registrava due volte i listener: controllare `git status` e spostarle via prima di testare.
+> - **Copertura:** il container non ha pcov/xdebug, quindi la copertura al 100% delle classi in
+>   `App\Support\Ui` è verificata a mano (ogni ramo ha un test).
+>
+> **Esito `/ui-review` della styleguide (2026-11-08).**
+>
+> - **Misure** (375 px, CPU 4×, rete lenta): LCP 1,28–1,32 s, CLS ≤ 0,029, INP ≤ 56 ms. axe:
+>   nessuna violazione su 7 pagine in light e dark; nessun overflow da 320 px; console pulita.
+> - **Corretti nella fase** (review degli standard e `/ui-review`):
+>   - toast sotto il backdrop di un dialog aperto, e quindi non annunciati: ogni dialog e drawer
+>     ha il suo outlet;
+>   - toast che coprivano l'elemento con il focus (WCAG 2.4.11): la pagina scorre per mostrarlo,
+>     su mobile restano al massimo 2 toast, Esc chiude quelli non di errore;
+>   - scheda di `x-ui.tabs` con il focus fuori dalla lista scorrevole a 320–375 px;
+>   - header e footer fissi del drawer sopra l'elemento con il focus; CTA del footer a capo dentro
+>     la pill;
+>   - `id` proprio di un controllo dentro `x-ui.field` che staccava label e descrizioni;
+>     regole su id ed errore duplicate in 7 viste (ora in `App\Support\Ui`); `x-ui.field`
+>     riconosciuto da qualunque antenato con `label` (ora `@aware(['uiField'])`);
+>   - intestazione del date picker che non seguiva i cambi di valore dall'esterno; id del
+>     combobox che cambiava a ogni ricerca lato server; `label for` puntato a un `div`;
+>   - skeleton con `aria-busy` che impediva l'annuncio; focus perso su `body` chiudendo un toast;
+>   - avatar giallo invisibile in dark su una superficie; iniziali tagliate nei gruppi di
+>     avatar; badge info invisibile in dark (`info-subtle` ora navy-600);
+>   - bottone preferiti con nome che cambiava insieme ad `aria-pressed`; nome di landmark
+>     duplicato nella pagina dei token; testi inglesi misti UK/US (ora US, come il resto
+>     dell'app); modulo JS caricato due volte da una copia di sincronizzazione.
+> - **Aperti:**
+>
+>   | Gravità | Punto | Fase |
+>   |---|---|---|
+>   | Nit | In dark `block-peach` (peach-700) per un revisore si legge ancora mattone/terracotta; l'alternativa corallo-rosa (`oklch(42–45% 0.12 18–22)`) per un altro vira al rosso vino, vicino a `danger`. Da decidere a occhio con le foto vere | UI-6a |
+>   | Nit | In dark `primary`, `highlight` e `stamp` sono lo stesso giallo: documentato nella styleguide (un solo CTA giallo per gruppo); il bollino «In evidenza» giallo su una foto gialla si separa solo col bordo | UI-6 |
+>   | Nit | CLS 0,029 sulla pagina domain per lo swap del font: `preload` del woff2 | UI-3 |
+>   | Minor | Combobox in ricerca lato server: id delle opzioni per indice, `aria-activedescendant` può puntare a un'altra opzione dopo una risposta; modalità da provare su una pagina vera | UI-6b |
+>   | Minor | Dialog alti su mobile: la pila dei toast può coprire il fondo del dialog (restano chiudibili e raggiungibili) | UI-7 |
+>   | Nit | `x-ui.checkbox`/`x-ui.radio` riconoscono il gruppo con `@aware` (legend + name); contatore della textarea non aggiornato se Livewire azzera il valore dal server | UI-6c |
 - **Primitivi:** button (varianti/dimensioni/stato loading via `data-loading`), link, badge, tag,
   input, textarea, select, checkbox/radio/switch, field (label + help + errore), combobox
   (Alpine Anchor), date picker (wrapper Cally).
