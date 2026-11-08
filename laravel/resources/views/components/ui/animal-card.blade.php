@@ -6,8 +6,13 @@
  | vuoti con aria-label né bottoni dentro un link.
  |
  | - `name`, `href` (obbligatori): nome dell'animale (titolo e testo del link) e scheda;
- | - `photo`: URL della foto, mostrata 4:5 (`width`/`height` espliciti, lazy, object-cover)
- |   con `photo-alt` (default «Foto di <nome>»). Senza foto: zampa su fondo colorato;
+ | - `media`: il Media medialibrary della foto (UI-4): reso con <x-ui.picture> conversione
+ |   `card` 4:5 (AVIF/WebP/JPEG, srcset con `photo-sizes`, placeholder, mai l'originale);
+ |   `priority` per la prima card sopra la piega (immagine LCP: niente lazy);
+ | - `photo`: in alternativa un URL già pronto (styleguide, contenuti statici), mostrato 4:5
+ |   (`width`/`height` espliciti, lazy, object-cover). `photo-alt` (default «Foto di <nome>»)
+ |   vale per entrambi. Senza foto: zampa su fondo colorato;
+ | - `navigate` (default true): il link usa wire:navigate.hover (navigazione SPA della shell);
  | - `tone` (sun · peach · mint, default sun): il blocco di colore dietro la foto. Nel
  |   catalogo si alterna card per card ($loop->index % 3);
  |   in dark il tono sun usa surface-raised, perché block-sun coincide con il fondo della card;
@@ -33,7 +38,8 @@
  |             <x-ui.animal-card
  |                 :name="$animal->name"
  |                 :href="route('animals.show', $animal)"
- |                 :photo="$animal->getFirstMediaUrl('photos', 'thumb') ?: null"
+ |                 :media="$animal->getFirstMedia('photos') ?? $animal->getFirstMedia('avatar')"
+ |                 :priority="$loop->first"
  |                 :tone="['sun', 'peach', 'mint'][$loop->index % 3]"
  |                 :species="$animal->species->getLabel()"
  |                 :sex="$animal->sex->getLabel()"
@@ -54,6 +60,10 @@
 @props([
     'name',
     'href',
+    'media' => null,
+    'photoSizes' => '(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw',
+    'priority' => false,
+    'navigate' => true,
     'photo' => null,
     'photoAlt' => null,
     'photoWidth' => 400,
@@ -96,7 +106,18 @@
     ]) }}
 >
     <div class="relative aspect-4/5 overflow-hidden rounded-media {{ $tones[$tone] }}" data-animal-card-media>
-        @if (filled($photo))
+        @if ($media instanceof \Spatie\MediaLibrary\MediaCollections\Models\Media)
+            <x-ui.picture
+                :media="$media"
+                conversion="card"
+                fill
+                :rounded="false"
+                :alt="$photoAlt ?? __('ui_domain.animal_card.photo_alt', ['name' => $name])"
+                :sizes="$photoSizes"
+                :priority="$priority"
+                class="transition-transform duration-(--duration-slow) ease-out motion-safe:group-hover/card:scale-105"
+            />
+        @elseif (filled($photo))
             <img
                 src="{{ $photo }}"
                 alt="{{ $photoAlt ?? __('ui_domain.animal_card.photo_alt', ['name' => $name]) }}"
@@ -131,6 +152,7 @@
         <h{{ $level }} class="text-h4">
             <a
                 href="{{ $href }}"
+                @if ($navigate) wire:navigate.hover @endif
                 data-card-link
                 class="flex min-h-11 w-full items-center rounded-sm text-fg no-underline decoration-2 underline-offset-4 group-hover/card:underline after:absolute after:inset-0 after:rounded-card"
             >{{ $name }}</a>

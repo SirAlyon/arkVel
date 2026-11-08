@@ -2,6 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Models\Animal;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+uses(RefreshDatabase::class);
+
 /*
  | Componenti x-ui del gruppo "domain": animal-card (+ favorite, cta, skeleton),
  | organization-card, stat, section-heading, cta-band.
@@ -406,5 +413,26 @@ describe('styleguide page', function (): void {
             ->assertSee('Save Fido to favorites')
             ->assertSee('Browse the catalog')
             ->assertSee('Help us find a home for everyone');
+    });
+});
+
+describe('animal card with media (UI-6)', function (): void {
+    it('renders the photo through x-ui.picture with the card conversion and never the original', function (): void {
+        Storage::fake('public');
+        $animal = Animal::factory()->create(['name' => 'Fido']);
+        $media = $animal->addMedia(UploadedFile::fake()->image('fido.jpg', 1200, 1500))->toMediaCollection('photos');
+
+        $html = (string) $this->blade('<x-ui.animal-card name="Fido" href="/animali/fido" :media="$media" priority />', ['media' => $media->fresh()]);
+
+        expect($html)->toContain('fido-card')
+            ->toContain('fetchpriority="high"')
+            ->toContain('alt="Foto di Fido"')
+            ->toContain('wire:navigate.hover')
+            ->not->toContain('/fido.jpg"');
+    });
+
+    it('can opt out of wire:navigate', function (): void {
+        $this->blade('<x-ui.animal-card name="Fido" href="/animali/fido" :navigate="false" />')
+            ->assertDontSee('wire:navigate', escape: false);
     });
 });
