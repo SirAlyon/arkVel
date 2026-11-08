@@ -99,6 +99,11 @@ final class ContrastPairs
                 ['focus', 'canvas'],
                 ['focus', 'surface'],
                 ['focus', 'surface-raised'],
+                // Controlli di modulo selezionati (checkbox, radio, switch acceso).
+                ['primary', 'canvas'],
+                ['primary', 'surface'],
+                // Link nel riepilogo degli errori di un modulo (fondo danger-subtle).
+                ['focus', 'danger-subtle'],
                 ...array_map(
                     static fn (string $background, string $focus): array => [$focus, $background],
                     array_keys(self::focusScopes()),

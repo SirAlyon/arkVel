@@ -11,7 +11,7 @@
     $badges = ['neutral', 'primary', 'highlight', 'stamp', 'success', 'warning', 'danger', 'info'];
     $badgeIcons = ['success' => 'circle-check', 'warning' => 'triangle-alert', 'danger' => 'circle-x', 'info' => 'info'];
 @endphp
-<x-styleguide.layout :title="__('styleguide.groups.actions.title').' — '.__('styleguide.title')" current="actions">
+<x-styleguide.layout :title="__('styleguide.page_title', ['group' => __('styleguide.groups.actions.title'), 'styleguide' => __('styleguide.title')])" current="actions">
     <div class="flex flex-col gap-3 pt-4 md:pt-8">
         <h1 class="text-h1">{{ __('styleguide.groups.actions.title') }}</h1>
         <p class="max-w-2xl text-lead text-fg-muted">{{ __('styleguide.groups.actions.intro') }}</p>

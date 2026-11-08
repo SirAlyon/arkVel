@@ -9,12 +9,12 @@ declare(strict_types=1);
 return [
     'icon' => [
         'title' => 'Icon',
-        'description' => 'Stroked Lucide icons in the text colour. Never emoji.',
+        'description' => 'Stroked Lucide icons in the text color. Never emoji.',
         'a11y_decorative' => 'Decorative by default (aria-hidden): the action is named by the nearby text or by the control’s aria-label.',
         'a11y_label' => 'With a label it becomes a named image (role="img"), only when the icon carries information on its own.',
         'sizes' => 'Sizes',
         'set' => 'Recurring icons',
-        'labelled' => 'Named icon',
+        'labeled' => 'Named icon',
         'verified' => 'Verified organization',
         'labelled_hint' => 'Screen readers announce “Verified organization”.',
     ],
@@ -22,7 +22,7 @@ return [
     'button' => [
         'title' => 'Button',
         'description' => 'Pill, 700 text. With href it becomes a link that looks the same. The spinner appears on its own when Livewire sets data-loading on the button that started the request.',
-        'a11y_target' => 'At least a 44 px target in every size; 3 px focus ring, which takes the block text colour on coloured blocks.',
+        'a11y_target' => 'At least a 44 px target in every size; 3 px focus ring, which takes the block text color on coloured blocks.',
         'a11y_icon_only' => 'Icon only: the label is required and becomes the accessible name.',
         'a11y_loading' => 'Loading: aria-busy, disabled, and the spinner announces “Loading”.',
         'a11y_link' => 'Disabled link: no href and aria-disabled, so it leaves the tab order.',
@@ -40,7 +40,7 @@ return [
         'search' => 'Search',
         'next' => 'Next',
         'close' => 'Close',
-        'favorite' => 'Add to favourites',
+        'favorite' => 'Add to favorites',
         'states' => 'States',
         'disabled' => 'Disabled',
         'save' => 'Save',
@@ -56,12 +56,12 @@ return [
 
     'link' => [
         'title' => 'Link',
-        'description' => 'Links in text: underlined and bold, link colour.',
-        'a11y_underline' => 'Always underlined: they are not recognised by colour alone.',
+        'description' => 'Links in text: underlined and bold, link color.',
+        'a11y_underline' => 'Always underlined: they are not recognized by color alone.',
         'a11y_external' => 'External: icon and hidden text “(opens in a new tab)”.',
         'inline' => 'In text',
         'sentence_before' => 'Found the one for you already? Browse',
-        'catalog' => 'the animal catalogue',
+        'catalog' => 'the animal catalog',
         'sentence_after' => 'and apply in a few steps.',
         'external_title' => 'External',
         'inherit' => 'On coloured blocks',

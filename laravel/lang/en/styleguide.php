@@ -13,6 +13,7 @@ return [
     'language' => 'Language',
     'toc' => 'Sections',
 
+    'page_title' => ':group — :styleguide',
     'pages' => 'Styleguide pages',
     'tokens' => 'Tokens',
     'a11y' => 'Accessibility',

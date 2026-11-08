@@ -13,6 +13,7 @@ return [
     'language' => 'Lingua',
     'toc' => 'Sezioni',
 
+    'page_title' => ':group — :styleguide',
     'pages' => 'Pagine della styleguide',
     'tokens' => 'Token',
     'a11y' => 'Accessibilità',
