@@ -4,7 +4,7 @@
 > open-source / gratuito**. I pannelli Filament (`/account`, `/manage`, `/admin`) **non si toccano**,
 > con un'unica eccezione concordata: lo spostamento di login/registrazione adottante (fase UI-5).
 >
-> Stato: proposta approvata il 2026-11-03. UI-0, UI-1, UI-2 e UI-3 completate. Ogni fase va lanciata in una chat nuova con il
+> Stato: proposta approvata il 2026-11-03. UI-0, UI-1, UI-2, UI-3 e UI-4 completate. Ogni fase va lanciata in una chat nuova con il
 > super-prompt in fondo al documento.
 
 ---
@@ -232,7 +232,7 @@ Mockup di riferimento: canvas "ArkVel — Direzioni visive", artboard **B · Pop
 > | Minor | Nessun selettore di lingua visibile (Major se UI-0 va in produzione prima di UI-3) | UI-3 ✅ |
 > | Minor | Echo/Reverb importato su ogni pagina ospite (errori WebSocket in console) → import dinamico solo dove serve | UI-3 ✅ il layout pubblico non carica più `app.js` (Echo serve solo ai pannelli) |
 > | Minor | Salto di titoli `h1` → `h3` nel catalogo; bottoni preferiti con nome identico | UI-2 ✅ `x-ui.animal-card` con `heading-level` e preferito «Salva <nome> nei preferiti» (anche il Livewire `FavoriteButton`); il catalogo adotta la card in UI-6b |
-> | Minor | Immagini senza `width`/`height`, foto della scheda = miniatura 400×300 ingrandita, `alt` della galleria tutti uguali | UI-4 |
+> | Minor | Immagini senza `width`/`height`, foto della scheda = miniatura 400×300 ingrandita, `alt` della galleria tutti uguali | UI-4 ✅ componenti pronti (`x-ui.picture`, `x-ui.gallery` con alt per foto); le pagine li adottano in UI-6 |
 > | Nit | Mancano `Vary: Accept-Language` e `Content-Language` | UI-8 (prima di qualsiasi cache o CDN) |
 > | Nit | Suffisso " — ArkVel" hard-coded in `AnimalDetail` e `OrganizationPage` → `public.titles.*` | UI-3 ✅ (`seo.titles.*`) |
 > | Nit | Ricerca del catalogo senza label visibile | UI-6b |
@@ -568,6 +568,58 @@ Elenco originale della fase:
   da valutare, `BreadcrumbList`), sitemap, breadcrumb.
 
 ### UI-4 · Pipeline immagini
+
+> **Stato: completata il 2026-11-08** (branch `feat/ui-4-images`, partito da `feat/ui-3-shell`;
+> 2039 test, browser 123/123). Componenti e pipeline pronti; **l'adozione nelle pagine è in UI-6**.
+>
+> **Cosa è stato fatto:**
+> - **Conversioni** (`App\Enums\ImageConversion`, `App\Support\Media\ImageConversions`): `card`
+>   800×1000 (4:5), `hero` 1536×1024 (3:2: proporzione nativa delle fotocamere, ritaglia meno un
+>   animale), `og` 1200×630 JPEG, `zoom` (fino a 2048 px, per la lightbox: senza, si caricherebbe
+>   l'originale). Ognuna in JPEG + `-webp` + `-avif` se GD li supporta (il nome semplice è sempre
+>   JPEG), tutte in coda con responsive images e placeholder (`og` senza). `thumb` invariata e
+>   sincrona (la usano Filament e le pagine legacy).
+> - **Docker:** GD con `libwebp` e `libavif`. Senza, i formati non vengono registrati e resta il JPEG.
+> - **Privacy:** al caricamento l'originale delle foto (`photos`, `avatar` di `Animal`, contratto
+>   `CleansImageMetadata`) viene ricodificato senza EXIF/GPS (`StripImageMetadata`, sincrono,
+>   prima delle conversioni, idempotente, in caso di errore logga e non blocca l'upload). Il
+>   markup non usa mai l'URL dell'originale: finché le conversioni sono in coda si mostra la
+>   `thumb` con le proporzioni del preset. Non coperti: gli allegati di `MedicalRecord`.
+> - **`x-ui.picture`:** `Media`, oggetto `Picture` o URL statici; `<source>` AVIF/WebP, `srcset`/
+>   `sizes`, `width`/`height`, `loading=lazy` o `priority` (`fetchpriority=high`), placeholder come
+>   sfondo CSS, `alt` obbligatorio (o `decorative`), fallback con la zampa.
+> - **`x-ui.gallery`:** Embla Carousel 8.6 e PhotoSwipe 5.4 (MIT) con import dinamico (Embla solo
+>   con più foto, il core di PhotoSwipe solo all'apertura); slide fuori vista `inert`, «n di N»,
+>   bottoni e miniature (`thumb`), frecce, lightbox modale con ritorno del focus, alt per foto
+>   (proprietà `alt` del media o «Foto n di N di <nome>»), reduced-motion anche nello swipe;
+>   senza JS è una lista scorrevole.
+> - **Comando** `php artisan arkvel:media:regenerate` (`--model`, `--collection`, `--conversion`,
+>   `--only-missing`, `--dry-run`, `--force`) sopra l'Action `RegenerateImageConversions`. Va
+>   rilanciato dopo un cambio di driver, librerie o conversioni, a coda vuota.
+> - **SEO:** `og:image` dalla conversione `og`, con `thumb` finché è in coda.
+> - **Styleguide:** `/_styleguide/media` con immagini d'esempio statiche.
+>
+> **Note per UI-6 (integrazione):**
+> - card: `<x-ui.picture :media="$animal->getFirstMedia('photos') ?? $animal->getFirstMedia('avatar')"
+>   conversion="card" fill :alt="…" sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" />`
+>   nel box 4:5; `x-ui.animal-card` accetta un `Media`; nelle query del catalogo `with('media')`;
+> - scheda: `<x-ui.gallery :media="$animal->getMedia('photos')" :name="$animal->name" priority
+>   sizes="(min-width: 1024px) 60vw, 100vw" />`;
+> - dopo il deploy: `php artisan arkvel:media:regenerate --only-missing`.
+>
+> **Esito della review degli standard (2026-11-08):** corretti prima del commit l'originale con
+> EXIF/GPS usato come fallback e nel link senza JS, `og` generata ma non usata, ordine dei formati
+> (il JPEG ora viene generato per primo), miniature sovradimensionate, `Fit::Crop` sulla thumb
+> (ora `Fit::Max`, niente ingrandimenti), stato globale nella galleria, reduced-motion nello swipe.
+>
+> **Aperti:**
+>
+> | Gravità | Punto | Fase |
+> |---|---|---|
+> | Minor | Un `PerformConversionsJob` su una foto da 12 MP dura 6–12 s (AVIF): serve una coda `media` dedicata (`MEDIA_QUEUE`) con `--timeout=300` e `retry_after` più alto, oppure almeno `--timeout=120` sul worker unico (`docker-compose.yml`, deploy) | UI-8 |
+> | Minor | `card`/`hero`/`og` ritagliano e possono ingrandire foto piccole: valutare una risoluzione minima all'upload in `AnimalForm` (Filament: va concordato) | UI-8 |
+> | Nit | `--only-missing` lanciato con job ancora in coda può accodarli due volte (innocuo) | — |
+> | Nit | Allegati delle schede mediche (`MedicalRecord`) non ripuliti dai metadati | UI-8 |
 - Conversioni medialibrary: `card` (4:5), `hero` (16:9 / 3:2), `og` (1200×630), WebP + AVIF,
   `withResponsiveImages()` (placeholder sfocato incluso), tutte in coda.
 - Componente `x-ui.picture`: `srcset`/`sizes`, `fetchpriority="high"` per l'immagine LCP,
