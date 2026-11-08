@@ -9,6 +9,9 @@ RUN apk add --no-cache \
     icu-dev icu-libs icu-data-full \
     libzip-dev \
     libpng-dev libjpeg-turbo-dev freetype-dev \
+    # libwebp/libavif: GD scrive e legge WebP e AVIF (conversioni medialibrary di UI-4).
+    # Senza, gd_info() non ha WebP né AVIF e le conversioni restano in JPEG.
+    libwebp-dev libavif-dev \
     postgresql-dev \
     oniguruma-dev \
     linux-headers \
@@ -16,7 +19,7 @@ RUN apk add --no-cache \
     nodejs npm
 
 # PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp --with-avif \
     && docker-php-ext-install -j"$(nproc)" \
         pdo pdo_pgsql pgsql \
         intl gd zip bcmath exif pcntl opcache sockets \

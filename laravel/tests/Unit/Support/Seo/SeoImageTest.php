@@ -37,6 +37,19 @@ it('falls back to the avatar', function (): void {
     expect(app(SeoImage::class)->forAnimal($animal->fresh()))->toContain('avatar-'.SeoImage::CONVERSIONS[0]);
 });
 
+it('prefers the 1200×630 og conversion and falls back to thumb while it is queued', function (): void {
+    $animal = Animal::factory()->create();
+    $media = $animal->addMedia(UploadedFile::fake()->image('argo.jpg', 1600, 1200))->toMediaCollection('photos');
+
+    $media->generated_conversions = ['thumb' => true, 'og' => true];
+    $media->save();
+    expect(app(SeoImage::class)->forAnimal($animal->fresh()))->toContain('argo-og');
+
+    $media->generated_conversions = ['thumb' => true];
+    $media->save();
+    expect(app(SeoImage::class)->forAnimal($animal->fresh()))->toContain('argo-thumb');
+});
+
 it('never points to a conversion that has not been generated yet', function (): void {
     $animal = Animal::factory()->create();
     $media = $animal->addMedia(UploadedFile::fake()->image('argo.jpg'))->toMediaCollection('photos');

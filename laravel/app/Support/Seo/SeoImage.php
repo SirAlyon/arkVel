@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Seo;
 
+use App\Enums\ImageConversion;
 use App\Models\Animal;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -11,11 +12,10 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 /**
  * Immagine di condivisione (og:image, twitter:image, JSON-LD) di una pagina.
  *
- * PUNTO UNICO da aggiornare in UI-4: {@see self::CONVERSIONS} elenca le conversioni
- * medialibrary in ordine di preferenza e vince la prima GIÀ GENERATA. Oggi c'è solo
- * `thumb` (400×400 contain, sincrona, la stessa della copertina della scheda); UI-4
- * aggiungerà `og` (1200×630) in testa. Poiché `og` sarà in coda, finché il worker non
- * l'ha prodotta si ripiega su `thumb` invece di pubblicare un URL che non esiste.
+ * {@see self::CONVERSIONS} elenca le conversioni medialibrary in ordine di preferenza e
+ * vince la prima GIÀ GENERATA: `og` (1200×630 JPEG, UI-4) e, finché il worker non l'ha
+ * prodotta (è in coda), `thumb` (sincrona, sempre pronta), invece di pubblicare un URL che
+ * non esiste. Mai il file originale: può contenere metadati (vedi StripImageMetadata).
  *
  * L'URL pubblicato è sempre un URI assoluto valido: i nomi dei file possono contenere
  * caratteri non ASCII (es. «perché.jpg»), che il disco non codifica; qui vengono
@@ -27,7 +27,7 @@ final readonly class SeoImage
     /**
      * @var list<string>
      */
-    public const array CONVERSIONS = ['thumb'];
+    public const array CONVERSIONS = [ImageConversion::Og->value, 'thumb'];
 
     public function __construct(
         private UrlGenerator $url,
