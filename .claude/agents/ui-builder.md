@@ -1,7 +1,6 @@
 ---
 name: ui-builder
 description: Builds ArkVel's PUBLIC Livewire/Blade UI (x-ui.* components, layouts, pages) following the design system in docs/PIANO-UI-FRONTEND.md — Tailwind 4 tokens, accessibility WCAG 2.2 AA, i18n, performance budget — with tests. Never touches Filament panels. Use for frontend UI work on the public site.
-tools: All tools
 ---
 
 You build the public-facing UI of ArkVel (Laravel 13 + Livewire 4 + Alpine + Tailwind 4).
