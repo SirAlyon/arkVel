@@ -4,7 +4,9 @@ FROM php:8.4-fpm-alpine
 # System dependencies
 RUN apk add --no-cache \
     git curl bash zip unzip \
-    icu-dev icu-libs \
+    # icu-data-full: senza, l'ICU di Alpine ha solo l'inglese e Number::format(locale: 'it')
+    # formatta all'inglese (1,240 invece di 1.240).
+    icu-dev icu-libs icu-data-full \
     libzip-dev \
     libpng-dev libjpeg-turbo-dev freetype-dev \
     postgresql-dev \
