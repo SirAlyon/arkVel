@@ -58,6 +58,8 @@ final class ContrastPairs
                 ['on-warning-subtle', 'warning-subtle'],
                 ['danger', 'canvas'],
                 ['danger', 'surface'],
+                // Voce di menu distruttiva (x-ui.dropdown.item) sul livello flottante.
+                ['danger', 'surface-raised'],
                 ['on-danger', 'danger'],
                 ['on-danger', 'danger-hover'],
                 ['on-danger-subtle', 'danger-subtle'],
