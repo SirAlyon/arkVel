@@ -66,6 +66,36 @@ it('moves between tabs with arrows, Home and End, selecting on focus', function 
         ->assertAttribute($tab('about'), 'aria-selected', 'true');
 });
 
+it('keeps the active tab in view inside the scrolling list on narrow screens', function (string $device): void {
+    $tab = static fn (string $name): string => '[data-demo="tabs"] [data-tab="'.$name.'"]';
+    // La scheda sta per intero nell'area visibile della lista scorrevole.
+    $inView = static fn (string $name): string => '(() => { const tab = document.querySelector('.json_encode($tab($name), JSON_THROW_ON_ERROR).'); const area = tab.closest("[data-tabs-scroller]").getBoundingClientRect(); const box = tab.getBoundingClientRect(); return box.left >= area.left - 1 && box.right <= area.right + 1; })()';
+    $scroller = "document.querySelector('[data-demo=\"tabs\"] [data-tabs-scroller]')";
+
+    $page = visit(route('styleguide.group', 'content'))->withLocale('it-IT')->on()->{$device}()
+        ->assertScript("{$scroller}.scrollWidth > {$scroller}.clientWidth", true)
+        ->assertScript($inView('about'), true)
+        ->assertScript($inView('meet'), false)
+        ->keys($tab('about'), ['End'])
+        ->assertScript(BrowserScripts::activeElement('data-tab'), 'meet')
+        ->assertScript($inView('meet'), true)
+        ->keys($tab('meet'), ['ArrowRight'])
+        ->assertScript(BrowserScripts::activeElement('data-tab'), 'about')
+        ->assertScript($inView('about'), true)
+        ->keys($tab('about'), ['ArrowLeft'])
+        ->assertScript($inView('meet'), true)
+        ->keys($tab('meet'), ['ArrowLeft'])
+        ->assertScript($inView('documents'), true);
+
+    // Scheda scelta dal modello (x-model / wire:model): portata in vista nella lista, senza
+    // far scorrere la pagina in verticale.
+    $page->keys($tab('documents'), ['Home'])
+        ->assertScript($inView('about'), true)
+        ->assertScript('function () { const before = window.scrollY; const root = document.querySelector(\'[data-demo="tabs"]\'); window.Alpine.$data(root).selected = "meet"; return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve(window.scrollY === before)))); }', true)
+        ->assertAttribute($tab('meet'), 'aria-selected', 'true')
+        ->assertScript($inView('meet'), true);
+})->with(['mobile', 'iPhoneSE']);
+
 it('reaches the tab panel with Tab and selects tabs on click', function (): void {
     visit(route('styleguide.group', 'content'))->withLocale('it-IT')
         ->keys('[data-demo="tabs"] [data-tab="about"]', ['Tab'])
@@ -151,6 +181,30 @@ it('falls back to named initials when an avatar photo fails to load', function (
             }
             JS, [true, 'img', 'Maria Rossi', 'MR'])
         ->assertSeeIn('[data-demo="avatar-group"] [data-avatar-more]', 'e altri 3');
+});
+
+it('does not cover the initials of the avatars in a group', function (): void {
+    // Per ogni avatar a iniziali di un gruppo (salvo l'ultimo): le iniziali finiscono prima
+    // dell'avatar seguente e del suo anello (ring-2), che gli si sovrappone a destra.
+    $clipped = <<<'JS'
+        [...document.querySelectorAll('[data-avatar-group]')].flatMap((group) => {
+            const items = [...group.children];
+            return items.slice(0, -1).filter((item, index) => {
+                const initials = item.querySelector('[data-avatar-initials]');
+                if (!initials || item.querySelector('img:not([hidden])') || !initials.checkVisibility()) {
+                    return false;
+                }
+                const next = items[index + 1].firstElementChild.getBoundingClientRect();
+                return initials.getBoundingClientRect().right > next.left - 2;
+            }).map((item) => item.querySelector('[data-avatar-initials]').textContent.trim());
+        })
+        JS;
+
+    visit(route('styleguide.group', 'content'))->withLocale('it-IT')
+        ->assertScript($clipped, []);
+
+    visit(route('styleguide.group', 'content'))->withLocale('it-IT')->on()->mobile()
+        ->assertScript($clipped, []);
 });
 
 it('keeps initials avatars distinct from the background they sit on, in light and dark mode', function (): void {

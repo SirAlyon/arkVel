@@ -49,6 +49,10 @@
             @foreach ($variants as $variant)
                 <x-ui.button :variant="$variant">{{ $t('button.variant_'.$variant) }}</x-ui.button>
             @endforeach
+            <p class="flex w-full items-start gap-2 text-small text-fg-muted" data-demo="button-yellow-note">
+                <x-ui.icon name="info" size="sm" class="mt-0.5" />
+                <span>{{ $t('button.yellow_note') }}</span>
+            </p>
         </x-styleguide.example>
 
         <x-styleguide.example :title="$t('button.sizes')">

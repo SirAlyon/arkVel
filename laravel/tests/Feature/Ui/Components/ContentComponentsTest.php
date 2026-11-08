@@ -285,7 +285,8 @@ describe('avatar group', function (): void {
             ->assertSee('<span aria-hidden="true">+2</span>', escape: false)
             ->assertSee('e altri 2')
             ->assertDontSee('persone')
-            ->assertSee('ring-3 ring-canvas', escape: false)
+            ->assertSee('ring-2 ring-canvas', escape: false)
+            ->assertSee('-space-x-2', escape: false)
             ->assertSee('bg-inverse', escape: false);
     });
 
@@ -293,8 +294,8 @@ describe('avatar group', function (): void {
         $this->blade('<x-ui.avatar.group :people="$people" :total="5" ring="surface" size="sm" />', ['people' => $people])
             ->assertSee('data-avatar-more="1"', escape: false)
             ->assertSee('e un altro')
-            ->assertSee('ring-3 ring-surface', escape: false)
-            ->assertSee('-space-x-2', escape: false);
+            ->assertSee('ring-2 ring-surface', escape: false)
+            ->assertSee('-space-x-1', escape: false);
     });
 
     it('shows no bubble when everyone fits', function () use ($people): void {

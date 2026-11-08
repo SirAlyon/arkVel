@@ -143,6 +143,13 @@ describe('drawer', function (): void {
             ->assertSee('data-drawer-footer', escape: false);
     });
 
+    it('lets the footer buttons grow and wrap as whole buttons', function (): void {
+        // Regressione: con flex-1 sul bottone il testo andava a capo dentro la pill.
+        $this->blade('<x-ui.drawer title="Filtri"><x-slot:footer><x-ui.button>Applica</x-ui.button></x-slot:footer></x-ui.drawer>')
+            ->assertSee('flex flex-wrap gap-3', escape: false)
+            ->assertSee('*:shrink *:grow', escape: false);
+    });
+
     it('marks the sticky header and footer, and carries a toast outlet', function (): void {
         $this->blade('<x-ui.drawer title="Filtri"><x-slot:footer><x-ui.button>Applica</x-ui.button></x-slot:footer></x-ui.drawer>')
             ->assertSeeInOrder(['<dialog', 'data-sticky="top"', 'data-sticky="bottom"', 'data-toaster-outlet', '</dialog>'], escape: false);
@@ -310,6 +317,7 @@ describe('toaster', function (): void {
             ->assertSee('x-text="speaks ? $store.toasts.assertive : \'\'"', escape: false)
             ->assertSee('x-for="toast in (speaks ? $store.toasts.items : [])"', escape: false)
             ->assertSee('x-on:focusin="entered($event)"', escape: false)
+            ->assertSee('x-on:keydown.escape="escapeToast($event)"', escape: false)
             ->assertSee('fixed inset-x-0 bottom-0', escape: false)
             ->assertSee('sm:right-0', escape: false);
     });

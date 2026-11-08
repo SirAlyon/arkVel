@@ -49,6 +49,16 @@ function overlaysDispatchToast(array $detail): string
     return "function () { window.dispatchEvent(new CustomEvent('toast', { detail: ".json_encode($detail, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE).' })); return true; }';
 }
 
+/**
+ * Lancia più toast, nell'ordine, in un solo script.
+ *
+ * @param  list<array<string, mixed>>  $toasts
+ */
+function overlaysDispatchToasts(array $toasts): string
+{
+    return 'function () { '.json_encode($toasts, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE).".forEach((detail) => window.dispatchEvent(new CustomEvent('toast', { detail }))); return true; }";
+}
+
 /** Il centro dell'elemento, al clic, colpisce proprio lui: è sopra a tutto e non è inerte. */
 function overlaysOnTop(string $selector): string
 {
@@ -320,8 +330,9 @@ it('shows, announces and dismisses toasts above an open dialog', function (): vo
         ->assertAttribute($dialog.' [data-toaster-status]', 'role', 'status')
         ->assertScript(overlaysEventually(overlaysOnTop($dialog.' [data-toast][data-type="success"] [data-toast-close]')), true)
         ->assertScript('function () { const button = '.overlaysQuery($dialog.' [data-toast] [data-toast-close]').'; button.focus(); return document.activeElement === button; }', true)
-        // Chiuso il dialog, il toast ancora attivo torna nel toaster della pagina.
-        ->keys(':focus', ['Escape'])
+        // Chiuso il dialog (Esc da un suo controllo: sul toast Esc chiuderebbe il toast), il
+        // toast ancora attivo torna nel toaster della pagina.
+        ->keys($dialog.' [data-demo="dialog-cancel"]', ['Escape'])
         ->assertScript(overlaysEventually("document.activeElement?.dataset.demo === 'dialog-open'"), true)
         ->assertScript(overlaysEventually("document.querySelectorAll('[data-toaster] [data-toast]').length === 1"), true)
         ->assertScript(overlaysQuery($dialog.' [data-toaster-status]').'.textContent', '');
@@ -355,3 +366,114 @@ it('moves focus to the next control when a static toast is dismissed', function 
         ->assertScript('document.activeElement !== document.body && document.activeElement.checkVisibility()', true)
         ->assertScript('document.activeElement.closest(\'[data-toast]\') === null', true);
 });
+
+/**
+ | Prepara il caso WCAG 2.4.11 con la pila dei toast aperta: sceglie un elemento
+ | focalizzabile `cur` della pagina (a metà, o l'ultimo prima del toaster con `$last`) e
+ | quello che lo precede, `prev`; fa scorrere la pagina perché `cur` finisca sotto la pila
+ | (a metà) o in fondo alla pagina, mette il focus su `prev` e marca `cur` con
+ | data-under-toasts. Restituisce true se `cur` è davvero coperto e `prev` no: il Tab
+ | successivo porta il focus su un elemento sotto i toast.
+ */
+function overlaysPlaceUnderToasts(bool $last = false): string
+{
+    $mode = $last ? 'true' : 'false';
+
+    return <<<JS
+        function () {
+            const list = document.querySelector('[data-toaster] [data-toaster-list]');
+            const covers = (element) => { const area = list.getBoundingClientRect(); const box = element.getBoundingClientRect(); return area.height > 0 && box.bottom > area.top && box.top < area.bottom && box.right > area.left && box.left < area.right; };
+            const focusables = [...document.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select, textarea, summary, [tabindex="0"]')]
+                .filter((element) => !element.closest('[data-toaster], dialog, [inert]') && element.getAttribute('tabindex') !== '-1' && element.checkVisibility() && element.getBoundingClientRect().height > 0);
+            const scrollBy = (top) => window.scrollTo({ top: window.scrollY + top, behavior: 'instant' });
+            let index;
+            if ({$mode}) {
+                index = focusables.length - 1;
+                window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+            } else {
+                index = focusables.findIndex((element, position) => position > 0 && element.getBoundingClientRect().top + window.scrollY > window.innerHeight
+                    && element.getBoundingClientRect().top - focusables[position - 1].getBoundingClientRect().bottom > 16);
+                scrollBy(focusables[index].getBoundingClientRect().top - (list.getBoundingClientRect().top + 4));
+            }
+            const cur = focusables[index];
+            const prev = focusables[index - 1];
+            document.querySelectorAll('[data-under-toasts]').forEach((element) => element.removeAttribute('data-under-toasts'));
+            cur.setAttribute('data-under-toasts', '');
+            prev.focus({ preventScroll: true });
+            return document.activeElement === prev && covers(cur) && !covers(prev);
+        }
+        JS;
+}
+
+/** L'elemento con il focus è quello marcato e non interseca la pila dei toast. */
+function overlaysFocusUncovered(): string
+{
+    return "(() => { const target = document.activeElement; if (!target?.hasAttribute('data-under-toasts')) { return false; } const area = document.querySelector('[data-toaster] [data-toaster-list]').getBoundingClientRect(); const box = target.getBoundingClientRect(); return area.height > 0 && !(box.bottom > area.top && box.top < area.bottom && box.right > area.left && box.left < area.right); })()";
+}
+
+it('keeps the element with keyboard focus out from under the toasts on mobile', function (bool $last): void {
+    $toasts = array_map(
+        static fn (int $number): array => ['type' => 'warning', 'title' => 'Promemoria '.$number, 'description' => 'Controlla i documenti della richiesta di adozione.', 'duration' => 0],
+        range(1, 4),
+    );
+
+    visit(route('styleguide.group', 'overlays'))->withLocale('it-IT')->on()->mobile()
+        ->assertScript(overlaysDispatchToasts($toasts), true)
+        // Sotto i 640 px restano al massimo 2 toast: i più vecchi si chiudono.
+        ->assertScript(overlaysEventually("document.querySelectorAll('[data-toaster] [data-toast]').length === 2"), true)
+        ->assertDontSeeIn('[data-toaster]', 'Promemoria 1')
+        ->assertDontSeeIn('[data-toaster]', 'Promemoria 2')
+        ->assertScript(overlaysPlaceUnderToasts($last), true)
+        ->keys(':focus', ['Tab'])
+        ->assertScript(overlaysEventually(overlaysFocusUncovered()), true);
+})->with([
+    'in the middle of the page' => [false],
+    'at the end of the page' => [true],
+]);
+
+it('keeps up to 5 toasts stacked on wide screens', function (): void {
+    $toasts = array_map(static fn (int $number): array => ['type' => 'info', 'title' => 'Notifica '.$number, 'duration' => 0], range(1, 6));
+
+    visit(route('styleguide.group', 'overlays'))->withLocale('it-IT')
+        ->assertScript(overlaysDispatchToasts($toasts), true)
+        ->assertScript(overlaysEventually("document.querySelectorAll('[data-toaster] [data-toast]').length === 5"), true)
+        ->assertDontSeeIn('[data-toaster]', 'Notifica 1');
+});
+
+it('closes the focused toast with Escape, except errors', function (): void {
+    visit(route('styleguide.group', 'overlays'))->withLocale('it-IT')
+        ->assertScript(overlaysDispatchToast(['type' => 'danger', 'title' => 'Pagamento non riuscito', 'duration' => 0]), true)
+        ->assertScript(overlaysDispatchToast(['type' => 'success', 'title' => 'Richiesta inviata', 'duration' => 0]), true)
+        ->assertScript(overlaysEventually("document.querySelectorAll('[data-toaster] [data-toast]').length === 2"), true)
+        ->keys('[data-toaster] [data-toast][data-type="success"] [data-toast-close]', ['Escape'])
+        ->assertScript(overlaysEventually("document.querySelectorAll('[data-toaster] [data-toast]').length === 1"), true)
+        // Il focus passa al toast rimasto, non si perde.
+        ->assertScript('document.activeElement?.closest(\'[data-toast]\')?.dataset.type', 'danger')
+        ->keys(':focus', ['Escape'])
+        ->assertScript('function () { return new Promise((resolve) => setTimeout(() => resolve(document.querySelectorAll(\'[data-toaster] [data-toast]\').length), 400)); }', 1);
+});
+
+it('closes a toast above a dialog with Escape and leaves the dialog open', function (): void {
+    $dialog = '[data-dialog="adoption-info"]';
+
+    visit(route('styleguide.group', 'overlays'))->withLocale('it-IT')
+        ->keys('[data-demo="dialog-open"]', ['Enter'])
+        ->assertScript(overlaysEventually(overlaysDialogSettled($dialog)), true)
+        ->assertScript(overlaysDispatchToast(['type' => 'success', 'title' => 'Richiesta inviata', 'duration' => 0]), true)
+        ->assertScript(overlaysEventually(overlaysOnTop($dialog.' [data-toast] [data-toast-close]')), true)
+        ->keys($dialog.' [data-toast] [data-toast-close]', ['Escape'])
+        ->assertScript(overlaysEventually("document.querySelectorAll('".$dialog." [data-toast]').length === 0"), true)
+        ->assertScript(overlaysDialogIsOpen($dialog), true);
+});
+
+it('keeps the drawer footer buttons on a single line of text', function (string $device): void {
+    $drawer = '[data-drawer="filters"]';
+    // Ogni bottone del footer è alto quanto il suo min-height (una riga di testo) e sta nel footer.
+    $tidy = '(() => { const footer = '.overlaysQuery($drawer.' [data-drawer-footer]').'.getBoundingClientRect(); return [...'.overlaysQuery($drawer.' [data-drawer-footer]').'.children].every((button) => { const box = button.getBoundingClientRect(); return box.height <= parseFloat(getComputedStyle(button).minHeight) + 1 && box.left >= footer.left && box.right <= footer.right; }); })()';
+
+    visit(route('styleguide.group', 'overlays'))->withLocale('it-IT')->on()->{$device}()
+        ->click('[data-demo="drawer-open"]')
+        ->assertScript(overlaysEventually(overlaysDialogSettled($drawer)), true)
+        ->assertScript($tidy, true)
+        ->assertScript(overlaysOnTop($drawer.' [data-demo="drawer-apply"]'), true);
+})->with(['desktop', 'mobile', 'iPhoneSE']);

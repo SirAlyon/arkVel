@@ -75,6 +75,18 @@ it('never uses yellow as a large dark-mode surface', function (): void {
     }
 });
 
+it('keeps the subtle status backgrounds distinct from the surfaces they sit on', function (string $theme): void {
+    // Badge e icone dei toast (bg-*-subtle) stanno su canvas, surface e surface-raised: con
+    // lo stesso colore del fondo il badge sparirebbe (es. info-subtle = surface in dark).
+    $sheet = designTokenSheet();
+
+    foreach (['success', 'warning', 'danger', 'info'] as $status) {
+        foreach (['canvas', 'surface', 'surface-raised'] as $surface) {
+            expect($sheet->hex("{$status}-subtle", $theme))->not->toBe($sheet->hex($surface, $theme), "{$status}-subtle su {$surface}");
+        }
+    }
+})->with(['light', 'dark']);
+
 it('redefines every semantic colour token for the dark theme', function (): void {
     $sheet = designTokenSheet();
     $semantic = array_filter(

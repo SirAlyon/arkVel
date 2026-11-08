@@ -353,7 +353,9 @@
         --color-danger-subtle: var(--color-cherry-950);
         --color-on-danger-subtle: var(--color-cherry-100);
         --color-info: var(--color-navy-300);
-        --color-info-subtle: var(--color-navy-800);
+        /* navy-600, non 800 (= surface) né 700 (= surface-raised): il badge info resta
+           visibile su ogni superficie; on-info-subtle (navy-100) ci sta sopra a ~6:1. */
+        --color-info-subtle: var(--color-navy-600);
         --color-on-info-subtle: var(--color-navy-100);
 
         --shadow-overlay: 0 1px 2px oklch(0% 0 0 / 0.3), 0 12px 32px -8px oklch(0% 0 0 / 0.55);

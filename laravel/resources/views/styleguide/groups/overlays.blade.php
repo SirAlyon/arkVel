@@ -127,7 +127,7 @@
 
                 <x-slot:footer>
                     <x-ui.button variant="ghost" icon="rotate-ccw" x-on:click="$dispatch('toast', {{ Js::from(['type' => 'info', 'title' => $t('drawer.reset_toast')]) }})" data-demo="drawer-reset">{{ $t('drawer.reset') }}</x-ui.button>
-                    <x-ui.button class="flex-1" x-on:click="close()" data-demo="drawer-apply">{{ $t('drawer.show_results') }}</x-ui.button>
+                    <x-ui.button x-on:click="close()" data-demo="drawer-apply">{{ $t('drawer.show_results') }}</x-ui.button>
                 </x-slot:footer>
             </x-ui.drawer>
         </x-styleguide.example>

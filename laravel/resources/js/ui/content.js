@@ -19,10 +19,41 @@ const targetIndex = (key, index, length, previous, next) => {
     return key in targets ? (targets[key] + length) % length : null;
 };
 
+/**
+ | Porta `tab` in vista nella sua lista scorrevole ([data-tabs-scroller]), con un margine
+ | per l'anello di focus. Agisce solo su scrollLeft del contenitore: la pagina non scorre
+ | in verticale (al caricamento, con una scheda scelta dal server o via x-model).
+ | scrollBy usa coordinate fisiche, quindi funziona anche in RTL.
+ */
+const revealTab = (tab) => {
+    const scroller = tab?.closest('[data-tabs-scroller]');
+
+    if (!scroller || scroller.scrollWidth <= scroller.clientWidth) {
+        return;
+    }
+
+    const margin = 8;
+    const area = scroller.getBoundingClientRect();
+    const box = tab.getBoundingClientRect();
+    let delta = 0;
+
+    if (box.left < area.left + margin) {
+        delta = box.left - area.left - margin;
+    } else if (box.right > area.right - margin) {
+        delta = box.right - area.right + margin;
+    }
+
+    if (delta !== 0) {
+        scroller.scrollBy({ left: delta, behavior: 'instant' });
+    }
+};
+
 document.addEventListener('alpine:init', () => {
     /*
      | Tabs (APG, attivazione automatica): `selected` è il nome della scheda attiva ed è
-     | x-modelable, quindi si lega a wire:model / x-model del componente.
+     | x-modelable, quindi si lega a wire:model / x-model del componente. La scheda attiva
+     | resta in vista nella lista scorrevole (revealTab): all'avvio e a ogni cambio, da
+     | tastiera, da clic o dal modello.
      */
     window.Alpine.data('uiTabs', (initial = null) => ({
         selected: initial,
@@ -33,6 +64,13 @@ document.addEventListener('alpine:init', () => {
             if (!names.includes(this.selected)) {
                 this.selected = names[0] ?? null;
             }
+
+            this.$watch('selected', () => this.$nextTick(() => this.reveal()));
+            this.$nextTick(() => this.reveal());
+        },
+
+        reveal() {
+            revealTab(this.tabs().find((tab) => tab.dataset.tab === this.selected));
         },
 
         tabs() {
@@ -62,7 +100,8 @@ document.addEventListener('alpine:init', () => {
             }
 
             event.preventDefault();
-            tabs[target].focus();
+            tabs[target].focus({ preventScroll: true });
+            revealTab(tabs[target]);
             this.select(tabs[target].dataset.tab);
         },
     }));

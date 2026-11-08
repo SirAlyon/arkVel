@@ -133,6 +133,24 @@ const toastRegion = () => ({
         }
     },
 
+    /**
+     | Esc con il focus su un toast lo chiude come il suo bottone (focus spostato), salvo
+     | gli errori (danger), che restano finché non li chiudi di proposito. Dentro un modale
+     | preventDefault() ferma anche la chiusura del dialog: Esc chiude solo il toast.
+     */
+    escapeToast(event) {
+        const toast = event.target.closest('[data-toast]');
+        const close = toast?.querySelector('[data-toast-close]');
+
+        if (!close || toast.dataset.type === 'danger' || toast.hasAttribute('data-leaving')) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        close.click();
+    },
+
     /** Chiusura dal bottone: il focus va al toast vicino o torna dove era prima. */
     closeToast(id, event) {
         const current = event.target.closest('[data-toast]');
@@ -499,7 +517,7 @@ document.addEventListener('alpine:init', () => {
         assertive: '',
         layers: [],
         messages: { types: {}, announcement: '', announcementShort: '' },
-        limit: 5,
+        limits: { mobile: 2, wide: 5 },
         durations: { success: 5000, info: 6000, warning: 8000, danger: 0 },
         paused: false,
         sequence: 0,
@@ -525,7 +543,7 @@ document.addEventListener('alpine:init', () => {
             this.items.push(toast);
 
             const active = this.items.filter((item) => !item.leaving);
-            active.slice(0, Math.max(0, active.length - this.limit)).forEach((item) => this.dismiss(item.id));
+            active.slice(0, Math.max(0, active.length - this.limit())).forEach((item) => this.dismiss(item.id));
 
             this.announce(toast);
 
@@ -547,6 +565,15 @@ document.addEventListener('alpine:init', () => {
             setTimeout(() => {
                 this[region] = text;
             }, 100);
+        },
+
+        /**
+         | Quanti toast restano impilati: sotto i 640 px la pila sta a tutta larghezza in
+         | fondo allo schermo e ne bastano pochi per coprire metà della pagina (WCAG 2.4.11):
+         | oltre il limite si chiudono i più vecchi.
+         */
+        limit() {
+            return window.matchMedia('(min-width: 40rem)').matches ? this.limits.wide : this.limits.mobile;
         },
 
         find(id) {
@@ -626,13 +653,25 @@ document.addEventListener('alpine:init', () => {
 
     /*
      | Regione dei toast della pagina (<x-ui.toaster>): pausa su hover/focus, ritorno del
-     | focus quando si chiude il toast che lo conteneva (toastRegion), scroll-padding in fondo
-     | alla pagina perché i toast non coprano l'elemento con il focus (WCAG 2.4.11, tecnica
-     | C43). Con un modale aperto tace e nasconde la lista: è inerte, parla l'outlet.
+     | focus quando si chiude il toast che lo conteneva (toastRegion). Con un modale aperto
+     | tace e nasconde la lista: è inerte, parla l'outlet.
+     |
+     | I toast non coprono l'elemento con il focus (WCAG 2.4.11, tecnica C43):
+     | - scroll-padding in fondo alla pagina, alto quanto la pila (ResizeObserver);
+     | - lo scroll-padding da solo non basta: il browser non scorre se l'elemento che riceve
+     |   il focus è già nella finestra, anche se sta sotto un toast. Un listener `focusin`
+     |   lo porta in vista (scrollIntoView rispetta lo scroll-padding) quando il suo
+     |   rettangolo interseca la pila; solo per il focus da tastiera (:focus-visible), il
+     |   clic non fa scorrere la pagina;
+     | - in fondo alla pagina non c'è abbastanza da scorrere: si aggiunge in coda uno spazio
+     |   (padding-bottom su <html>) alto quanto serve. Lo spazio se ne va quando la pila è
+     |   vuota e lui è fuori dalla finestra, così il contenuto non salta.
      */
     Alpine.data('uiToaster', ({ messages = {}, flash = null } = {}) => ({
         ...toastRegion(),
         observer: null,
+        onFocusIn: null,
+        onScroll: null,
 
         init() {
             const store = Alpine.store('toasts');
@@ -641,6 +680,9 @@ document.addEventListener('alpine:init', () => {
             this.observer = new ResizeObserver(() => this.reserveSpace());
             this.observer.observe(this.$refs.toastList);
 
+            this.onFocusIn = (event) => this.uncover(event.target);
+            document.addEventListener('focusin', this.onFocusIn);
+
             if (flash) {
                 this.$nextTick(() => store.add(flash));
             }
@@ -648,6 +690,8 @@ document.addEventListener('alpine:init', () => {
 
         destroy() {
             this.observer?.disconnect();
+            document.removeEventListener('focusin', this.onFocusIn);
+            this.dropSpacer(true);
             document.documentElement.style.scrollPaddingBottom = '';
         },
 
@@ -658,6 +702,56 @@ document.addEventListener('alpine:init', () => {
         reserveSpace() {
             const height = this.$refs.toastList.getBoundingClientRect().height;
             document.documentElement.style.scrollPaddingBottom = height > 0 ? `${Math.ceil(height) + 32}px` : '';
+
+            if (height === 0) {
+                this.dropSpacer();
+            }
+        },
+
+        /** Il rettangolo di `target` interseca la pila dei toast. */
+        covers(target) {
+            const list = this.$refs.toastList.getBoundingClientRect();
+            const box = target.getBoundingClientRect();
+
+            return list.height > 0 && box.bottom > list.top && box.top < list.bottom && box.right > list.left && box.left < list.right;
+        },
+
+        /** Porta in vista l'elemento che ha ricevuto il focus, se sta sotto i toast. */
+        uncover(target) {
+            if (!(target instanceof Element) || this.$refs.toastList.contains(target) || !target.matches(':focus-visible') || !this.covers(target)) {
+                return;
+            }
+
+            this.reserveSpace();
+            target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+
+            if (this.covers(target)) {
+                const missing = target.getBoundingClientRect().bottom - this.$refs.toastList.getBoundingClientRect().top + 16;
+                const root = document.documentElement;
+                root.style.paddingBottom = `${Math.ceil((Number.parseFloat(root.style.paddingBottom) || 0) + missing)}px`;
+                target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+            }
+        },
+
+        /** Toglie lo spazio in coda, ma solo quando non è in vista (o subito, con `now`). */
+        dropSpacer(now = false) {
+            const root = document.documentElement;
+            const spacer = Number.parseFloat(root.style.paddingBottom) || 0;
+
+            if (spacer === 0) {
+                return;
+            }
+
+            const hidden = root.scrollHeight - window.scrollY - window.innerHeight >= spacer;
+
+            if (now || hidden) {
+                root.style.paddingBottom = '';
+                window.removeEventListener('scroll', this.onScroll);
+                this.onScroll = null;
+            } else if (!this.onScroll) {
+                this.onScroll = () => this.$refs.toastList.getBoundingClientRect().height === 0 && this.dropSpacer();
+                window.addEventListener('scroll', this.onScroll, { passive: true });
+            }
         },
     }));
 

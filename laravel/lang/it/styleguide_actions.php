@@ -31,6 +31,7 @@ return [
         'variant_secondary' => 'Secondario',
         'variant_highlight' => 'In evidenza',
         'variant_ghost' => 'Discreto',
+        'yellow_note' => 'Nel tema scuro il bottone primario, quello in evidenza (highlight) e il badge timbro (stamp) diventano lo stesso giallo: in un gruppo di azioni usa un solo CTA giallo e affiancagli un secondario o un discreto (ghost).',
         'variant_danger' => 'Pericolo',
         'sizes' => 'Dimensioni',
         'size_sm' => 'Piccolo · 44',

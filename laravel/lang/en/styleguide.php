@@ -97,6 +97,7 @@ return [
     ],
 
     'contrast' => [
+        'table' => 'Contrast table',
         'intro' => 'Ratios computed by the browser for the active theme. Text needs at least 4.5:1; control borders and focus at least 3:1. ColorContrastTest checks the same pairs.',
         'pair' => 'Pair',
         'sample' => 'Sample',

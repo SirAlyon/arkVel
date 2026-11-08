@@ -97,6 +97,7 @@ return [
     ],
 
     'contrast' => [
+        'table' => 'Tabella dei contrasti',
         'intro' => 'Rapporti calcolati dal browser sul tema attivo. Testo almeno 4,5:1; bordi dei controlli e focus almeno 3:1. Le stesse coppie sono verificate dal test ColorContrastTest.',
         'pair' => 'Coppia',
         'sample' => 'Esempio',

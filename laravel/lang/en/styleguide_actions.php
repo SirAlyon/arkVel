@@ -31,6 +31,7 @@ return [
         'variant_secondary' => 'Secondary',
         'variant_highlight' => 'Highlight',
         'variant_ghost' => 'Ghost',
+        'yellow_note' => 'In dark mode the primary button, the highlight button and the stamp badge become the same yellow: use a single yellow CTA per group of actions and pair it with a secondary or ghost button.',
         'variant_danger' => 'Danger',
         'sizes' => 'Sizes',
         'size_sm' => 'Small · 44',

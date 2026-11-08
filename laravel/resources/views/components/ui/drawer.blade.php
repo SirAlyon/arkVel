@@ -9,7 +9,9 @@
  | - apertura: slot `trigger`, $dispatch('open-drawer', 'nome') / 'close-drawer', oppure
  |   x-model / wire:model booleano, come il dialog; `close()` lo chiude dall'interno;
  | - `title` (h2, aria-labelledby) e `description` (aria-describedby); intestazione e
- |   `footer` restano fissi (data-sticky), il contenuto scorre. Il <dialog> riserva la loro
+ |   `footer` restano fissi (data-sticky), il contenuto scorre. I bottoni del footer crescono
+ |   per riempire la riga e, se non ci stanno, vanno a capo a tutta larghezza (niente testo a
+ |   capo dentro la pill): non serve flex-1 sui singoli bottoni. Il <dialog> riserva la loro
  |   altezza con scroll-padding (misurata in uiDialog), così l'elemento con il focus non
  |   finisce sotto (WCAG 2.4.11);
  | - contenitore Alpine, trigger e <dialog> stanno in <x-ui.dialog.shell>, comune al
@@ -83,7 +85,11 @@
         <div class="flex flex-1 flex-col gap-4 px-6 pb-6" data-drawer-body>{{ $slot }}</div>
 
         @isset($footer)
-            <footer class="sticky bottom-0 flex flex-wrap gap-3 border-t-2 border-line bg-surface-raised p-6 pt-4" data-sticky="bottom" data-drawer-footer>{{ $footer }}</footer>
+            {{-- I bottoni crescono (*:grow) e stanno su una riga finché ci entrano con il testo su
+                 una riga sola; altrimenti vanno a capo, a tutta larghezza (pannello stretto, mobile).
+                 *:shrink toglie lo shrink-0 di x-ui.button: un'etichetta più larga del pannello va a
+                 capo dentro la pill invece di uscire dal bordo. --}}
+            <footer class="sticky bottom-0 flex flex-wrap gap-3 border-t-2 border-line bg-surface-raised p-6 pt-4 *:shrink *:grow" data-sticky="bottom" data-drawer-footer>{{ $footer }}</footer>
         @endisset
     </div>
 </x-ui.dialog.shell>

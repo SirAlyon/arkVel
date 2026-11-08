@@ -30,15 +30,17 @@
     $more = max(0, (int) ($total ?? count($people)) - count($shown));
 
     $rings = [
-        'canvas' => 'ring-3 ring-canvas',
-        'surface' => 'ring-3 ring-surface',
+        'canvas' => 'ring-2 ring-canvas',
+        'surface' => 'ring-2 ring-surface',
     ];
 
+    // Sovrapposizione + anello coprono il bordo destro dell'avatar precedente: restano
+    // sotto ~1/5 del diametro, così le iniziali (centrate) si leggono per intero.
     $overlaps = [
-        'sm' => '-space-x-2',
-        'md' => '-space-x-3',
-        'lg' => '-space-x-4',
-        'xl' => '-space-x-5',
+        'sm' => '-space-x-1',
+        'md' => '-space-x-2',
+        'lg' => '-space-x-3',
+        'xl' => '-space-x-4',
     ];
 
     $moreSizes = [

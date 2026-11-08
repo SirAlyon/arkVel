@@ -13,9 +13,11 @@
  |   danger, in due regioni live sempre presenti nella pagina; il testo segue gli schemi
  |   tradotti ui_overlays.toast.announcement(_short);
  | - chiusura automatica (danger resta finché non la chiudi), in pausa con il mouse sopra
- |   o con il focus dentro; bottone di chiusura tradotto; al massimo 5 toast impilati;
- | - in basso a destra, in basso al centro su mobile. Riserva scroll-padding in fondo alla
- |   pagina, così i toast non coprono l'elemento con il focus (WCAG 2.4.11);
+ |   o con il focus dentro; bottone di chiusura tradotto, ed Esc con il focus su un toast
+ |   (non danger); al massimo 5 toast impilati, 3 sotto i 640 px (i più vecchi si chiudono);
+ | - in basso a destra, in basso al centro su mobile. Non coprono l'elemento con il focus
+ |   (WCAG 2.4.11): scroll-padding in fondo alla pagina e, al focus da tastiera su un
+ |   elemento sotto la pila, scroll per portarlo in vista (vedi uiToaster);
  | - con un dialog o drawer aperto la pagina è inerte: annunci e lista passano all'outlet
  |   dentro il modale (<x-ui.toaster.outlet>), e qui la lista si svuota.
 --}}

@@ -34,6 +34,32 @@ it('renders the design tokens in the local environment', function (): void {
     expect(substr_count($response->getContent() ?: '', 'data-contrast="'))->toBe(count(ContrastPairs::all()));
 });
 
+it('names the scrolling contrast table apart from its section', function (string $locale, string $section, string $table): void {
+    styleguideInEnvironment('local');
+
+    // axe landmark-unique: la regione scorrevole e la section#contrast non condividono il nome.
+    $this->withSession(['locale' => $locale])
+        ->get(route('styleguide'))
+        ->assertOk()
+        ->assertSee('<h2 id="contrast-title" class="text-h2">'.$section.'</h2>', escape: false)
+        ->assertSee('role="region" aria-label="'.$table.'" data-contrast-region', escape: false);
+})->with([
+    'it' => ['it', 'Contrasti', 'Tabella dei contrasti'],
+    'en' => ['en', 'Contrast', 'Contrast table'],
+]);
+
+it('warns that the yellow buttons look the same in dark mode', function (string $locale, string $note): void {
+    styleguideInEnvironment('local');
+
+    $this->withSession(['locale' => $locale])
+        ->get(route('styleguide.group', 'actions'))
+        ->assertOk()
+        ->assertSeeInOrder(['id="button"', 'data-demo="button-yellow-note"', $note, 'id="link"'], escape: false);
+})->with([
+    'it' => ['it', 'in un gruppo di azioni usa un solo CTA giallo'],
+    'en' => ['en', 'use a single yellow CTA per group of actions'],
+]);
+
 it('is translated in English', function (): void {
     styleguideInEnvironment('local');
 

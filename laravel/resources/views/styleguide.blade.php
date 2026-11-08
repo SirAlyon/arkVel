@@ -212,7 +212,7 @@
                 <p class="max-w-2xl rounded-card bg-warning-subtle px-5 py-4 text-on-warning-subtle">{{ __('styleguide.contrast.forbidden') }}</p>
             </div>
 
-            <div class="overflow-x-auto rounded-card bg-surface p-2" tabindex="0" role="region" aria-label="{{ __('styleguide.sections.contrast') }}">
+            <div class="overflow-x-auto rounded-card bg-surface p-2" tabindex="0" role="region" aria-label="{{ __('styleguide.contrast.table') }}" data-contrast-region>
                 <table
                     class="w-full min-w-[40rem] border-separate border-spacing-y-1 text-left text-small"
                     data-contrast-table
