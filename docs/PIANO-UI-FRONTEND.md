@@ -4,7 +4,7 @@
 > open-source / gratuito**. I pannelli Filament (`/account`, `/manage`, `/admin`) **non si toccano**,
 > con un'unica eccezione concordata: lo spostamento di login/registrazione adottante (fase UI-5).
 >
-> Stato: proposta approvata il 2026-11-03. UI-0…UI-6 completate. Ogni fase va lanciata in una chat nuova con il
+> Stato: proposta approvata il 2026-11-03. UI-0…UI-7 completate. Ogni fase va lanciata in una chat nuova con il
 > super-prompt in fondo al documento.
 
 ---
@@ -747,8 +747,8 @@ Elenco originale della fase:
 > |---|---|---|
 > | Minor | Catalogo: cliccando un link di paginazione mentre `wire:intersect` sta ancora caricando la pagina successiva compaiono errori in console (drawer e toaster morfati a navigazione già partita) | UI-8 |
 > | Nit | Dopo «Carica altri» tutte le pagine caricate sono marcate `aria-current` nella paginazione | UI-8 |
-> | Nit | Transizione animata card → scheda non fatta (richiede `view-transition-name` per animale su card e galleria) | UI-7 |
-> | Nit | Le foto coprono il blocco colorato della card: lo «sfondo colorato» della direzione B si vede solo senza foto | UI-7 |
+> | Nit | Transizione animata card → scheda non fatta (richiede `view-transition-name` per animale su card e galleria) | UI-7 ✅ |
+> | Nit | Le foto coprono il blocco colorato della card: lo «sfondo colorato» della direzione B si vede solo senza foto | UI-7 ✅ cornice nel tono della card |
 > | Nit | Bianco su `block-leaf` in dark a 4,64:1: AA ma con poco margine | — |
 - **UI-6a Home:** hero a blocchi (bento) come da §1-bis, griglia di animali in evidenza con chip filtro,
   numeri chiave, "come funziona l'adozione" in 3-4 passi, storie di adozione (placeholder),
@@ -769,6 +769,50 @@ Elenco originale della fase:
   grazie/annulla curate.
 
 ### UI-7 · Motion, micro-interazioni e mappa
+
+> **Stato: completata il 2026-11-09** (branch `feat/ui-7-motion-map`, partito da `feat/ui-6-pages`;
+> 2593 test, browser 234/234). Motion e mappa costruiti in parallelo da due agenti, poi riviste
+> (standard + `/ui-review`) e corrette.
+>
+> **Mappa** (`maplibre-gl` 6, BSD-3; tile OpenFreeMap, stili `positron`/`fiord` configurabili con
+> `MAP_STYLE_LIGHT`/`MAP_STYLE_DARK`):
+> - catalogo con vista «Elenco / Mappa» (`?view=map`, nella cronologia): enti con animali che
+>   corrispondono ai filtri (`BuildCatalogMap`, stesse regole di visibilità del catalogo), marker e
+>   cluster come bottoni da 44 px nell'ordine dell'elenco, riquadro `dialog` sempre dentro la
+>   cornice, etichette nella lingua della pagina, Ctrl/⌘ + rotella o due dita per muovere la mappa,
+>   elenco alternativo sempre presente, fallback se le tile non arrivano; in vista mappa non si
+>   caricano griglia né preferiti;
+> - pagina ente: sezione «Dove si trova» con un cerchio sull'area approssimata;
+> - **privacy:** le coordinate degli enti sono pubblicate solo come centro di una cella di una
+>   griglia (`ApproximateLocation`, `MAP_GRID_DEGREES`, default 0,02° ≈ 2 km; raggio del cerchio
+>   1,6 km, che contiene sempre la posizione reale); mai indirizzo, CAP o coordinate esatte;
+> - **host esterno:** quando una mappa entra in vista il browser contatta `tiles.openfreemap.org`
+>   (vede IP e area consultata; niente chiavi, cookie o tracker). Va citato nell'informativa
+>   privacy; in produzione si può passare a tile self-hosted cambiando solo l'URL dello stile.
+> - Bug trovato in verifica manuale e corretto: `maplibre-gl.css` rimetteva il contenitore in
+>   `position: relative` (altezza 0, mappa invisibile pur «pronta»): c'è un test di regressione.
+>
+> **Motion:** `motion` 14 (MIT) solo come `motion/mini` per il cuore dei preferiti (5 KB gzip,
+> caricato al primo hover/focus); il resto in CSS. Comparsa allo scroll con `x-reveal`
+> (IntersectionObserver, mai sopra la piega né sull'LCP, visibile senza JS e con reduced-motion,
+> disattivabile con `UI_REVEAL=false`), pop dell'icona dei toast, foto che passa dalla card alla
+> scheda con le View Transitions di Livewire (`AnimalPhotoTransition`, nomi univoci per pagina),
+> cornice nel tono della card intorno alla foto. Scostamento voluto dal piano: niente
+> `wire:intersect` + Motion per le reveal (più leggero così).
+>
+> **Test e ambiente:** phpunit.xml e `TestCase` forzano `SCOUT_DRIVER=collection` (l'indice
+> Meilisearch di sviluppo si era sporcato con una prova manuale); il catalogo filtra gli enti
+> verificati anche nella query al motore, quindi un indice stantio non mostra card fantasma.
+>
+> **Misure** (375 px, CPU 4×): LCP 0,6–0,9 s, CLS 0 (anche con reveal e mappa), INP ≤ 72 ms.
+>
+> **Aperti:**
+>
+> | Gravità | Punto | Fase |
+> |---|---|---|
+> | Minor | La suite browser lanciata subito dopo Pest completo a volte si blocca dopo `HomeTest`; da sola passa sempre in ~2,5 minuti | UI-8 |
+> | Nit | Stile `fiord` (dark): etichette maiuscole e un triangolo più chiaro a zoom basso (stile upstream) | — |
+> | Nit | Tile vettoriali bloccate ma stile caricato: mappa vuota senza messaggio (l'elenco c'è) | — |
 - Micro-interazioni: preferito (cuore animato), hover delle card, reveal allo scroll con
   `wire:intersect` + Motion, conferme toast. Tutto disattivato con `prefers-reduced-motion`.
 - Mappa MapLibre (import dinamico, `wire:ignore` + Alpine) su catalogo e pagina ente, con
