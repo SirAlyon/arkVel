@@ -4,7 +4,7 @@
 > open-source / gratuito**. I pannelli Filament (`/account`, `/manage`, `/admin`) **non si toccano**,
 > con un'unica eccezione concordata: lo spostamento di login/registrazione adottante (fase UI-5).
 >
-> Stato: proposta approvata il 2026-11-03. UI-0…UI-7 completate. Ogni fase va lanciata in una chat nuova con il
+> Stato: proposta approvata il 2026-11-03. UI-0…UI-8 completate: refactor della UI pubblica concluso. Ogni fase va lanciata in una chat nuova con il
 > super-prompt in fondo al documento.
 
 ---
@@ -233,7 +233,7 @@ Mockup di riferimento: canvas "ArkVel — Direzioni visive", artboard **B · Pop
 > | Minor | Echo/Reverb importato su ogni pagina ospite (errori WebSocket in console) → import dinamico solo dove serve | UI-3 ✅ il layout pubblico non carica più `app.js` (Echo serve solo ai pannelli) |
 > | Minor | Salto di titoli `h1` → `h3` nel catalogo; bottoni preferiti con nome identico | UI-2 ✅ `x-ui.animal-card` con `heading-level` e preferito «Salva <nome> nei preferiti» (anche il Livewire `FavoriteButton`); il catalogo adotta la card in UI-6b |
 > | Minor | Immagini senza `width`/`height`, foto della scheda = miniatura 400×300 ingrandita, `alt` della galleria tutti uguali | UI-4 ✅ componenti pronti (`x-ui.picture`, `x-ui.gallery` con alt per foto); le pagine li adottano in UI-6 |
-> | Nit | Mancano `Vary: Accept-Language` e `Content-Language` | UI-8 (prima di qualsiasi cache o CDN) |
+> | Nit | Mancano `Vary: Accept-Language` e `Content-Language` | UI-8 ✅ |
 > | Nit | Suffisso " — ArkVel" hard-coded in `AnimalDetail` e `OrganizationPage` → `public.titles.*` | UI-3 ✅ (`seo.titles.*`) |
 > | Nit | Ricerca del catalogo senza label visibile | UI-6b |
 
@@ -557,7 +557,7 @@ Elenco originale della fase:
 > |---|---|---|
 > | Minor | Pagine legacy dentro la shell nuova: disallineamento di ~45 px tra breadcrumb/header (`max-w-page`) e contenuto vecchio a 1440 px; contrasti e `heading-order` delle pagine già noti | UI-6 ✅ |
 > | Nit | Con il mouse `wire:navigate.hover` prefetcha e poi richiede di nuovo la pagina al click (2 fetch): verificare il comportamento di Livewire 4 | UI-8 |
-> | Nit | Nginx locale senza compressione né Cache-Control su `/build/*` | UI-8 |
+> | Nit | Nginx locale senza compressione né Cache-Control su `/build/*` | UI-8 ✅ |
 > | Nit | Breadcrumb a 320 px: le voci intermedie si accorciano presto (tetto 10ch) | UI-6 ✅ tetto solo sotto `md` |
 - Header nuovo (trasparente sulla hero, poi solido allo scroll), menu mobile a drawer,
   selettore lingua, menu account (link a `/account` e, per i membri di un ente, a `/manage`).
@@ -671,7 +671,7 @@ Elenco originale della fase:
 > | Gravità | Punto | Fase |
 > |---|---|---|
 > | **Blocker per la produzione** | Manca la pagina dell'informativa privacy (e dei termini): la registrazione registra la presa visione con `config('arkvel.privacy_policy_version')`, il link comparirà da solo quando esisterà la route `legal.privacy` (`App\Support\Site\LegalLinks`) | prima del rilascio |
-> | Minor | Le registrazioni fatte dai pannelli Filament (es. `/manage`) non normalizzano l'email in minuscolo: un account con maiuscole non accederebbe da `/accedi`. Oggi non ci sono dati legacy; una migrazione che porta le email in minuscolo chiude il punto | UI-8 |
+> | Minor | Le registrazioni fatte dai pannelli Filament (es. `/manage`) non normalizzano l'email in minuscolo: un account con maiuscole non accederebbe da `/accedi`. Oggi non ci sono dati legacy; una migrazione che porta le email in minuscolo chiude il punto | UI-8 ✅ |
 > | Nit | I link di verifica/reset già inviati con le vecchie URL del pannello (`/account/email-verification/…`) rispondono 404 dopo il deploy (scadono in 60 minuti) | — |
 > | Nit | `pest --parallel` si è bloccato una volta su un worker: la suite seriale impiega ~20 minuti | UI-8 |
 - Pagine Livewire pubbliche col nuovo design:
@@ -745,8 +745,8 @@ Elenco originale della fase:
 >
 > | Gravità | Punto | Fase |
 > |---|---|---|
-> | Minor | Catalogo: cliccando un link di paginazione mentre `wire:intersect` sta ancora caricando la pagina successiva compaiono errori in console (drawer e toaster morfati a navigazione già partita) | UI-8 |
-> | Nit | Dopo «Carica altri» tutte le pagine caricate sono marcate `aria-current` nella paginazione | UI-8 |
+> | Minor | Catalogo: cliccando un link di paginazione mentre `wire:intersect` sta ancora caricando la pagina successiva compaiono errori in console (drawer e toaster morfati a navigazione già partita) | UI-8 ✅ |
+> | Nit | Dopo «Carica altri» tutte le pagine caricate sono marcate `aria-current` nella paginazione | UI-8 ✅ |
 > | Nit | Transizione animata card → scheda non fatta (richiede `view-transition-name` per animale su card e galleria) | UI-7 ✅ |
 > | Nit | Le foto coprono il blocco colorato della card: lo «sfondo colorato» della direzione B si vede solo senza foto | UI-7 ✅ cornice nel tono della card |
 > | Nit | Bianco su `block-leaf` in dark a 4,64:1: AA ma con poco margine | — |
@@ -820,6 +820,48 @@ Elenco originale della fase:
 - GSAP solo se una sezione d'effetto lo giustifica.
 
 ### UI-8 · Qualità e rilascio
+
+> **Stato: completata il 2026-11-09** (branch `feat/ui-8-quality`, partito da
+> `feat/ui-7-motion-map`). Gli agenti di questa fase si sono fermati più volte per lo stop del
+> Mac: il lavoro è stato diviso in pezzi piccoli e in parte completato dalla sessione principale.
+>
+> **Cosa è stato fatto:**
+> - **CI:** job `browser` in `.github/workflows/ci.yml` (Node 22, `npm ci && npm run build`,
+>   cache dei browser Playwright sulla sua versione, Pest `tests/Browser`, screenshot come
+>   artifact se fallisce; `memory_limit=1G`). Validato con actionlint; la prima esecuzione reale
+>   su GitHub va osservata.
+> - **Nginx:** gzip (brotli non disponibile nell'immagine alpine), `immutable` per `/build/*`,
+>   `no-cache` per il manifest, una settimana per `/images/*`.
+> - **Header di lingua:** middleware `ContentLanguage` (`Content-Language` e
+>   `Vary: Accept-Language` sulle sole risposte HTML).
+> - **Catalogo:** le richieste Livewire in volo dei componenti sostituiti vengono annullate
+>   all'avvio di `wire:navigate` (`shell.js`: niente più errori in console seguendo la
+>   paginazione durante il caricamento continuo); una sola pagina `aria-current` nella
+>   paginazione, le altre caricate sono «già mostrate».
+> - **Email:** forma canonica (minuscolo, senza spazi) in un punto unico (`EmailAddress`) usata dai
+>   DTO dei moduli e dal mutator di `User` (copre anche i pannelli Filament senza toccarli);
+>   migrazione per le email esistenti che salta e logga gli account in conflitto.
+> - **Documenti:** [WCAG-CHECKLIST.md](WCAG-CHECKLIST.md) (criteri WCAG 2.2 AA, come sono
+>   soddisfatti e dove sono testati) e [RILASCIO-UI.md](RILASCIO-UI.md) (bloccanti, variabili,
+>   passi di deploy, worker, nginx, verifiche).
+>
+> **Core Web Vitals finali** (375 px, CPU 4×, rete ~1,6 Mbps / 150 ms, asset compressi):
+>
+> | Pagina | LCP | CLS |
+> |---|---|---|
+> | Home | 0,92 s | 0 |
+> | Catalogo (griglia) | 0,84 s | 0 |
+> | Catalogo (mappa) | 0,79 s | 0 |
+> | Scheda animale | 0,89 s | 0 |
+> | Indice enti | 0,78 s | 0 |
+> | Pagina ente | 0,80 s | 0 |
+> | Accedi | 0,76 s | 0 |
+>
+> INP misurato nelle fasi UI-6/UI-7 sulle interazioni principali: ≤ 72 ms. Budget §4 rispettato
+> ovunque.
+>
+> **Resta aperto:** vedi la sezione «Punti aperti residui» di [RILASCIO-UI.md](RILASCIO-UI.md).
+> Bloccante per la produzione: la pagina dell'informativa privacy.
 - Suite browser su tutte le pagine pubbliche e sui flussi auth: viewport mobile/desktop,
   light/dark, screenshot di confronto, assert di accessibilità.
 - Audit Chrome DevTools MCP sui Core Web Vitals; correggere fino a rispettare il budget §4.
