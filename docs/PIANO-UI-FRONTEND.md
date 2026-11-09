@@ -4,7 +4,7 @@
 > open-source / gratuito**. I pannelli Filament (`/account`, `/manage`, `/admin`) **non si toccano**,
 > con un'unica eccezione concordata: lo spostamento di login/registrazione adottante (fase UI-5).
 >
-> Stato: proposta approvata il 2026-11-03. UI-0…UI-5 completate. Ogni fase va lanciata in una chat nuova con il
+> Stato: proposta approvata il 2026-11-03. UI-0…UI-6 completate. Ogni fase va lanciata in una chat nuova con il
 > super-prompt in fondo al documento.
 
 ---
@@ -324,9 +324,9 @@ Elenco originale della fase:
 > | `line-strong` | `dusk-400` (≥ 3,7:1 su tutte le superfici) |
 > | `primary`, `highlight`, `focus`, `link`, `stamp` | giallo `sun-300` con testo navy |
 > | `block-sun` | navy-800, cioè la hero è una superficie scura con accenti gialli |
-> | `block-peach` | peach-700, testo `peach-100` (5,86:1; era peach-800, che si leggeva marrone: cambiato in UI-2) |
-> | `block-mint` | leaf-900, testo `leaf-100` |
-> | `block-leaf` | leaf-700, testo bianco (più chiaro della menta, così restano distinguibili) |
+> | `block-peach` | peach-800, testo `peach-100` (9,9:1). In UI-2 era passato a peach-700, ma in UI-6 si è visto che è quasi identico al rosso di `danger` (1,03:1): meglio un pesca scuro che un blocco che sembra un errore |
+> | `block-mint` | leaf-800, testo `leaf-100` (7,7:1; era leaf-900, invisibile sulla card) |
+> | `block-leaf` | leaf-600, testo bianco (4,64:1, AA al limite: più chiaro della menta, così restano distinguibili) |
 >
 > **Esito `/ui-review` della styleguide e review degli standard (2026-11-03).**
 >
@@ -482,10 +482,10 @@ Elenco originale della fase:
 >
 >   | Gravità | Punto | Fase |
 >   |---|---|---|
->   | Nit | In dark `block-peach` (peach-700) per un revisore si legge ancora mattone/terracotta; l'alternativa corallo-rosa (`oklch(42–45% 0.12 18–22)`) per un altro vira al rosso vino, vicino a `danger`. Da decidere a occhio con le foto vere | UI-6a |
+>   | Nit | In dark `block-peach` per un revisore si legge mattone/terracotta; le alternative più rosse si confondono con `danger` | UI-6 ✅ peach-800 (vedi tabella dark di UI-1) |
 >   | Nit | In dark `primary`, `highlight` e `stamp` sono lo stesso giallo: documentato nella styleguide (un solo CTA giallo per gruppo); il bollino «In evidenza» giallo su una foto gialla si separa solo col bordo | UI-6 |
 >   | Nit | CLS 0,029 sulla pagina domain per lo swap del font: `preload` del woff2 | UI-3 ✅ (preload nel layout pubblico; la styleguide ha un layout suo) |
->   | Minor | Combobox in ricerca lato server: id delle opzioni per indice, `aria-activedescendant` può puntare a un'altra opzione dopo una risposta; modalità da provare su una pagina vera | UI-6b |
+>   | Minor | Combobox in ricerca lato server: id delle opzioni per indice, `aria-activedescendant` può puntare a un'altra opzione dopo una risposta; modalità da provare su una pagina vera | UI-8 (il catalogo usa select e radio, non il combobox) |
 >   | Minor | Dialog alti su mobile: la pila dei toast può coprire il fondo del dialog (restano chiudibili e raggiungibili) | UI-7 |
 >   | Nit | `x-ui.checkbox`/`x-ui.radio` riconoscono il gruppo con `@aware` (legend + name); contatore della textarea non aggiornato se Livewire azzera il valore dal server | UI-6c |
 - **Primitivi:** button (varianti/dimensioni/stato loading via `data-loading`), link, badge, tag,
@@ -555,10 +555,10 @@ Elenco originale della fase:
 >
 > | Gravità | Punto | Fase |
 > |---|---|---|
-> | Minor | Pagine legacy dentro la shell nuova: disallineamento di ~45 px tra breadcrumb/header (`max-w-page`) e contenuto vecchio a 1440 px; contrasti e `heading-order` delle pagine già noti | UI-6 |
+> | Minor | Pagine legacy dentro la shell nuova: disallineamento di ~45 px tra breadcrumb/header (`max-w-page`) e contenuto vecchio a 1440 px; contrasti e `heading-order` delle pagine già noti | UI-6 ✅ |
 > | Nit | Con il mouse `wire:navigate.hover` prefetcha e poi richiede di nuovo la pagina al click (2 fetch): verificare il comportamento di Livewire 4 | UI-8 |
 > | Nit | Nginx locale senza compressione né Cache-Control su `/build/*` | UI-8 |
-> | Nit | Breadcrumb a 320 px: le voci intermedie si accorciano presto (tetto 10ch) | UI-6 |
+> | Nit | Breadcrumb a 320 px: le voci intermedie si accorciano presto (tetto 10ch) | UI-6 ✅ tetto solo sotto `md` |
 - Header nuovo (trasparente sulla hero, poi solido allo scroll), menu mobile a drawer,
   selettore lingua, menu account (link a `/account` e, per i membri di un ente, a `/manage`).
 - Footer (newsletter placeholder, link legali, lingue).
@@ -697,6 +697,59 @@ Elenco originale della fase:
   - i test esistenti di `tests/Feature/Adopter` restano verdi.
 
 ### UI-6 · Pagine (un commit per pagina)
+
+> **Stato: completata il 2026-11-09** (branch `feat/ui-6-pages`, partito da `feat/ui-5-auth`;
+> 2500 test, browser 195/195). Le quattro pagine sono state costruite in parallelo da quattro
+> agenti con file separati (testi in `lang/*/page_{home,catalog,animal,organizations}.php`), poi
+> riviste (standard + `/ui-review`) e corrette.
+>
+> **Commit:** la scheda animale è passata prima da un refactor a comportamento invariato
+> (`11ad59e`, componenti figli `AnimalDetail/*` e Action `ContactOrganizationAboutAnimal`), poi
+> card con foto (`657f2b5`), pagine (`6e5bae1`) e pulizia del legacy (`0e3c118`). **Deviazione
+> voluta dal "un commit per pagina":** le modifiche condivise (paginazione, card, preferiti,
+> bottone, breadcrumb) sono intrecciate con tutte le pagine e un commit per pagina non passava
+> il gate in isolamento.
+>
+> **Cosa è stato fatto:**
+> - **Home:** hero bento (ricerca, animale in copertina, numeri reali), vetrina filtrabile per
+>   specie in un'island Livewire, «come funziona» in 4 passi, segnaposto onesto per le storie,
+>   banda donazione; header trasparente sulla hero.
+> - **Catalogo:** ricerca istantanea con label visibile e live region, faccette con conteggi
+>   (`CountsCatalogFacets`: Meilisearch o database secondo `scout.driver`, sempre limitati agli enti
+>   verificati), chip dei filtri attivi, drawer dei filtri su mobile, ordinamento, caricamento
+>   continuo (`wire:intersect`) con «Carica altri» e paginazione di riserva, stati vuoti; form GET
+>   senza JS; query string compatibile (`q`, `species`…).
+> - **Scheda animale:** galleria, schede informative (identikit, carattere, compatibilità, salute),
+>   descrizioni nella lingua disponibile con `lang`, pannello azioni sticky su desktop e bottom
+>   sheet su mobile con candidatura, affido, prenotazione (date picker + orario libero: nessuna
+>   regola nuova) e contatto, riepilogo errori e messaggi di esito con focus, nota per gli ospiti,
+>   animali simili (`FindSimilarAnimals`).
+> - **Enti:** indice con filtri (`q`, `region`, `type`; i vecchi `regione`/`tipo` sono ancora
+>   letti), pagina ente con animali, numeri e widget donazione (comportamento Stripe invariato),
+>   pagine grazie/annullo.
+> - **Condivisi:** `x-ui.pagination`, `x-site.animal-card` (foto, località `PublicLocation`, età
+>   `AnimalAge`), preferiti con una query per pagina (`FindFavoritedAnimalIds` + prop `favorited`
+>   di `FavoriteButton`), `WebUrl::safe()`, re-indicizzazione degli animali al cambio di stato di un
+>   ente (`OrganizationObserver` → `SyncOrganizationAnimalsSearchIndex`), route `animals.show`
+>   solo numerica, bottoni che vanno a capo su mobile, fix di `x-ui.toast` (un `@foreach` con
+>   destrutturazione e un apostrofo in un commento rompevano lo stato dei loop di Livewire 4).
+> - **Pulizia:** rimossi gli alias `brand-*`/`accent-*`, i componenti legacy (`x-animal-card`,
+>   `x-badge`, `x-button`, `x-filter-select`) e le chiavi `public.*` orfane. Token dark dei
+>   blocchi rivisti (tabella di UI-1).
+>
+> **Passi di deploy:** `php artisan scout:sync-index-settings` (senza, l'ordinamento su `featured`
+> fallisce: il catalogo degrada e logga un warning) e `php artisan arkvel:media:regenerate
+> --only-missing`.
+>
+> **Aperti:**
+>
+> | Gravità | Punto | Fase |
+> |---|---|---|
+> | Minor | Catalogo: cliccando un link di paginazione mentre `wire:intersect` sta ancora caricando la pagina successiva compaiono errori in console (drawer e toaster morfati a navigazione già partita) | UI-8 |
+> | Nit | Dopo «Carica altri» tutte le pagine caricate sono marcate `aria-current` nella paginazione | UI-8 |
+> | Nit | Transizione animata card → scheda non fatta (richiede `view-transition-name` per animale su card e galleria) | UI-7 |
+> | Nit | Le foto coprono il blocco colorato della card: lo «sfondo colorato» della direzione B si vede solo senza foto | UI-7 |
+> | Nit | Bianco su `block-leaf` in dark a 4,64:1: AA ma con poco margine | — |
 - **UI-6a Home:** hero a blocchi (bento) come da §1-bis, griglia di animali in evidenza con chip filtro,
   numeri chiave, "come funziona l'adozione" in 3-4 passi, storie di adozione (placeholder),
   CTA donazione/enti.
