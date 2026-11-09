@@ -15,8 +15,14 @@
  |   card della vetrina. Nell'island si usa solo $spotlightId (bloccato al mount), così un
  |   chip non ricalcola la hero.
  | - Ricerca della hero con label visibile (x-ui.field), come quella del catalogo.
+ | - Motion (UI-7): la hero è ferma (contiene l'LCP); sotto, sezioni e card compaiono allo
+ |   scroll (x-reveal: mai sopra la piega, mai senza JS o con reduced-motion). La foto della
+ |   hero ha il nome di View Transition dell'animale (App\Support\Site\AnimalPhotoTransition):
+ |   aprendo la scheda vola nella galleria. La vetrina esclude l'animale della hero, quindi
+ |   i nomi restano unici nella pagina.
 --}}
 @use('App\Enums\Species')
+@use('App\Support\Site\AnimalPhotoTransition')
 
 @php
     $stats = $this->stats;
@@ -67,7 +73,10 @@
 
             <div class="flex flex-col gap-4 md:grid md:grid-cols-2 lg:col-span-5 lg:flex">
                 <div class="flex flex-col gap-3 rounded-panel bg-block-peach p-3 text-on-block-peach lg:flex-1" data-home-spotlight>
-                    <div class="relative aspect-3/2 overflow-hidden rounded-media lg:aspect-auto lg:min-h-64 lg:flex-1">
+                    <div
+                        class="relative aspect-3/2 overflow-hidden rounded-media lg:aspect-auto lg:min-h-64 lg:flex-1"
+                        @if ($spotlight !== null) wire:transition.navigate="{{ AnimalPhotoTransition::name($spotlight) }}" data-photo-transition="{{ route('animals.show', $spotlight) }}" @endif
+                    >
                         <div class="absolute inset-0">
                             @if ($spotlight !== null)
                                 <x-ui.picture
@@ -105,10 +114,10 @@
 
                 <ul role="list" aria-label="{{ __('page_home.hero.stats_label') }}" class="grid gap-4 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2" data-home-stats>
                     <li>
-                        <x-ui.stat :value="$stats->availableAnimals" :label="trans_choice('page_home.stats.animals', $stats->availableAnimals)" tone="leaf" icon="paw-print" class="h-full" data-home-stat="animals" />
+                        <x-ui.stat :value="$stats->availableAnimals" :label="trans_choice('page_home.stats.animals', $stats->availableAnimals)" tone="leaf" icon="paw-print" class="h-full" :reveal="false" data-home-stat="animals" />
                     </li>
                     <li>
-                        <x-ui.stat :value="$stats->verifiedOrganizations" :label="trans_choice('page_home.stats.organizations', $stats->verifiedOrganizations)" tone="surface" icon="building-2" class="h-full" data-home-stat="organizations" />
+                        <x-ui.stat :value="$stats->verifiedOrganizations" :label="trans_choice('page_home.stats.organizations', $stats->verifiedOrganizations)" tone="surface" icon="building-2" class="h-full" :reveal="false" data-home-stat="organizations" />
                     </li>
                 </ul>
             </div>
@@ -202,6 +211,8 @@
 
     {{-- Come funziona --}}
     <section aria-labelledby="home-how-title" class="mx-auto w-full max-w-page px-gutter" data-home-how>
+        {{-- Reveal solo dei figli (titolo e passi in sequenza), non del pannello: due reveal
+             annidati sommerebbero le dissolvenze e lo spostamento. --}}
         <div class="flex flex-col gap-10 rounded-panel bg-surface p-panel">
             <x-ui.section-heading
                 id="home-how-title"
@@ -212,7 +223,7 @@
 
             <ol role="list" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-home-steps>
                 @foreach ($steps as $index => $step)
-                    <li class="flex flex-col gap-4 rounded-step bg-surface-raised p-6" data-home-step="{{ $step }}">
+                    <li class="flex flex-col gap-4 rounded-step bg-surface-raised p-6" data-home-step="{{ $step }}" x-reveal>
                         <span aria-hidden="true" class="inline-flex size-14 items-center justify-center rounded-icon-lg text-h4 tabular-nums {{ $stepTones[$index] }}">{{ $index + 1 }}</span>
                         <h3 class="text-h5">{{ __('page_home.how.steps.'.$step.'.title') }}</h3>
                         <p class="text-fg-muted">{{ __('page_home.how.steps.'.$step.'.body') }}</p>
@@ -229,9 +240,10 @@
                 'flex flex-col items-start gap-8 rounded-panel border-2 border-dashed border-line p-panel',
                 'lg:col-span-8' => $stats->hasCompletedAdoptions(),
                 'lg:col-span-12' => ! $stats->hasCompletedAdoptions(),
-            ])>
+            ]) x-reveal>
                 <x-ui.section-heading
                     id="home-stories-title"
+                    :reveal="false"
                     :eyebrow="__('page_home.stories.eyebrow')"
                     :title="__('page_home.stories.title')"
                     :description="__('page_home.stories.body')"

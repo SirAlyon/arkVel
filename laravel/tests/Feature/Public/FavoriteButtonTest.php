@@ -38,6 +38,13 @@ it('redirects a guest to the adopter login and creates no favorite', function ()
     expect($animal->favoritedBy()->count())->toBe(0);
 });
 
+it('marks the button of a guest only, so its heart does not pop as if saved', function () {
+    $animal = visibleAnimal();
+
+    Livewire::test(FavoriteButton::class, ['animal' => $animal])->assertSee('data-favorite-guest', false);
+    Livewire::actingAs(User::factory()->create())->test(FavoriteButton::class, ['animal' => $animal])->assertDontSee('data-favorite-guest', false);
+});
+
 it('lets an authenticated user favorite then unfavorite an animal', function () {
     $user = User::factory()->create();
     $animal = visibleAnimal();

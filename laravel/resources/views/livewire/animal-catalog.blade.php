@@ -12,13 +12,20 @@
  | - caricamento continuo: wire:intersect sulle prime CatalogResults::AUTO_LOAD_PAGES
  |   pagine, poi «Carica altri» (un link a ?page=N+1, che senza JavaScript cambia pagina),
  |   più x-ui.pagination (link veri) per chi non ha JavaScript e per i motori di ricerca;
+ | - vista «Mappa» (?view=map, UI-7, x-ui.view-switch): al posto della griglia la mappa
+ |   degli enti con animali che corrispondono ai filtri (x-ui.map, posizioni approssimate)
+ |   e, sempre, l’elenco alternativo degli stessi enti (x-ui.map.list);
  | - senza JavaScript ricerca, filtri e ordinamento sono moduli GET verso /animali.
 --}}
 @php
     /** @var \App\Support\Catalog\CatalogResults $results */
     $activeFacets = count($results->filters->activeFacets());
-    $hasResults = ! $results->isEmpty();
     $tones = ['sun', 'peach', 'mint'];
+    $mapView = $catalogView === \App\Enums\CatalogView::Map;
+    // La mappa non carica animali (solo totale e faccette): lì conta il totale.
+    $hasResults = $mapView ? $results->total > 0 : ! $results->isEmpty();
+    // Stato dei moduli GET senza JavaScript: filtri, ordinamento e vista.
+    $state = [...$results->stateParameters(), ...$catalogView->queryParameters()];
 @endphp
 
 <div class="mx-auto w-full max-w-page px-gutter pb-section pt-6 sm:pt-10" data-catalog>
@@ -36,7 +43,7 @@
         class="mt-8 flex max-w-3xl flex-col gap-3"
         data-catalog-search
     >
-        <x-site.catalog.hidden-state :parameters="$results->stateParameters()" :except="['q']" />
+        <x-site.catalog.hidden-state :parameters="$state" :except="['q']" />
         <x-ui.field name="q" :label="__('page_catalog.search.label')" :help="__('page_catalog.search.help')">
             <x-ui.input
                 type="search"
@@ -88,21 +95,32 @@
                         </x-ui.button>
                     </div>
 
-                    <form
-                        method="get"
-                        action="{{ route('catalog') }}"
-                        wire:submit="$refresh"
-                        class="flex min-w-0 flex-1 flex-wrap items-end gap-3 sm:flex-none"
-                        data-catalog-sort
-                    >
-                        <x-site.catalog.hidden-state :parameters="$results->stateParameters()" :except="['sort']" />
-                        <x-ui.field name="sort" :label="__('page_catalog.sort.label')" class="min-w-0 flex-1 sm:w-64 sm:flex-none">
-                            <x-ui.select wire:model.live="sort" :value="$sort" :options="$sortOptions" />
-                        </x-ui.field>
-                        <noscript>
-                            <x-ui.button type="submit" variant="secondary">{{ __('page_catalog.sort.apply') }}</x-ui.button>
-                        </noscript>
-                    </form>
+                    <x-ui.view-switch
+                        :label="__('page_catalog.view.label')"
+                        :options="$viewOptions"
+                        :current="$catalogView->value"
+                        property="display"
+                        data-catalog-view-switch
+                    />
+
+                    {{-- Nella mappa l’ordine non conta: l’ordinamento è solo nella griglia. --}}
+                    @unless ($mapView)
+                        <form
+                            method="get"
+                            action="{{ route('catalog') }}"
+                            wire:submit="$refresh"
+                            class="flex min-w-0 basis-full flex-wrap items-end gap-3 sm:basis-auto"
+                            data-catalog-sort
+                        >
+                            <x-site.catalog.hidden-state :parameters="$state" :except="['sort']" />
+                            <x-ui.field name="sort" :label="__('page_catalog.sort.label')" class="min-w-0 flex-1 sm:w-64 sm:flex-none">
+                                <x-ui.select wire:model.live="sort" :value="$sort" :options="$sortOptions" />
+                            </x-ui.field>
+                            <noscript>
+                                <x-ui.button type="submit" variant="secondary">{{ __('page_catalog.sort.apply') }}</x-ui.button>
+                            </noscript>
+                        </form>
+                    @endunless
                 </div>
             </div>
 
@@ -133,7 +151,56 @@
                 </div>
             @endif
 
-            @if ($hasResults)
+            @if ($hasResults && $mapView && ! $map->isEmpty())
+                {{-- Vista mappa: la mappa (se qualche ente ha una posizione) e sempre l’elenco
+                     degli stessi enti, che per tastiera e screen reader vale la mappa. --}}
+                <section
+                    aria-labelledby="catalog-map-title"
+                    class="flex flex-col gap-5 transition-opacity duration-(--duration-fast) ease-out"
+                    wire:loading.delay.class="opacity-60"
+                    wire:loading.delay.attr="aria-busy"
+                    data-catalog-map
+                >
+                    <div class="flex max-w-3xl flex-col gap-1">
+                        <h2 id="catalog-map-title" class="text-h4 text-fg">{{ __('page_catalog.map.title') }}</h2>
+                        <p class="text-small text-fg-muted">{{ __('page_catalog.map.description') }}</p>
+                    </div>
+
+                    <div class="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start">
+                        @if ($map->located() !== [])
+                            <x-ui.map
+                                wire:key="catalog-map"
+                                id="catalog-map"
+                                :label="__('page_catalog.map.label')"
+                                :markers="$map->markers"
+                                :fallback="__('page_catalog.map.fallback')"
+                            />
+                        @endif
+
+                        <div class="flex min-w-0 flex-col gap-3" data-catalog-map-list>
+                            <h3 id="catalog-map-list-title" class="text-h5 text-fg">{{ __('page_catalog.map.list_title') }}</h3>
+                            @if ($map->hasUnlocated())
+                                <p class="text-small text-fg-muted" data-catalog-map-unlocated>{{ __('page_catalog.map.unlocated') }}</p>
+                            @endif
+                            <x-ui.map.list :markers="$map->markers" aria-labelledby="catalog-map-list-title" />
+                        </div>
+                    </div>
+                </section>
+            @elseif ($hasResults && $mapView)
+                {{-- Animali trovati ma nessun ente da mostrare (indice di ricerca in ritardo):
+                     niente elenco vuoto, un rimando alla griglia. --}}
+                <x-ui.empty-state
+                    icon="map"
+                    block="mint"
+                    :title="__('page_catalog.map.empty_title')"
+                    :description="__('page_catalog.map.empty_description')"
+                    data-catalog-empty="map"
+                >
+                    <x-slot:actions>
+                        <x-ui.button variant="secondary" icon="layout-grid" :href="$viewOptions['list']['href']" wire:click.prevent="$set('display', 'list')">{{ __('page_catalog.map.empty_action') }}</x-ui.button>
+                    </x-slot:actions>
+                </x-ui.empty-state>
+            @elseif ($hasResults)
                 <div
                     class="flex flex-col gap-8 transition-opacity duration-(--duration-fast) ease-out"
                     wire:loading.delay.class="opacity-60"

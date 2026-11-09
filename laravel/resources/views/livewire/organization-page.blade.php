@@ -8,8 +8,11 @@
  |   (x-site.organization.donation-widget);
  | - animali dell'ente: griglia di x-site.animal-card (solo publiclyVisible, media in eager
  |   loading, preferiti in una query), x-ui.pagination, stato vuoto; «Sfoglia il catalogo»
- |   apre il catalogo filtrato su questo ente.
- | Gerarchia: h1 nome → h2 sezioni (chi siamo, donazione, animali) → h3 card.
+ |   apre il catalogo filtrato su questo ente;
+ | - «Dove si trova» (UI-7), se l’ente ha una posizione: la località in chiaro e una piccola
+ |   x-ui.map con un cerchio sulla zona APPROSSIMATA ($mapArea), mai un punto preciso. La
+ |   mappa si carica solo quando sta per entrare in vista.
+ | Gerarchia: h1 nome → h2 sezioni (chi siamo, donazione, animali, dove si trova) → h3 card.
 --}}
 @php
     /** @var \App\Support\Site\TranslatedText|null $description */
@@ -175,4 +178,28 @@
             </x-ui.empty-state>
         @endif
     </section>
+
+    {{-- Dove si trova: zona approssimata, mai l’indirizzo. --}}
+    @if ($mapArea !== null)
+        <section aria-labelledby="organization-map-title" class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start" data-organization-map>
+            <div class="flex min-w-0 flex-col gap-3">
+                <h2 id="organization-map-title" class="text-h3 text-fg">{{ __('page_organizations.show.map.title') }}</h2>
+                @if ($location !== null)
+                    <p class="flex items-center gap-2 text-lead font-semibold text-fg" data-organization-map-location>
+                        <x-ui.icon name="map-pin" />
+                        <span class="min-w-0">{{ $location }}</span>
+                    </p>
+                @endif
+                <p class="max-w-prose text-body text-fg-muted">{{ __('page_organizations.show.map.description') }}</p>
+            </div>
+
+            <x-ui.map
+                wire:key="organization-map"
+                id="organization-map"
+                :label="__('page_organizations.show.map.label', ['name' => $organization->name])"
+                :area="$mapArea"
+                size="sm"
+            />
+        </section>
+    @endif
 </div>

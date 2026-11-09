@@ -26,7 +26,11 @@ use Illuminate\Support\Collection;
  *   allineato (sempre quando si parte da pagina 1) basta una sola richiesta al motore
  *   con una pagina più grande; altrimenti una richiesta per pagina (al massimo
  *   CatalogQuery::MAX_PAGES);
- * - una combinazione impossibile (ente fuori dalla regione) non interroga il motore.
+ * - una combinazione impossibile (ente fuori dalla regione) non interroga il motore;
+ * - senza animali (`CatalogQuery::$withAnimals` false, vista «Mappa») solo il totale e le
+ *   faccette: nessun animale, foto o ente caricato;
+ * - il totale è sempre contato sul database tra gli animali visibili
+ *   ({@see CatalogScoutQuery}), mai preso dall'indice, che può essere stantio.
  */
 final readonly class SearchCatalog
 {
@@ -43,9 +47,11 @@ final readonly class SearchCatalog
         $sort = CatalogSort::fromQuery($query->sort);
         $firstPage = $query->firstPage();
 
-        [$animals, $total] = $filters->matchesNothing()
-            ? [new Collection, 0]
-            : $this->fetch($filters, $sort, $firstPage, $query->loadedPages());
+        [$animals, $total] = match (true) {
+            $filters->matchesNothing() => [new Collection, 0],
+            ! $query->withAnimals => [new Collection, $this->scoutQuery->total($filters)],
+            default => $this->fetch($filters, $sort, $firstPage, $query->loadedPages()),
+        };
 
         $lastPage = max(1, (int) ceil($total / CatalogQuery::PER_PAGE));
 

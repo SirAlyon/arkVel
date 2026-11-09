@@ -52,6 +52,14 @@ return [
             'title' => 'Media',
             'intro' => 'Responsive images (AVIF, WebP, JPEG) with a blurred placeholder, and a gallery with a lightbox.',
         ],
+        'motion' => [
+            'title' => 'Motion',
+            'intro' => 'Micro-interactions and animations: reveal on scroll, the favorite heart, toast confirmation and the photo flying from the card to the profile. All of them respect “reduce motion”.',
+        ],
+        'map' => [
+            'title' => 'Map',
+            'intro' => 'Map with approximate locations (MapLibre and OpenFreeMap tiles), its accessible alternative list and the view switch.',
+        ],
     ],
 
     'sections' => [

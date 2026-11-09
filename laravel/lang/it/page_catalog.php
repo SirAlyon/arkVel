@@ -87,4 +87,23 @@ return [
         'description' => 'Conosci gli enti che ospitano questi animali: ogni rifugio ha la sua storia e altri modi per dare una mano.',
         'action' => 'Scopri gli enti',
     ],
+
+    'view' => [
+        'label' => 'Vista',
+        'list' => 'Elenco',
+        'map' => 'Mappa',
+    ],
+
+    'map' => [
+        'title' => 'Gli enti sulla mappa',
+        'description' => 'Gli enti con animali che corrispondono alla ricerca. Le posizioni sono approssimate: indicano la zona, non l’indirizzo.',
+        'label' => 'Mappa degli enti con animali che corrispondono alla ricerca',
+        'list_title' => 'Elenco degli enti',
+        'fallback' => 'Gli stessi enti sono nell’elenco.',
+        'unlocated' => 'Alcuni enti non hanno ancora una posizione: li trovi solo nell’elenco.',
+        'animals' => '{1}:count animale|[2,*]:count animali',
+        'empty_title' => 'Nessun ente da mostrare sulla mappa',
+        'empty_description' => 'Gli animali che corrispondono alla ricerca ci sono, ma i loro enti non sono ancora pronti per la mappa. Li trovi nell’elenco.',
+        'empty_action' => 'Vedi l’elenco',
+    ],
 ];

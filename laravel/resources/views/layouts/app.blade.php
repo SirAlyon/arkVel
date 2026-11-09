@@ -14,6 +14,8 @@
  |   pubbliche lo attivano: ->layoutData(['themeable' => true]);
  | - $transparentHeader (default false): header trasparente sopra la hero, solido allo
  |   scroll (vedi components/site/header). Per la Home in UI-6a.
+ | - reveal allo scroll spento da config('arkvel.reveal'): data-reveal="off" su <html>, letto
+ |   da resources/js/ui/motion.js.
  |
  | Asset: solo app.css e ui.js (componenti x-ui e shell). resources/js/app.js (Echo/Reverb)
  | serve ai pannelli Filament e lo caricano loro (filament/realtime-assets): qui darebbe
@@ -31,7 +33,7 @@
     $transparentHeader = (bool) ($transparentHeader ?? false);
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-pt-24" @unless ($themeable) data-theme-forced="light" @endunless>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-pt-24" @unless ($themeable) data-theme-forced="light" @endunless @unless (config('arkvel.reveal')) data-reveal="off" @endunless>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -18,7 +18,12 @@
  | - `heading-level` (default 3), `tone` (sun · peach · mint), `photo-sizes`: come in
  |   x-ui.animal-card;
  | - `with-location` (default true): false dove la località è già nel contesto (la
- |   pagina di un ente elenca solo i suoi animali).
+ |   pagina di un ente elenca solo i suoi animali);
+ | - `photo-transition` (default true): la foto ha il nome di View Transition dell'animale
+ |   (App\Support\Site\AnimalPhotoTransition) e con wire:navigate vola nella galleria
+ |   della scheda. Il nome dev'essere unico nella pagina: false se lo stesso animale
+ |   compare due volte (es. in un riquadro o popup oltre che nella griglia);
+ | - `reveal` (default true): comparsa allo scroll, come in x-ui.animal-card.
  |
  | <x-site.animal-card
  |     :animal="$animal"
@@ -36,6 +41,8 @@
     'tone' => 'sun',
     'photoSizes' => '(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw',
     'withLocation' => true,
+    'photoTransition' => true,
+    'reveal' => true,
 ])
 
 @php
@@ -56,6 +63,8 @@
     :location="$withLocation ? \App\Support\Site\PublicLocation::of($animal->organization) : null"
     :featured="$animal->featured"
     :heading-level="$headingLevel"
+    :reveal="$reveal"
+    :transition-name="$photoTransition ? \App\Support\Site\AnimalPhotoTransition::name($animal) : null"
     {{ $attributes }}
 >
     <x-slot:favorite>

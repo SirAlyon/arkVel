@@ -50,4 +50,20 @@ return [
         'redirect' => env('GOOGLE_CALENDAR_REDIRECT_URI'),
     ],
 
+    /*
+    | Mappe del sito pubblico (x-ui.map, UI-7): stili vettoriali MapLibre di OpenFreeMap
+    | (gratuiti, senza chiave né cookie; tile © OpenMapTiles, dati © OpenStreetMap).
+    | Il browser li scarica da tiles.openfreemap.org solo quando una mappa entra in vista.
+    | Uno stile per tema: positron (chiaro e sobrio, i segnaposto restano in primo piano) e
+    | fiord (blu scuro, vicino al navy del tema scuro). Per un'istanza self-hosted delle
+    | tile basta cambiare questi URL.
+    */
+    'maps' => [
+        'style_light' => env('MAP_STYLE_LIGHT', 'https://tiles.openfreemap.org/styles/positron'),
+        'style_dark' => env('MAP_STYLE_DARK', 'https://tiles.openfreemap.org/styles/fiord'),
+        // Privacy: lato in gradi della griglia con cui si approssimano le sedi degli enti
+        // (App\Support\Map\ApproximateLocation). 0,02° ≈ 2 km; accettato tra 0,01° e 1°.
+        'grid_degrees' => env('MAP_GRID_DEGREES', 0.02),
+    ],
+
 ];

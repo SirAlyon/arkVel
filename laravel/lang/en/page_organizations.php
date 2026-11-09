@@ -48,6 +48,11 @@ return [
         'animals_title' => 'Their animals',
         'animals_empty_title' => 'No animals up for adoption, for now',
         'browse_catalog' => 'Browse the catalog',
+        'map' => [
+            'title' => 'Where it is',
+            'label' => 'Map of the area of :name',
+            'description' => 'The circle shows the area where the organization is, not its address. To visit, contact the organization.',
+        ],
     ],
 
     'donation' => [

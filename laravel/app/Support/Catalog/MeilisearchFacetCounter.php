@@ -27,8 +27,8 @@ use Meilisearch\Contracts\SearchQuery;
  * risultati in {@see CatalogScoutQuery}: i numeri non contano mai animali non mostrati.
  *
  * Gli attributi contati devono essere tra i `filterableAttributes` dell'indice
- * (config/scout.php); Meilisearch restituisce al massimo `maxValuesPerFacet` (100) valori
- * per faccetta.
+ * (config/scout.php); Meilisearch restituisce al massimo `maxValuesPerFacet` valori per
+ * faccetta (1000 per l'indice degli animali, config/scout.php → `faceting`).
  */
 final readonly class MeilisearchFacetCounter implements CountsCatalogFacets
 {

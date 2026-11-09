@@ -10,7 +10,9 @@
  |   del titolo. Livello 1 per una banda che è il contenuto principale della pagina;
  | - `icon`: icona Lucide decorativa in un quadrato stondato giallo (navy sul tono sun);
  | - `id`: id del titolo (aria-labelledby della <section>; default dallo slug del titolo);
- | - slot: il testo (text-lead); slot `actions`: i bottoni.
+ | - slot: il testo (text-lead); slot `actions`: i bottoni;
+ | - `reveal` (default true): compare allo scroll (x-reveal, resources/js/ui/motion.js), mai
+ |   sopra la piega, mai senza JS o con reduced-motion.
  |
  | Bottoni consigliati: `highlight` (giallo) su leaf e inverse, `primary` su sun, peach e mint.
  | Il giallo come TESTO sul verde è vietato sotto i 24 px (4,43:1): sul verde il giallo è
@@ -30,6 +32,7 @@
     'size' => 'h2',
     'icon' => null,
     'id' => null,
+    'reveal' => true,
 ])
 
 @use('Illuminate\Support\Str')
@@ -52,6 +55,7 @@
 <section
     aria-labelledby="{{ $id }}"
     data-cta-band="{{ $tone }}"
+    @if ($reveal) x-reveal @endif
     {{ $attributes->class(['flex w-full flex-col gap-8 rounded-panel p-panel md:flex-row md:items-center md:justify-between', $tones[$tone]]) }}
 >
     <div class="flex max-w-2xl flex-col gap-4">

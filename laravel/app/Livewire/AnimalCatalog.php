@@ -6,9 +6,11 @@ namespace App\Livewire;
 
 use App\Actions\Animals\FindFavoritedAnimalIds;
 use App\Actions\Catalog\SearchCatalog;
+use App\Actions\Map\BuildCatalogMap;
 use App\Data\Catalog\CatalogQuery;
 use App\Enums\CatalogFacet;
 use App\Enums\CatalogSort;
+use App\Enums\CatalogView;
 use App\Support\Catalog\ActiveCatalogFilter;
 use App\Support\Seo\InteractsWithSeo;
 use App\Support\Seo\PublicPageSeo;
@@ -31,7 +33,12 @@ use Livewire\WithPagination;
  *   («Carica altri» e caricamento continuo con wire:intersect), non va nell'URL;
  * - ogni cambio di ricerca, filtro o ordinamento riparte da pagina 1;
  * - i preferiti dell'utente tra gli animali mostrati arrivano in una sola query
- *   ({@see FindFavoritedAnimalIds}) e passano ai bottoni delle card.
+ *   ({@see FindFavoritedAnimalIds}) e passano ai bottoni delle card;
+ * - `display` (`?view=map`, UI-7) sceglie la vista: griglia degli animali o mappa degli
+ *   enti con il suo elenco alternativo ({@see BuildCatalogMap}, calcolata solo in quella
+ *   vista, dove animali e preferiti non si caricano: servono solo totale e faccette). I
+ *   filtri restano gli stessi nelle due viste. Il cambio di vista entra nella cronologia
+ *   (`history`): Indietro dalla mappa torna alla griglia.
  */
 class AnimalCatalog extends Component
 {
@@ -58,6 +65,10 @@ class AnimalCatalog extends Component
 
     #[Url(except: '')]
     public string $sort = '';
+
+    /** Vista del catalogo ({@see CatalogView}): `list` (predefinita) o `map`. */
+    #[Url(as: 'view', history: true, except: 'list')]
+    public string $display = 'list';
 
     /** Pagine caricate a partire da `page` (stato di vista, limitato da CatalogQuery). */
     public int $pages = 1;
@@ -97,8 +108,11 @@ class AnimalCatalog extends Component
         $this->pages = min(CatalogQuery::MAX_PAGES, max(1, $this->pages) + 1);
     }
 
-    public function render(SearchCatalog $searchCatalog, FindFavoritedAnimalIds $findFavorites, PublicPageSeo $seo): View
+    public function render(SearchCatalog $searchCatalog, FindFavoritedAnimalIds $findFavorites, BuildCatalogMap $buildMap, PublicPageSeo $seo): View
     {
+        $display = CatalogView::fromQuery($this->display);
+        $mapView = $display === CatalogView::Map;
+
         $results = $searchCatalog(new CatalogQuery(
             search: $this->search,
             species: $this->species,
@@ -109,12 +123,17 @@ class AnimalCatalog extends Component
             sort: $this->sort,
             page: (int) $this->getPage(),
             pages: $this->pages,
+            withAnimals: ! $mapView,
         ));
 
         $view = ViewFacade::make('livewire.animal-catalog', [
             'results' => $results,
-            // Preferiti dell'utente tra gli animali caricati: una query per tutta la griglia.
-            'favoriteIds' => $findFavorites->handle(Auth::user(), $results->animals),
+            'catalogView' => $display,
+            'map' => $mapView ? $buildMap($results) : null,
+            'viewOptions' => $this->viewOptions($results->stateParameters()),
+            // Preferiti dell'utente tra gli animali caricati: una query per tutta la griglia
+            // (nessuna nella mappa, che non mostra animali).
+            'favoriteIds' => $mapView ? [] : $findFavorites->handle(Auth::user(), $results->animals),
             'sortOptions' => array_column(array_map(
                 static fn (CatalogSort $sort): array => ['value' => $sort === CatalogSort::Relevance ? '' : $sort->value, 'label' => $sort->label()],
                 CatalogSort::cases(),
@@ -129,6 +148,28 @@ class AnimalCatalog extends Component
             total: $results->total,
             lastPage: $results->lastPage(),
         ));
+    }
+
+    /**
+     * Le voci del selettore «Elenco / Mappa»: link veri (senza JavaScript cambiano pagina)
+     * con i filtri correnti.
+     *
+     * @param  array<string, string>  $state
+     * @return array<string, array{label: string, icon: string, href: string}>
+     */
+    private function viewOptions(array $state): array
+    {
+        $options = [];
+
+        foreach (CatalogView::cases() as $view) {
+            $options[$view->value] = [
+                'label' => $view->label(),
+                'icon' => $view->icon(),
+                'href' => route('catalog', [...$state, ...$view->queryParameters()]),
+            ];
+        }
+
+        return $options;
     }
 
     private function restart(): void

@@ -16,7 +16,7 @@
     $locale = app()->getLocale();
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', $locale) }}">
+<html lang="{{ str_replace('_', '-', $locale) }}"@unless (config('arkvel.reveal')) data-reveal="off"@endunless>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

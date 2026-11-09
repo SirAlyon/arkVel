@@ -91,7 +91,8 @@ class FavoriteButton extends Component
 
     public function render(): View
     {
-        return ViewFacade::make('livewire.favorite-button');
+        // Ospite: il clic lo porta all'accesso, quindi il cuore non anima un salvataggio.
+        return ViewFacade::make('livewire.favorite-button', ['guest' => ! Auth::user() instanceof User]);
     }
 
     /**

@@ -14,7 +14,14 @@ pest()->extend(TestCase::class)->in('Feature');
 pest()->extend(TestCase::class)->in('Unit');
 // Suite browser: fuori dai testsuite di phpunit.xml, quindi esclusa dalla run standard
 // (container php e CI). Si lancia con `docker compose run --rm browser-tests`.
-pest()->extend(TestCase::class)->in('Browser');
+// Il reveal allo scroll (x-reveal) è spento in modo esplicito nei test browser: gli audit
+// axe e gli screenshot a pagina intera devono vedere tutto, non blocchi in attesa dello
+// scroll. Lo riaccendono solo i test del motion (tests/Browser/MotionTest.php).
+pest()->extend(TestCase::class)
+    ->beforeEach(function (): void {
+        config(['arkvel.reveal' => false]);
+    })
+    ->in('Browser');
 
 /*
 |--------------------------------------------------------------------------

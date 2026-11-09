@@ -26,6 +26,16 @@
  |   e sopra il suo ::after (z-10). Va usato <livewire:favorite-button> o, in pagine statiche,
  |   <x-ui.animal-card.favorite>: in entrambi il nome accessibile contiene il nome dell'animale.
  |
+ | - `reveal` (default true): la card compare allo scroll (x-reveal, resources/js/ui/motion.js):
+ |   mai sopra la piega, mai senza JS o con reduced-motion. Spenta con `priority` (LCP);
+ | - `transition-name`: nome della View Transition della foto (App\Support\Site\AnimalPhotoTransition),
+ |   unico nella pagina: con wire:navigate la foto vola dalla card alla galleria della scheda.
+ |   x-site.animal-card lo passa da sé; null (default) = nessuna transizione della foto.
+ |
+ | Foto in una cornice del colore del blocco (padding 8 px, angoli interni 16 px = raggio
+ | media meno la cornice): il tono a rotazione della direzione B resta visibile anche con
+ | la foto.
+ |
  | Hover e focus del link: la card si solleva di 4 px (solo senza reduced-motion), la foto
  | si ingrandisce appena e il nome si sottolinea. Il focus resta l'anello globale sul nome.
  |
@@ -76,6 +86,8 @@
     'location' => null,
     'featured' => false,
     'headingLevel' => 3,
+    'reveal' => true,
+    'transitionName' => null,
 ])
 
 @php
@@ -99,41 +111,48 @@
 
 <article
     data-animal-card="{{ $tone }}"
+    @if ($reveal && ! $priority) x-reveal @endif
     {{ $attributes->class([
         'group/card relative flex h-full flex-col gap-3 rounded-card bg-surface p-3 text-fg',
         'transition-transform duration-(--duration-base) ease-out',
         'motion-safe:hover:-translate-y-1 motion-safe:has-[[data-card-link]:focus-visible]:-translate-y-1',
     ]) }}
 >
-    <div class="relative aspect-4/5 overflow-hidden rounded-media {{ $tones[$tone] }}" data-animal-card-media>
-        @if ($media instanceof \Spatie\MediaLibrary\MediaCollections\Models\Media)
-            <x-ui.picture
-                :media="$media"
-                conversion="card"
-                fill
-                :rounded="false"
-                :alt="$photoAlt ?? __('ui_domain.animal_card.photo_alt', ['name' => $name])"
-                :sizes="$photoSizes"
-                :priority="$priority"
-                class="transition-transform duration-(--duration-slow) ease-out motion-safe:group-hover/card:scale-105"
-            />
-        @elseif (filled($photo))
-            <img
-                src="{{ $photo }}"
-                alt="{{ $photoAlt ?? __('ui_domain.animal_card.photo_alt', ['name' => $name]) }}"
-                width="{{ $photoWidth }}"
-                height="{{ $photoHeight }}"
-                loading="lazy"
-                decoding="async"
-                class="size-full object-cover transition-transform duration-(--duration-slow) ease-out motion-safe:group-hover/card:scale-105"
-            >
-        @else
-            {{-- Nessuna foto: zampa decorativa (il nome è nel titolo). svg() diretto perché
-                 x-ui.icon arriva al massimo a 32 px. --}}
-            <span class="flex size-full items-center justify-center" data-animal-card-fallback>
-                {{ svg('lucide-paw-print', 'size-16 shrink-0', ['aria-hidden' => 'true', 'focusable' => 'false', 'data-icon' => 'paw-print']) }}
-            </span>
-        @endif
+    <div class="relative aspect-4/5 rounded-media p-2 {{ $tones[$tone] }}" data-animal-card-media>
+        <div
+            class="relative size-full overflow-hidden rounded-icon-lg"
+            data-animal-card-photo
+            @if (filled($transitionName)) wire:transition.navigate="{{ $transitionName }}" data-photo-transition="{{ $href }}" @endif
+        >
+            @if ($media instanceof \Spatie\MediaLibrary\MediaCollections\Models\Media)
+                <x-ui.picture
+                    :media="$media"
+                    conversion="card"
+                    fill
+                    :rounded="false"
+                    :alt="$photoAlt ?? __('ui_domain.animal_card.photo_alt', ['name' => $name])"
+                    :sizes="$photoSizes"
+                    :priority="$priority"
+                    class="transition-transform duration-(--duration-slow) ease-out motion-safe:group-hover/card:scale-105"
+                />
+            @elseif (filled($photo))
+                <img
+                    src="{{ $photo }}"
+                    alt="{{ $photoAlt ?? __('ui_domain.animal_card.photo_alt', ['name' => $name]) }}"
+                    width="{{ $photoWidth }}"
+                    height="{{ $photoHeight }}"
+                    loading="lazy"
+                    decoding="async"
+                    class="size-full object-cover transition-transform duration-(--duration-slow) ease-out motion-safe:group-hover/card:scale-105"
+                >
+            @else
+                {{-- Nessuna foto: zampa decorativa (il nome è nel titolo). svg() diretto perché
+                     x-ui.icon arriva al massimo a 32 px. --}}
+                <span class="flex size-full items-center justify-center" data-animal-card-fallback>
+                    {{ svg('lucide-paw-print', 'size-16 shrink-0', ['aria-hidden' => 'true', 'focusable' => 'false', 'data-icon' => 'paw-print']) }}
+                </span>
+            @endif
+        </div>
 
         @if ($featured)
             <x-ui.badge variant="stamp" icon="star" class="absolute start-3 top-3 -rotate-2 ring-2 ring-canvas" data-animal-card-featured>{{ __('ui_domain.animal_card.featured') }}</x-ui.badge>

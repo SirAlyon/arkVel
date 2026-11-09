@@ -14,6 +14,7 @@ use App\Models\Animal;
 use App\Models\Organization;
 use App\Models\User;
 use App\Support\Billing\StripeConfig;
+use App\Support\Map\ApproximateLocation;
 use App\Support\Seo\InteractsWithSeo;
 use App\Support\Seo\PublicPageSeo;
 use App\Support\Site\PublicLocation;
@@ -47,9 +48,10 @@ use Livewire\WithPagination;
  *
  * Dati di presentazione calcolati qui, non nella vista: la descrizione nella lingua
  * corrente con fallback e la lingua in cui è scritta ({@see TranslatedText}, per `lang`),
- * la località pubblica ({@see PublicLocation}), il sito solo se http(s) ({@see WebUrl}) e
- * i preferiti dell'utente tra gli animali della pagina, in una query
- * ({@see FindFavoritedAnimalIds}).
+ * la località pubblica ({@see PublicLocation}), la zona APPROSSIMATA per la mappa
+ * ({@see ApproximateLocation}: le coordinate salvate non arrivano mai alla vista), il sito
+ * solo se http(s) ({@see WebUrl}) e i preferiti dell'utente tra gli animali della pagina,
+ * in una query ({@see FindFavoritedAnimalIds}).
  */
 class OrganizationPage extends Component
 {
@@ -197,6 +199,7 @@ class OrganizationPage extends Component
             'locale' => $locale,
             'description' => TranslatedText::pick($this->organization, 'description', $locale),
             'location' => PublicLocation::of($this->organization),
+            'mapArea' => ApproximateLocation::of($this->organization),
             'website' => WebUrl::safe($this->organization->getAttribute('website')),
             'summary' => app(SummarizeOrganizationAnimals::class)->handle($this->organization),
             'donationsEnabled' => app(StripeConfig::class)->configured(),

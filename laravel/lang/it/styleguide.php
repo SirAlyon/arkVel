@@ -52,6 +52,14 @@ return [
             'title' => 'Media',
             'intro' => 'Immagini responsive (AVIF, WebP, JPEG) con placeholder sfocato e galleria con lightbox.',
         ],
+        'motion' => [
+            'title' => 'Movimento',
+            'intro' => 'Micro-interazioni e animazioni: reveal allo scroll, cuore dei preferiti, conferma dei toast e foto che vola dalla card alla scheda. Tutte rispettano «riduci movimento».',
+        ],
+        'map' => [
+            'title' => 'Mappa',
+            'intro' => 'Mappa con posizioni approssimate (MapLibre e tile OpenFreeMap), il suo elenco alternativo accessibile e il selettore di vista.',
+        ],
     ],
 
     'sections' => [

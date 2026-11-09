@@ -7,7 +7,9 @@
  | - `label` (obbligatorio): cosa misura il numero;
  | - `tone`: leaf (default, verde) · surface · sun · peach · mint · inverse;
  | - `icon`: icona Lucide decorativa sopra il numero;
- | - `size`: lg (default, text-h2) · md (text-h3).
+ | - `size`: lg (default, text-h2) · md (text-h3);
+ | - `reveal` (default true): compare allo scroll (x-reveal, resources/js/ui/motion.js), mai
+ |   sopra la piega, mai senza JS o con reduced-motion.
  |
  | Semantica: numero ed etichetta stanno nello stesso <p>, quindi lo screen reader li legge
  | insieme («1.240 animali adottati»). Più stat affiancate: una lista (<ul role="list">).
@@ -21,6 +23,7 @@
     'tone' => 'leaf',
     'icon' => null,
     'size' => 'lg',
+    'reveal' => true,
 ])
 
 @use('Illuminate\Support\Number')
@@ -41,7 +44,7 @@
         : (string) $value;
 @endphp
 
-<div data-stat="{{ $tone }}" {{ $attributes->class(['flex flex-col gap-4 rounded-card p-6', $tones[$tone]]) }}>
+<div data-stat="{{ $tone }}" @if ($reveal) x-reveal @endif {{ $attributes->class(['flex flex-col gap-4 rounded-card p-6', $tones[$tone]]) }}>
     @if ($icon)
         <x-ui.icon :name="$icon" size="lg" />
     @endif

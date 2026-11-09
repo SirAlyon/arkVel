@@ -17,7 +17,9 @@ use Spatie\LaravelData\Data;
  *
  * - `page`: la prima pagina mostrata (`?page=N`, link di paginazione e SEO), almeno 1;
  * - `pages`: quante pagine sono caricate a partire da `page` («Carica altri» e
- *   caricamento continuo), tra 1 e {@see self::MAX_PAGES}.
+ *   caricamento continuo), tra 1 e {@see self::MAX_PAGES};
+ * - `withAnimals`: false quando servono solo totale e faccette (vista «Mappa» del
+ *   catalogo): nessun animale caricato dal database.
  */
 final class CatalogQuery extends Data
 {
@@ -40,6 +42,7 @@ final class CatalogQuery extends Data
         public readonly string $sort = '',
         public readonly int $page = 1,
         public readonly int $pages = 1,
+        public readonly bool $withAnimals = true,
     ) {}
 
     public function firstPage(): int

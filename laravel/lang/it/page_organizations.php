@@ -48,6 +48,11 @@ return [
         'animals_title' => 'I loro animali',
         'animals_empty_title' => 'Nessun animale in adozione, per ora',
         'browse_catalog' => 'Sfoglia il catalogo',
+        'map' => [
+            'title' => 'Dove si trova',
+            'label' => 'Mappa della zona di :name',
+            'description' => 'Il cerchio indica la zona in cui si trova l’ente, non l’indirizzo. Per una visita, contatta l’ente.',
+        ],
     ],
 
     'donation' => [

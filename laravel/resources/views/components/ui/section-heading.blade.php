@@ -10,7 +10,10 @@
  | - `eyebrow`: testo breve sopra il titolo; `eyebrow-variant` badge (default, pill gialla)
  |   o text (testo piccolo in grassetto);
  | - `description`: sottotitolo text-lead in fg-muted (o lo slot);
- | - slot `action`: link o bottone, es. <x-ui.button variant="secondary" :href="…">.
+ | - slot `action`: link o bottone, es. <x-ui.button variant="secondary" :href="…">;
+ | - `reveal` (default true): compare allo scroll (x-reveal, resources/js/ui/motion.js): mai
+ |   sopra la piega, mai senza JS o con reduced-motion. false dentro un contenitore che ha
+ |   già il suo x-reveal.
  |
  | <section aria-labelledby="featured-title">
  |     <x-ui.section-heading id="featured-title" :title="__('…')" :eyebrow="__('…')" :description="__('…')">
@@ -29,6 +32,7 @@
     'eyebrow' => null,
     'eyebrowVariant' => 'badge',
     'description' => null,
+    'reveal' => true,
 ])
 
 @use('Illuminate\Support\Str')
@@ -40,7 +44,7 @@
     $id ??= 'heading-'.(Str::slug($title) ?: substr(md5($title), 0, 8));
 @endphp
 
-<div data-section-heading {{ $attributes->class('flex flex-col gap-5 md:flex-row md:items-end md:justify-between') }}>
+<div data-section-heading @if ($reveal) x-reveal @endif {{ $attributes->class('flex flex-col gap-5 md:flex-row md:items-end md:justify-between') }}>
     <div class="flex max-w-3xl flex-col gap-3">
         @if (filled($eyebrow))
             @if ($eyebrowVariant === 'text')

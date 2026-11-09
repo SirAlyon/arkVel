@@ -8,6 +8,11 @@
  |   focus dentro, il focus passa al primo elemento focalizzabile che lo segue (o a quello
  |   prima), oppure a `focus-target` (selettore CSS, es. il contenitore dei messaggi).
  |
+ | Entrata e uscita animate (solo nel toaster): il toast sale e compare (--duration-base,
+ | ease-out), l'icona del tipo entra con un piccolo pop (--duration-slow, ease-pop, senza
+ | ritardo: tutto entro 300 ms); con
+ | prefers-reduced-motion le durate sono ~0 (app.css).
+ |
  | Tipi: success · warning · danger · info. Il tipo non passa dal solo colore: icona nel
  | riquadro colorato e, per gli screen reader, il nome del tipo prima del titolo (schema
  | tradotto ui_overlays.toast.prefix, punteggiatura compresa).
@@ -64,7 +69,11 @@
         @if ($bound || $key === $type)
             <span
                 @if ($bound) x-show="toast.type === '{{ $key }}'" @endif
-                class="inline-flex size-11 shrink-0 items-center justify-center rounded-icon {{ $tone }}"
+                @class([
+                    'inline-flex size-11 shrink-0 items-center justify-center rounded-icon',
+                    $tone,
+                    'transition-[scale] duration-(--duration-slow) ease-pop starting:scale-50' => $bound,
+                ])
                 data-toast-icon="{{ $key }}"
             >
                 <x-ui.icon :name="$icon" />

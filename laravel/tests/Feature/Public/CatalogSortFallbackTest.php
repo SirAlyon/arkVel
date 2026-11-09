@@ -84,6 +84,9 @@ it('falls back to the relevance of the engine when no attribute is sortable', fu
 });
 
 it('does not hide the other errors of the engine', function (): void {
+    // Senza enti verificati il motore non viene nemmeno interrogato (CatalogScoutQuery).
+    Organization::factory()->verified()->create();
+
     $index = Mockery::mock(Indexes::class);
     $index->shouldReceive('rawSearch')->once()->andThrow(new ApiException(new Response(500), ['message' => 'Boom', 'code' => 'internal']));
     fakeMeilisearch($index);

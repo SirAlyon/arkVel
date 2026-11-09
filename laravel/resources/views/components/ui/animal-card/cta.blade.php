@@ -9,7 +9,8 @@
  |   lingua corrente («Nel catalogo ci sono altri 128 animali…»);
  | - `title`, `description`, `action`: sostituiscono i testi predefiniti; la descrizione
  |   può anche arrivare dallo slot;
- | - `heading-level` (default 3): lo stesso livello delle card animale vicine.
+ | - `heading-level` (default 3): lo stesso livello delle card animale vicine;
+ | - `reveal` (default true): compare allo scroll con le card vicine (x-reveal).
  |
  | L'unico elemento interattivo è il bottone-link; sul fondo inverse il focus prende il
  | colore on-inverse (regola .bg-inverse di app.css).
@@ -23,6 +24,7 @@
     'description' => null,
     'action' => null,
     'headingLevel' => 3,
+    'reveal' => true,
 ])
 
 @use('Illuminate\Support\Number')
@@ -39,6 +41,7 @@
 
 <div
     data-animal-card-cta
+    @if ($reveal) x-reveal @endif
     {{ $attributes->class('flex h-full min-h-80 flex-col justify-between gap-8 rounded-card bg-inverse p-6 text-on-inverse') }}
 >
     <span class="inline-flex size-14 items-center justify-center rounded-icon-lg bg-highlight text-on-highlight">

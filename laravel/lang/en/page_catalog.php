@@ -87,4 +87,23 @@ return [
         'description' => 'Meet the organizations caring for these animals: every shelter has its own story and other ways to help.',
         'action' => 'Meet the organizations',
     ],
+
+    'view' => [
+        'label' => 'View',
+        'list' => 'List',
+        'map' => 'Map',
+    ],
+
+    'map' => [
+        'title' => 'Organizations on the map',
+        'description' => 'The organizations with animals matching your search. Locations are approximate: they show the area, not the address.',
+        'label' => 'Map of the organizations with animals matching your search',
+        'list_title' => 'List of organizations',
+        'fallback' => 'The same organizations are in the list.',
+        'unlocated' => 'Some organizations have no location yet: you will find them only in the list.',
+        'animals' => '{1}:count animal|[2,*]:count animals',
+        'empty_title' => 'No organizations to show on the map',
+        'empty_description' => 'There are animals that match the search, but their organizations are not ready for the map yet. You can find them in the list.',
+        'empty_action' => 'See the list',
+    ],
 ];

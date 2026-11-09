@@ -11,7 +11,9 @@
  |
  | - `name` (obbligatorio): nome dell'animale;
  | - `pressed`: già nei preferiti;
- | - `label`: sostituisce il nome accessibile calcolato.
+ | - `label`: sostituisce il nome accessibile calcolato;
+ | - `guest`: il clic non salva (porta alla pagina di accesso): data-favorite-guest, così il
+ |   cuore non fa il «pop» di un preferito aggiunto (resources/js/ui/motion.js).
  |
  | <x-slot:favorite>
  |     <x-ui.animal-card.favorite name="Fido" :pressed="$favorited" wire:click="toggle" />
@@ -21,6 +23,7 @@
     'name',
     'pressed' => false,
     'label' => null,
+    'guest' => false,
 ])
 
 <button
@@ -28,6 +31,7 @@
     aria-pressed="{{ $pressed ? 'true' : 'false' }}"
     aria-label="{{ $label ?? __('ui_domain.animal_card.favorite', ['name' => $name]) }}"
     data-favorite
+    @if ($guest) data-favorite-guest @endif
     {{ $attributes->class([
         'group/favorite inline-flex size-11 items-center justify-center rounded-full bg-canvas text-fg',
         'transition-[background-color,color,scale] duration-(--duration-fast) ease-pop motion-safe:hover:scale-110 motion-safe:active:scale-95',

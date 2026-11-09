@@ -16,10 +16,15 @@
  |
  | Galleria: x-ui.gallery con la prima foto come LCP (priority); senza foto, la foto
  | profilo o la zampa con le stesse proporzioni (nessun CLS).
- | Transizione animata card → scheda: rinviata (vedi il report di UI-6c), perché serve un
- | view-transition-name unico per animale sulla foto della card e sulla prima slide.
+ | Transizione animata card → scheda (UI-7): galleria (o foto di riserva) con il nome di View
+ | Transition dell'animale (App\Support\Site\AnimalPhotoTransition), lo stesso della sua
+ | card: con wire:navigate la foto vola dalla card a qui. Gli animali simili escludono
+ | questo animale, quindi i nomi restano unici nella pagina.
+ | Reveal allo scroll (x-reveal) sulle sezioni sotto la galleria e sulle card simili: mai
+ | sopra la piega, mai senza JS o con reduced-motion (resources/js/ui/motion.js).
 --}}
 @use('App\Enums\OrganizationStatus')
+@use('App\Support\Site\AnimalPhotoTransition')
 
 @php
     $name = $animal->name;
@@ -84,7 +89,7 @@
             {{-- Galleria (prima foto = LCP) --}}
             <div class="min-w-0 lg:col-span-7" data-animal-gallery>
                 @if ($photos->isNotEmpty())
-                    <x-ui.gallery id="animal-gallery" :media="$photos" :name="$name" priority :sizes="$gallerySizes" />
+                    <x-ui.gallery id="animal-gallery" :media="$photos" :name="$name" priority :sizes="$gallerySizes" :transition-name="AnimalPhotoTransition::name($animal)" />
                 @else
                     <x-ui.picture
                         :media="$avatar"
@@ -93,6 +98,8 @@
                         :sizes="$gallerySizes"
                         priority
                         data-animal-photo-fallback
+                        wire:transition.navigate="{{ AnimalPhotoTransition::name($animal) }}"
+                        data-photo-transition=""
                     />
                 @endif
             </div>
@@ -167,8 +174,8 @@
 
             {{-- Presentazione, schede informative, ente --}}
             <div class="flex min-w-0 flex-col gap-section lg:col-span-7">
-                <section aria-labelledby="animal-about-title" class="flex flex-col gap-5" data-animal-about>
-                    <x-ui.section-heading id="animal-about-title" size="h3" :title="__('page_animal.about.title', ['name' => $name])" />
+                <section aria-labelledby="animal-about-title" class="flex flex-col gap-5" data-animal-about x-reveal>
+                    <x-ui.section-heading id="animal-about-title" size="h3" :reveal="false" :title="__('page_animal.about.title', ['name' => $name])" />
                     @if ($description !== null)
                         <p class="max-w-prose whitespace-pre-line text-lead [overflow-wrap:anywhere]" @if ($description->differsFrom($locale)) lang="{{ $description->locale }}" @endif data-animal-description>{{ $description->text }}</p>
                     @else
@@ -176,8 +183,8 @@
                     @endif
                 </section>
 
-                <section aria-labelledby="animal-facts-title" class="flex flex-col gap-5" data-animal-facts>
-                    <x-ui.section-heading id="animal-facts-title" size="h3" :title="__('page_animal.facts.title', ['name' => $name])" />
+                <section aria-labelledby="animal-facts-title" class="flex flex-col gap-5" data-animal-facts x-reveal>
+                    <x-ui.section-heading id="animal-facts-title" size="h3" :reveal="false" :title="__('page_animal.facts.title', ['name' => $name])" />
 
                     <x-ui.tabs id="animal-facts" selected="profile">
                         <x-ui.tabs.list :label="__('page_animal.facts.tabs', ['name' => $name])">
@@ -224,8 +231,8 @@
                     </x-ui.tabs>
                 </section>
 
-                <section aria-labelledby="animal-organization-title" class="flex flex-col gap-5" data-animal-organization-section>
-                    <x-ui.section-heading id="animal-organization-title" size="h3" :title="__('page_animal.organization.title', ['name' => $name])" />
+                <section aria-labelledby="animal-organization-title" class="flex flex-col gap-5" data-animal-organization-section x-reveal>
+                    <x-ui.section-heading id="animal-organization-title" size="h3" :reveal="false" :title="__('page_animal.organization.title', ['name' => $name])" />
                     <x-ui.organization-card
                         :name="$organization->name"
                         :href="route('organizations.show', $organization)"

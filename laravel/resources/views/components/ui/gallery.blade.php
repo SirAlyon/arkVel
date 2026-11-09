@@ -15,7 +15,10 @@
  |   di fallback e il nome della lightbox. `label` sostituisce il nome della regione;
  | - `id`: prefisso degli id (default «gallery»), unico nella pagina;
  | - `priority`: la prima slide è l'immagine LCP della pagina (fetchpriority="high");
- | - `sizes`: larghezza mostrata delle slide (default 100vw).
+ | - `sizes`: larghezza mostrata delle slide (default 100vw);
+ | - `transition-name`: nome della View Transition del riquadro delle foto
+ |   (App\Support\Site\AnimalPhotoTransition), unico nella pagina: con wire:navigate la foto
+ |   della card vola qui (e torna indietro sulla card con il tasto Indietro).
  |
  | Senza JS è una lista di foto scorrevole in orizzontale (scroll-snap) e ogni foto è un
  | link alla foto per la lightbox. Con JS: slide fuori vista `inert`, bottoni precedente/successiva
@@ -39,6 +42,7 @@
     'id' => 'gallery',
     'priority' => false,
     'sizes' => '100vw',
+    'transitionName' => null,
 ])
 
 @php
@@ -81,6 +85,7 @@
     >
         <div
             data-gallery-viewport
+            @if (filled($transitionName)) wire:transition.navigate="{{ $transitionName }}" data-photo-transition @endif
             class="overflow-x-auto overscroll-x-contain rounded-media snap-x snap-mandatory group-data-ready/gallery:snap-none group-data-ready/gallery:overflow-hidden"
         >
             <ul role="list" data-gallery-container class="flex touch-pan-y">

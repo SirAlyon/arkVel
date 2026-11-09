@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\Contracts\ContractGenerator;
 use App\Support\Pdf\DompdfContractGenerator;
 use App\Support\Settings\PlatformSettings;
+use App\Support\Ui\ElementIds;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -31,6 +32,9 @@ class AppServiceProvider extends ServiceProvider
         // memo in memoria; condividendo l'istanza, ogni consumatore (resolver Google,
         // pagina admin) legge/invalida la stessa cache all'interno della request.
         $this->app->singleton(PlatformSettings::class);
+
+        // Id univoci dei componenti x-ui nella pagina: uno stato per richiesta.
+        $this->app->scoped(ElementIds::class);
     }
 
     /**
