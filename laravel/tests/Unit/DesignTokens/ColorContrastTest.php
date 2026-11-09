@@ -117,3 +117,48 @@ it('scopes the focus colour inside every coloured block, as listed in ContrastPa
     // Senza override il focus di default sparirebbe su almeno uno di questi fondi.
     expect($sheet->contrast('focus', 'inverse', 'light'))->toBeLessThan(ContrastKind::NonText->minimum());
 });
+
+/*
+ | Fondi che non devono confondersi (ΔE OKLab, TokenSheet::difference()). Il contrasto WCAG
+ | non basta: due fondi scuri di luminanza simile hanno contrasto ~1 anche con tinte diverse.
+ | 0,10 è circa cinque volte la soglia del percettibile (~0,02).
+ */
+const DESIGN_TOKEN_MIN_DIFFERENCE = 0.10;
+
+it('keeps the dark peach block apart from the reds of the errors', function (string $red): void {
+    // Con peach-700 (#914234) il blocco pesca era quasi identico al rosso cherry-700 (1,04:1,
+    // ΔE 0,06) e sembrava un errore. Si confronta con i rossi dei token danger del tema
+    // scuro e con cherry-700, il rosso «errore» del tema chiaro che l'occhio associa.
+    $sheet = designTokenSheet();
+
+    expect($sheet->difference('block-peach', $red, 'dark'))->toBeGreaterThanOrEqual(DESIGN_TOKEN_MIN_DIFFERENCE);
+})->with(['danger', 'danger-hover', 'danger-subtle', 'cherry-700']);
+
+it('keeps the dark mint block apart from the surfaces and from the leaf block', function (string $background): void {
+    // Con leaf-900 la menta sulla card surface (navy-800) era 1,12:1, ΔE 0,11: quasi invisibile.
+    $sheet = designTokenSheet();
+
+    expect($sheet->difference('block-mint', $background, 'dark'))->toBeGreaterThanOrEqual(DESIGN_TOKEN_MIN_DIFFERENCE)
+        ->and($sheet->contrast('block-mint', $background, 'dark'))->toBeGreaterThanOrEqual(1.5);
+})->with(['canvas', 'surface', 'block-leaf']);
+
+it('keeps the dark coloured blocks distinct from one another', function (): void {
+    $sheet = designTokenSheet();
+    $blocks = ['block-sun', 'block-peach', 'block-mint', 'block-leaf'];
+
+    foreach ($blocks as $index => $first) {
+        foreach (array_slice($blocks, $index + 1) as $second) {
+            expect($sheet->difference($first, $second, 'dark'))->toBeGreaterThanOrEqual(DESIGN_TOKEN_MIN_DIFFERENCE, "{$first} / {$second}");
+        }
+    }
+});
+
+it('pins the dark block colours chosen after the UI-6 review', function (string $token, string $palette): void {
+    expect(designTokenSheet()->resolve($token, 'dark'))->toBe(designTokenSheet()->resolve($palette, 'dark'));
+})->with([
+    'pesca' => ['block-peach', 'peach-800'],
+    'testo su pesca' => ['on-block-peach', 'peach-100'],
+    'menta' => ['block-mint', 'leaf-800'],
+    'testo su menta' => ['on-block-mint', 'leaf-100'],
+    'verde' => ['block-leaf', 'leaf-600'],
+]);

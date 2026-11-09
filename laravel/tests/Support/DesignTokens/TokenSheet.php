@@ -88,6 +88,19 @@ final readonly class TokenSheet
         return (max($first, $second) + 0.05) / (min($first, $second) + 0.05);
     }
 
+    /**
+     * Distanza percettiva tra due colori: ΔE in OKLab (euclidea su L, a, b; L in 0-1).
+     * Circa 0,02 è la soglia del percettibile; il contrasto WCAG non basta a dire se due
+     * fondi si confondono (due colori di pari luminanza hanno contrasto 1 anche se diversi).
+     */
+    public function difference(string $first, string $second, string $theme): float
+    {
+        [$firstL, $firstA, $firstB] = self::oklab($this->resolve($first, $theme));
+        [$secondL, $secondA, $secondB] = self::oklab($this->resolve($second, $theme));
+
+        return sqrt(($firstL - $secondL) ** 2 + ($firstA - $secondA) ** 2 + ($firstB - $secondB) ** 2);
+    }
+
     public function hex(string $token, string $theme = 'light'): string
     {
         return '#'.implode('', array_map(
@@ -129,6 +142,17 @@ final readonly class TokenSheet
             $clamp(-1.2684380046 * $l + 2.6097574011 * $m - 0.3413193965 * $s),
             $clamp(-0.0041960863 * $l - 0.7034186147 * $m + 1.7076147010 * $s),
         ];
+    }
+
+    /**
+     * @param  array{float, float, float}  $oklch
+     * @return array{float, float, float}
+     */
+    private static function oklab(array $oklch): array
+    {
+        [$lightness, $chroma, $hue] = $oklch;
+
+        return [$lightness, $chroma * cos(deg2rad($hue)), $chroma * sin(deg2rad($hue))];
     }
 
     private static function encode(float $linear): float

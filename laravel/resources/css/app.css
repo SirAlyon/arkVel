@@ -231,33 +231,6 @@
     --color-info-subtle: var(--color-navy-50);
     --color-on-info-subtle: var(--color-navy-800);
 
-    /* ── Legacy (da rimuovere in UI-6) ──────────────────────────────────── */
-    /* Le pagine attuali usano ancora brand-* (ex terracotta) e accent-* (ex teal).
-       Fino alla loro migrazione puntano alla nuova palette: brand → sabbia/navy,
-       accent → verde, scalato di un passo perché il bianco sopra resti >= 4.5:1. */
-    --color-brand-50: var(--color-sand-50);
-    --color-brand-100: var(--color-sand-100);
-    --color-brand-200: var(--color-sand-200);
-    --color-brand-300: var(--color-navy-300);
-    --color-brand-400: var(--color-navy-400);
-    --color-brand-500: var(--color-navy-500);
-    --color-brand-600: var(--color-navy-600);
-    --color-brand-700: var(--color-navy-700);
-    --color-brand-800: var(--color-navy-800);
-    --color-brand-900: var(--color-navy-900);
-    --color-brand-950: var(--color-navy-950);
-    --color-accent-50: var(--color-leaf-50);
-    --color-accent-100: var(--color-leaf-100);
-    --color-accent-200: var(--color-leaf-200);
-    --color-accent-300: var(--color-leaf-300);
-    --color-accent-400: var(--color-leaf-400);
-    --color-accent-500: var(--color-leaf-600);
-    --color-accent-600: var(--color-leaf-700);
-    --color-accent-700: var(--color-leaf-800);
-    --color-accent-800: var(--color-leaf-900);
-    --color-accent-900: var(--color-leaf-950);
-    --color-accent-950: var(--color-leaf-950);
-
     /* ── Forme ──────────────────────────────────────────────────────────── */
     /* Raggi generosi per gerarchia: pannello > card > passo > immagine > icona.
        Bottoni, chip, nav e ricerca: `rounded-full`. Nessuna ombra: la profondità
@@ -305,7 +278,10 @@
      | Il giallo resta accento (bottoni, badge, numeri), mai grande superficie: il blocco
      | hero diventa una superficie scura e la card "inverse" un navy più chiaro (niente
      | grandi superfici crema che abbagliano). Pesca e menta diventano blocchi scuri con
-     | testo chiaro; il verde resta leaf-700, più luminoso della menta per distinguerli.
+     | testo chiaro: pesca peach-800 (non peach-700, quasi identico al rosso cherry-700 degli
+     | errori), menta leaf-800 (staccata dalla surface navy-800, dove leaf-900 spariva) e
+     | verde leaf-600, un gradino più chiaro di leaf-700 per restare distinto dalla menta.
+     | ColorContrastTest verifica le distanze (ΔE OKLab) tra questi fondi.
      */
     .dark {
         color-scheme: dark;
@@ -337,11 +313,11 @@
 
         --color-block-sun: var(--color-navy-800);
         --color-on-block-sun: var(--color-sand-50);
-        --color-block-peach: var(--color-peach-700);
+        --color-block-peach: var(--color-peach-800);
         --color-on-block-peach: var(--color-peach-100);
-        --color-block-mint: var(--color-leaf-900);
+        --color-block-mint: var(--color-leaf-800);
         --color-on-block-mint: var(--color-leaf-100);
-        --color-block-leaf: var(--color-leaf-700);
+        --color-block-leaf: var(--color-leaf-600);
         --color-on-block-leaf: var(--color-white);
 
         --color-success: var(--color-leaf-300);

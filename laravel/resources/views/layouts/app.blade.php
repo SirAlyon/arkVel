@@ -8,10 +8,10 @@
  | - $title, $metaDescription: fallback di <title> e meta description per una pagina che
  |   non passa $seo;
  | - $themeable (default false): la pagina usa i token semantici e segue il tema scelto
- |   (chiaro / scuro / automatico). Le pagine legacy usano ancora colori fissi (brand-*,
- |   stone-*, bg-white): senza opt-in il tema è forzato chiaro (data-theme-forced su <html>,
- |   letto da partials/theme-script) e il selettore del tema non compare. Le pagine lo
- |   attivano quando migrano (UI-6): ->layoutData(['themeable' => true]);
+ |   (chiaro / scuro / automatico). Una pagina a colori fissi (palette grezza, bg-white)
+ |   resta senza opt-in: il tema è forzato chiaro (data-theme-forced su <html>, letto da
+ |   partials/theme-script) e il selettore del tema non compare. Dal UI-6 tutte le pagine
+ |   pubbliche lo attivano: ->layoutData(['themeable' => true]);
  | - $transparentHeader (default false): header trasparente sopra la hero, solido allo
  |   scroll (vedi components/site/header). Per la Home in UI-6a.
  |
