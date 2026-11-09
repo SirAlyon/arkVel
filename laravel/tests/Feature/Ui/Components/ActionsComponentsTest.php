@@ -155,7 +155,7 @@ describe('pagination', function (): void {
 
         expect($html)->toContain('aria-label="Pagine del catalogo"')
             ->toContain('Pagine da 1 a 3 di 5')
-            ->and(substr_count($html, 'aria-current="page"'))->toBe(3)
+            ->and(substr_count($html, 'aria-current="page"'))->toBe(1)
             ->and($html)->toMatch('/href="\/l\?page=4"[^>]*rel="next"/s');
     });
 
@@ -266,4 +266,12 @@ describe('theme toggle', function (): void {
             ->assertSeeInOrder(['data-icon="sun"', 'data-icon="moon"', 'data-icon="monitor"'], escape: false)
             ->assertDontSee('{!!', escape: false);
     });
+});
+
+it('marks only the first loaded page as current when a range of pages is shown', function (): void {
+    $html = (string) $this->blade('<x-ui.pagination :current="2" :current-to="4" :last="6" :url="fn ($page) => \'/animali?page=\'.$page" />');
+
+    expect(substr_count($html, 'aria-current="page"'))->toBe(1)
+        ->and($html)->toContain('aria-label="Pagina 3, già mostrata"')
+        ->and($html)->toContain('aria-label="Pagina 2"');
 });

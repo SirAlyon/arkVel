@@ -173,12 +173,48 @@ it('moves between the pages with the shared pagination, on mobile and desktop', 
         ->assertScript(BrowserScripts::undersizedTargets('[data-catalog-pagination]'), []);
 
     // Arrivando alla paginazione la sentinella carica da sola la pagina 3: si aspetta che
-    // finisca (le pagine caricate diventano correnti), poi «successiva» porta alla 4.
+    // finisca (la 3 si evidenzia come già mostrata, ma resta una sola pagina corrente: la 2),
+    // poi «successiva» porta alla 4.
     $page->script('document.querySelector("[data-catalog-pagination]").scrollIntoView()');
     $page->assertScript(catalogEventually('document.querySelector("[data-pagination-summary]")?.textContent.includes("Pagine da 2 a 3 di 4")'), true)
-        ->assertAttribute('[data-pagination-page="3"]', 'aria-current', 'page')
+        ->assertAttribute('[data-pagination-page="3"]', 'aria-label', 'Pagina 3, già mostrata')
+        ->assertScript('document.querySelectorAll("[data-catalog-pagination] [aria-current=page]").length', 1)
         ->click('[data-pagination-next]')
         ->assertScript(catalogEventually('new URLSearchParams(location.search).get("page") === "4"'), true)
         ->assertScript(catalogEventually('document.querySelector("[data-pagination-page=\'4\']")?.getAttribute("aria-current") === "page"'), true)
         ->assertNoJavaScriptErrors();
 })->with(['mobile' => 375, 'desktop' => 1280]);
+
+it('drops a pending continuous load when the visitor follows a pagination link', function (): void {
+    seedCatalog(extra: 40);
+
+    $page = visit(route('catalog', ['sort' => 'name']))->withLocale('it-IT')->resize(1280, 900);
+
+    // Raccoglie gli errori della pagina (la finestra resta la stessa con wire:navigate) e
+    // rallenta di 1,5 s le risposte di Livewire, così «Carica altri» è ancora in volo
+    // quando la navigazione verso pagina 3 scambia la pagina.
+    $page->script(<<<'JS'
+        window.__catalogErrors = [];
+        window.addEventListener('error', (event) => window.__catalogErrors.push(String(event.message)));
+        window.addEventListener('unhandledrejection', (event) => window.__catalogErrors.push(String(event.reason?.message ?? event.reason)));
+        const originalFetch = window.fetch;
+        window.fetch = (input, init) => {
+            const update = init?.headers?.['X-Livewire'] === '1';
+
+            return update
+                ? new Promise((resolve, reject) => setTimeout(() => originalFetch(input, init).then(resolve, reject), 1500))
+                : originalFetch(input, init);
+        };
+        JS);
+
+    $page->click('[data-catalog-load-more]')
+        ->assertScript('document.querySelector("[data-catalog-loading]").checkVisibility()', true)
+        ->click('[data-pagination-page="3"]')
+        ->assertScript(catalogEventually('new URLSearchParams(location.search).get("page") === "3"'), true)
+        ->assertScript(catalogEventually('document.querySelector("[data-pagination-summary]")?.textContent.includes("Pagina 3 di 4")'), true)
+        // La risposta rallentata arriva dopo lo scambio: non deve toccare la nuova pagina.
+        ->assertScript('new Promise((resolve) => setTimeout(() => resolve(window.__catalogErrors), 2500))', [])
+        ->assertScript(catalogCards().' >= 12', true)
+        ->assertSeeIn('[data-catalog-status]', 'mostrati dal 25 al')
+        ->assertNoJavaScriptErrors();
+});

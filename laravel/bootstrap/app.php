@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ContentLanguage;
 use App\Http\Middleware\SetLocale;
 use App\Support\Auth\PostLoginDestination;
 use App\Support\Http\TrustedHosts;
@@ -30,7 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Lingua dell'interfaccia del sito pubblico (sessione → Accept-Language → default).
         // Solo sul gruppo `web`: i pannelli Filament hanno uno stack proprio.
-        $middleware->web(append: [SetLocale::class]);
+        $middleware->web(append: [SetLocale::class, ContentLanguage::class]);
 
         // Ospiti sulle rotte protette da `auth` (es. il download .ics di un appuntamento,
         // il pannello /account, la pagina di verifica email) → accesso pubblico (UI-5),

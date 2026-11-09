@@ -46,3 +46,92 @@ jobs:
 
       - name: Pest (tests)
         run: ./vendor/bin/pest --ci
+
+  # Suite browser (Pest 4 Browser plugin + Playwright/Chromium). È fuori dai testsuite di
+  # phpunit.xml, quindi va lanciata esplicitamente. In locale gira nel servizio
+  # `browser-tests` (Dockerfile.browser); qui gira direttamente sul runner Ubuntu.
+  # Nessun servizio esterno: SQLite in memoria e Scout `collection` forzati da phpunit.xml.
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo, pdo_sqlite, sqlite3, intl, gd, zip, bcmath, redis, sockets
+          coverage: none
+          # Come Dockerfile.browser: la suite browser sta stretta con il limite di default.
+          ini-values: memory_limit=1G
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: laravel/vendor
+          key: composer-${{ hashFiles('laravel/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        timeout-minutes: 10
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # Node 22: stessa major di Dockerfile.browser (NODE_MAJOR).
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: laravel/package-lock.json
+
+      - name: Install Node dependencies
+        timeout-minutes: 10
+        run: npm ci
+
+      - name: Build assets
+        timeout-minutes: 10
+        run: npm run build
+
+      # Versione del client playwright installato da npm ci: chiave della cache dei browser,
+      # così un bump di playwright in package.json scarica il Chromium corrispondente.
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        run: npx playwright install --with-deps chromium
+
+      # Con i browser in cache servono comunque le librerie di sistema (non cacheate).
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 10
+        run: npx playwright install-deps chromium
+
+      - name: Pest (browser tests)
+        timeout-minutes: 20
+        run: ./vendor/bin/pest tests/Browser
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-screenshots
+          path: laravel/tests/Browser/Screenshots
+          if-no-files-found: ignore
+          retention-days: 7

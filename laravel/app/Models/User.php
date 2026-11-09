@@ -8,6 +8,7 @@ use App\Enums\OrganizationStatus;
 use App\Enums\RoleName;
 use App\Notifications\Auth\ResetPasswordLink;
 use App\Notifications\Auth\VerifyEmailAddress;
+use App\Support\Auth\EmailAddress;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
@@ -15,6 +16,7 @@ use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -45,6 +47,23 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * L'email si salva sempre nella forma canonica ({@see EmailAddress}: senza spazi ai
+     * lati, in minuscolo), da qualunque parte arrivi: moduli pubblici, pannelli Filament
+     * (registrazione /manage, utenti dell'admin), seeder, factory. Così /accedi, che cerca
+     * l'indirizzo in minuscolo, trova anche gli account creati con le maiuscole. Le email
+     * salvate prima di questa regola le porta in minuscolo la migrazione
+     * 2026_11_09_090000_normalize_user_emails.
+     *
+     * @return Attribute<string, string>
+     */
+    protected function email(): Attribute
+    {
+        return Attribute::make(
+            set: static fn (string $value): string => EmailAddress::normalize($value),
+        );
     }
 
     /**

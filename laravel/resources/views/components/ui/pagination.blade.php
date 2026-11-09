@@ -97,8 +97,9 @@
                     @elseif ($page >= $current && $page <= $currentTo)
                         <a
                             href="{{ $toUrl($page) }}"
-                            aria-current="page"
-                            aria-label="{{ __('ui_navigation.pagination.page', ['page' => $page]) }}"
+                            {{-- Una sola pagina corrente: le altre dell intervallo caricato hanno lo stesso aspetto ma lo dicono a parole. --}}
+                            @if ($page === $current) aria-current="page" @endif
+                            aria-label="{{ $page === $current ? __('ui_navigation.pagination.page', ['page' => $page]) : __('ui_navigation.pagination.page_shown', ['page' => $page]) }}"
                             class="{{ $pageClasses }} border-primary bg-primary text-on-primary"
                             @if ($livewire) wire:click.prevent @endif
                             data-pagination-page="{{ $page }}"

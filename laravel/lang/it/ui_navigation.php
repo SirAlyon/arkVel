@@ -12,6 +12,7 @@ return [
         'previous' => 'Pagina precedente',
         'next' => 'Pagina successiva',
         'page' => 'Pagina :page',
+        'page_shown' => 'Pagina :page, già mostrata',
         'summary' => 'Pagina :page di :last',
         'summary_range' => 'Pagine da :from a :to di :last',
     ],
