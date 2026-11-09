@@ -1,0 +1,247 @@
+/*
+ | Gruppo "map": tema di MapLibre per x-ui.map (segnaposto, cluster, riquadro, controlli,
+ | messaggio dei gesti). Importato da resources/js/ui/map.js insieme a MapLibre, solo
+ | quando una mappa si carica.
+ |
+ | Solo token: i colori seguono il tema (in scuro primary diventa il giallo). Target dei
+ | segnaposto e dei controlli 44 px; anelli di focus dal token `focus`, dentro il bordo della
+ | mappa (che ha overflow nascosto). Le trasformazioni di hover usano `scale` (proprietà
+ | separata) perché `transform` lo scrive MapLibre per posizionare i segnaposto.
+ */
+.ui-map.maplibregl-map {
+    /* maplibre-gl.css (caricato dopo Tailwind) mette .maplibregl-map in position: relative,
+       che annulla `absolute inset-0` del contenitore: altezza 0 e mappa invisibile. */
+    position: absolute;
+    inset: 0;
+    font-family: var(--font-sans);
+    color: var(--color-fg);
+}
+
+.ui-map .maplibregl-canvas:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: -3px;
+}
+
+/* ── Segnaposto e cluster ─────────────────────────────────────────────── */
+.ui-map-marker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    padding: 0 0.75rem;
+    border: 2px solid var(--color-canvas);
+    border-radius: 9999px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font: 700 var(--text-small) / 1 var(--font-sans);
+    cursor: pointer;
+    transition:
+        scale var(--duration-fast) var(--ease-pop),
+        background-color var(--duration-fast) var(--ease-out);
+}
+
+.ui-map-marker:hover {
+    scale: 1.08;
+}
+
+.ui-map-marker:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+.ui-map-marker[aria-expanded='true'] {
+    border-color: var(--color-fg);
+    background: var(--color-highlight);
+    color: var(--color-on-highlight);
+    scale: 1.12;
+}
+
+.ui-map-cluster {
+    min-width: 3.25rem;
+    height: 3.25rem;
+    border: 3px solid var(--color-primary);
+    background: var(--color-block-mint);
+    color: var(--color-on-block-mint);
+    font-size: var(--text-body);
+}
+
+/* ── Riquadro (popup) ─────────────────────────────────────────────────── */
+/* Sopra i controlli dello zoom (z-index 2 in maplibre-gl.css): su una mappa stretta il
+   riquadro può passarci sopra, e non deve restare coperto. */
+.ui-map-popup-frame {
+    z-index: 3;
+}
+
+.ui-map-popup-frame .maplibregl-popup-content {
+    padding: 1rem 3rem 1rem 1rem;
+    border-radius: var(--radius-media);
+    background: var(--color-surface-raised);
+    color: var(--color-fg);
+    box-shadow: var(--shadow-overlay);
+    font-family: var(--font-sans);
+}
+
+.ui-map-popup-frame.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.ui-map-popup-frame.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.ui-map-popup-frame.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+    border-bottom-color: var(--color-surface-raised);
+}
+
+.ui-map-popup-frame.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.ui-map-popup-frame.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.ui-map-popup-frame.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+    border-top-color: var(--color-surface-raised);
+}
+
+.ui-map-popup-frame.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+    border-right-color: var(--color-surface-raised);
+}
+
+.ui-map-popup-frame.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+    border-left-color: var(--color-surface-raised);
+}
+
+.ui-map-popup-frame .maplibregl-popup-close-button {
+    top: 0.25rem;
+    right: 0.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    color: var(--color-fg);
+    font: 400 1.5rem / 1 var(--font-sans);
+}
+
+.ui-map-popup-frame .maplibregl-popup-close-button:hover {
+    background: var(--color-surface);
+}
+
+.ui-map-popup-frame .maplibregl-popup-close-button:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: -3px;
+}
+
+.ui-map-popup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.ui-map-popup__title {
+    font-size: var(--text-body);
+    font-weight: 800;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.ui-map-popup__meta {
+    color: var(--color-fg-muted);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+}
+
+.ui-map-popup__link {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    min-height: 2.75rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: var(--text-small);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.ui-map-popup__link:hover {
+    background: var(--color-primary-hover);
+}
+
+.ui-map-popup__link:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+/* Riquadro di un gruppo di enti nella stessa zona: elenco di link. */
+.ui-map-popup__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.ui-map-popup__item-link {
+    display: inline-flex;
+    min-height: 1.5rem;
+    align-items: center;
+    border-radius: 0.25rem;
+    color: var(--color-fg);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    overflow-wrap: anywhere;
+}
+
+.ui-map-popup__item-link:hover {
+    text-decoration-thickness: 4px;
+}
+
+.ui-map-popup__item-link:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+/* ── Controlli dello zoom ─────────────────────────────────────────────── */
+.ui-map .maplibregl-ctrl-group {
+    overflow: hidden;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-icon-lg);
+    background: var(--color-surface-raised);
+    box-shadow: none;
+}
+
+.ui-map .maplibregl-ctrl-group button {
+    width: 2.75rem;
+    height: 2.75rem;
+}
+
+.ui-map .maplibregl-ctrl-group button + button {
+    border-top-color: var(--color-line);
+}
+
+.ui-map .maplibregl-ctrl-group button:not(:disabled):hover {
+    background: var(--color-surface);
+}
+
+.ui-map .maplibregl-ctrl-group button:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: -3px;
+    box-shadow: none;
+}
+
+/* Le icone di MapLibre sono SVG scuri: in tema scuro si invertono. */
+.dark .ui-map .maplibregl-ctrl-icon {
+    filter: invert(1);
+}
+
+/* ── Messaggio dei gesti cooperativi (Ctrl + rotellina, due dita) ─────── */
+.ui-map .maplibregl-cooperative-gesture-screen {
+    padding: 1rem;
+    background: color-mix(in oklch, var(--color-inverse) 82%, transparent);
+    color: var(--color-on-inverse);
+    font: 600 var(--text-body) / 1.4 var(--font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-map-marker {
+        transition: none;
+    }
+
+    .ui-map-marker:hover,
+    .ui-map-marker[aria-expanded='true'] {
+        scale: 1;
+    }
+}

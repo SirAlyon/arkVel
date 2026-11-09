@@ -6,6 +6,9 @@ namespace App\Models;
 
 use App\Enums\OrganizationStatus;
 use App\Enums\RoleName;
+use App\Notifications\Auth\ResetPasswordLink;
+use App\Notifications\Auth\VerifyEmailAddress;
+use App\Support\Auth\EmailAddress;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
@@ -13,6 +16,7 @@ use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -43,6 +47,46 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * L'email si salva sempre nella forma canonica ({@see EmailAddress}: senza spazi ai
+     * lati, in minuscolo), da qualunque parte arrivi: moduli pubblici, pannelli Filament
+     * (registrazione /manage, utenti dell'admin), seeder, factory. Così /accedi, che cerca
+     * l'indirizzo in minuscolo, trova anche gli account creati con le maiuscole. Le email
+     * salvate prima di questa regola le porta in minuscolo la migrazione
+     * 2026_11_09_090000_normalize_user_emails.
+     *
+     * @return Attribute<string, string>
+     */
+    protected function email(): Attribute
+    {
+        return Attribute::make(
+            set: static fn (string $value): string => EmailAddress::normalize($value),
+        );
+    }
+
+    /**
+     * Mail di verifica dell'indirizzo (hook di MustVerifyEmail): la versione in coda con
+     * il link alla route pubblica `verification.verify`, nella lingua corrente. La usano
+     * il listener dell'evento Registered e il reinvio da /verifica-email. I pannelli
+     * /manage e /admin mandano ancora la mail di Filament, con i propri link.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify((new VerifyEmailAddress)->locale(app()->getLocale()));
+    }
+
+    /**
+     * Mail per reimpostare la password (hook di CanResetPassword), usata dal password
+     * broker di Laravel per la richiesta da /password-dimenticata: in coda, con il link
+     * alla route pubblica `password.reset`, nella lingua corrente.
+     *
+     * @param  string  $token
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify((new ResetPasswordLink($token))->locale(app()->getLocale()));
     }
 
     /**
@@ -230,8 +274,9 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
      * - adopter: accesso permissivo per ogni utente autenticato (`true`). Qui non
      *   c'è tenancy: l'ISOLAMENTO del pannello adopter è per OWNERSHIP a livello di
      *   Policy (AdopterProfilePolicy: solo il proprietario vede/modifica il proprio
-     *   profilo) più la VERIFICA EMAIL obbligatoria (emailVerification() sul
-     *   pannello). Il ruolo Adopter è di piattaforma, assegnato team-independent dal
+     *   profilo) più la VERIFICA EMAIL obbligatoria (dalla fase UI-5 il middleware
+     *   `verified` di Laravel nell'authMiddleware del pannello, che rimanda alla pagina
+     *   pubblica /verifica-email). Il ruolo Adopter è di piattaforma, assegnato team-independent dal
      *   middleware EnsureAdopterRole, ed è bookkeeping (nessun permesso).
      */
     public function canAccessPanel(Panel $panel): bool

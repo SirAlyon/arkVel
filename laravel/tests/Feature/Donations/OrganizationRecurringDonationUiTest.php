@@ -87,3 +87,25 @@ it('refuses a monthly donation from a guest and creates no recurring row', funct
 
     expect(RecurringDonation::query()->count())->toBe(0);
 });
+
+it('passes the same parameters to the recurring checkout action as before', function () {
+    configureStripeForRecurring();
+    $fake = fakeRecurringCheckout();
+    $org = Organization::factory()->verified()->create();
+    $donor = User::factory()->create();
+
+    Livewire::actingAs($donor)
+        ->test(OrganizationPage::class, ['organization' => $org])
+        ->set('donationFrequency', 'monthly')
+        ->set('donationAmount', '7.5')
+        ->set('donationMessage', 'Non viene usato dalla mensile')
+        ->call('donate')
+        ->assertHasNoErrors()
+        ->assertRedirect($fake->url);
+
+    $recurring = RecurringDonation::query()->sole();
+    expect($recurring->amount)->toBe(750)
+        ->and($recurring->currency)->toBe('eur')
+        ->and($recurring->organization_id)->toBe($org->getKey())
+        ->and($recurring->user_id)->toBe($donor->getKey());
+});

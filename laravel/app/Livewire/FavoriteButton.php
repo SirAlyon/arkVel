@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Actions\Animals\FindFavoritedAnimalIds;
 use App\Models\Animal;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -19,37 +20,61 @@ use Livewire\Component;
  * ESCLUSIVAMENTE sulla wishlist dell'utente autenticato
  * ({@see User::favorites()}), quindi non c'è alcuna azione cross-utente da
  * autorizzare a livello di riga: nessuna Policy sulla pivot. I due confini sono:
- *  - GUEST: non può mettere preferiti. Il toggle di un ospite lo devia alla login
- *    del pannello adopter (`filament.adopter.auth.login`, unica rotta di login
- *    dell'app), da cui potrà autenticarsi/registrarsi e tornare a scegliere.
+ *  - GUEST: non può mettere preferiti. Il toggle di un ospite lo devia alla pagina
+ *    di accesso pubblica (`login`, /accedi), da cui potrà autenticarsi/registrarsi e
+ *    tornare a scegliere.
  *  - SCOPING: attach/detach passano dalla relazione dell'utente corrente; lo
  *    stato mostrato riflette solo la sua wishlist.
  *
  * L'`animalId` è `#[Locked]`: è identità del componente, non deve essere
  * manomessa lato client.
+ *
+ * Stato iniziale senza query: in una griglia la pagina calcola UNA volta i preferiti
+ * dell'utente tra i suoi animali ({@see FindFavoritedAnimalIds}) e li passa a ogni bottone
+ * con `:favorited`. Senza il parametro (null) il bottone lo chiede da sé al database.
+ * Lo stato passato vale solo per il primo render: dopo un toggle la verità è sempre la
+ * pivot dell'utente autenticato, riletta dal database.
+ *
+ *     <livewire:favorite-button :animal="$animal" :favorited="in_array($animal->id, $favoriteIds, true)" :key="'fav-'.$animal->id" />
  */
 class FavoriteButton extends Component
 {
     #[Locked]
     public int $animalId;
 
-    public bool $favorited = false;
+    /**
+     * Nome dell'animale, solo per il nome accessibile del bottone ("Salva Fido nei
+     * preferiti", vedi x-ui.animal-card.favorite): in una griglia di card i bottoni
+     * devono avere nomi distinti.
+     */
+    #[Locked]
+    public string $animalName = '';
 
-    public function mount(Animal $animal): void
+    /**
+     * Già nei preferiti dell'utente autenticato. Dopo il mount è sempre un booleano: è
+     * nullable solo perché Livewire assegna il parametro omonimo `favorited` (che può
+     * valere null, «non noto») alla proprietà prima di chiamare mount().
+     */
+    public ?bool $favorited = false;
+
+    /**
+     * @param  bool|null  $favorited  stato già noto (calcolato dalla pagina per tutta la
+     *                                griglia); null per leggerlo dal database
+     */
+    public function mount(Animal $animal, ?bool $favorited = null): void
     {
         $this->animalId = $animal->getKey();
-        $this->favorited = $this->resolveFavorited();
+        $this->animalName = $animal->name;
+        $this->favorited = Auth::user() instanceof User && ($favorited ?? $this->resolveFavorited());
     }
 
     public function toggle(): mixed
     {
         $user = Auth::user();
 
-        // Ospite: nessun preferito creato. Devia alla login dell'adopter panel
-        // (non esiste una rotta `login` globale: l'unica login è quella del
-        // pannello, su /account/login).
+        // Ospite: nessun preferito creato. Devia alla pagina di accesso pubblica.
         if (! $user instanceof User) {
-            return $this->redirectRoute('filament.adopter.auth.login', navigate: true);
+            return $this->redirectRoute('login', navigate: true);
         }
 
         // Self-owned: toggle atomico sulla SOLA wishlist dell'utente corrente.
@@ -66,7 +91,8 @@ class FavoriteButton extends Component
 
     public function render(): View
     {
-        return ViewFacade::make('livewire.favorite-button');
+        // Ospite: il clic lo porta all'accesso, quindi il cuore non anima un salvataggio.
+        return ViewFacade::make('livewire.favorite-button', ['guest' => ! Auth::user() instanceof User]);
     }
 
     /**

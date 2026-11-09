@@ -1,23 +1,30 @@
-<div>
-    <section class="mx-auto flex max-w-2xl flex-col items-center px-4 py-20 text-center sm:px-6">
-        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 text-stone-500">
-            <svg class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clip-rule="evenodd" />
-            </svg>
+{{--
+ | /enti/{slug}/annulla (App\Livewire\DonationCancelled): ritorno da Stripe Checkout senza
+ | pagamento. Tono rassicurante, non di errore: nessun addebito, si può riprovare. Azioni:
+ | riprovare (pagina dell'ente, dove c'è il widget) o tornare al catalogo.
+ | Il blocco è x-ui.empty-state con il titolo h1 (è il contenuto principale della pagina).
+ | noindex dalla SEO (PublicPageSeo::donationCancelled); breadcrumb dal layout.
+--}}
+<div class="mx-auto flex w-full max-w-page flex-col px-gutter pt-6 pb-section" data-donation-landing="cancelled">
+    <x-ui.empty-state
+        id="donation-cancel"
+        icon="circle-x"
+        block="peach"
+        heading-level="1"
+        :title="__('donations.public.cancel_title')"
+    >
+        <div class="flex flex-col gap-4">
+            <p class="text-lead">{{ __('donations.public.cancel_body') }}</p>
+            <p class="[overflow-wrap:anywhere]">{{ __('page_organizations.cancelled.help', ['name' => $organization->name]) }}</p>
         </div>
 
-        <h1 class="mt-6 text-3xl font-bold tracking-tight text-stone-900">
-            {{ __('donations.public.cancel_title') }}
-        </h1>
-
-        <p class="mt-3 text-stone-600">
-            {{ __('donations.public.cancel_body') }}
-        </p>
-
-        <div class="mt-8">
-            <x-button :href="route('organizations.show', $organization)" variant="primary">
+        <x-slot:actions>
+            <x-ui.button :href="route('organizations.show', $organization)" wire:navigate.hover icon="rotate-ccw" data-donation-retry>
                 {{ __('donations.public.cancel_retry') }}
-            </x-button>
-        </div>
-    </section>
+            </x-ui.button>
+            <x-ui.button variant="secondary" :href="route('catalog')" wire:navigate.hover icon-trailing="arrow-right">
+                {{ __('page_organizations.cancelled.catalog') }}
+            </x-ui.button>
+        </x-slot:actions>
+    </x-ui.empty-state>
 </div>

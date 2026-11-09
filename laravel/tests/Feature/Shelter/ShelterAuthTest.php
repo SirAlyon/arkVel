@@ -6,6 +6,7 @@ use App\Actions\Organizations\AddOrganizationMember;
 use App\Enums\MembershipRole;
 use App\Models\Organization;
 use App\Models\User;
+use App\Notifications\Auth\ResetPasswordLink;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Auth\Notifications\ResetPassword;
 use Filament\Auth\Notifications\VerifyEmail;
@@ -161,6 +162,24 @@ it('sends the reset-password notification when a reset is requested', function (
     // sottoclasse della notification Laravel.
     expect(is_subclass_of(ResetPassword::class, BaseResetPassword::class))->toBeTrue();
     Notification::assertSentTo($user, ResetPassword::class);
+});
+
+it('keeps the Filament reset mail and link on /manage despite the public reset mail of the User model', function () {
+    Notification::fake();
+
+    [, $user] = verifiedShelterMember();
+
+    Livewire::test(RequestPasswordReset::class)
+        ->fillForm(['email' => $user->email])
+        ->call('request')
+        ->assertHasNoFormErrors();
+
+    // User::sendPasswordResetNotification() manda la mail pubblica (UI-5): il pannello
+    // usa la callback propria del broker, quindi la notifica e il link restano di Filament.
+    Notification::assertNotSentTo($user, ResetPasswordLink::class);
+    Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification): bool {
+        return str_contains((string) $notification->url, '/manage/password-reset/reset');
+    });
 });
 
 // --- email verification --------------------------------------------------------

@@ -13,6 +13,55 @@ return [
     'language' => 'Language',
     'toc' => 'Sections',
 
+    'page_title' => ':group — :styleguide',
+    'pages' => 'Styleguide pages',
+    'tokens' => 'Tokens',
+    'a11y' => 'Accessibility',
+    'show_code' => 'Show code',
+    'examples' => 'Examples',
+    'groups' => [
+        'actions' => [
+            'title' => 'Actions',
+            'intro' => 'Icons, buttons, links, badges and chips: the basic elements to act and label.',
+        ],
+        'forms' => [
+            'title' => 'Forms',
+            'intro' => 'Fields, labels, help and errors: input, textarea, select, checkbox, radio and switch.',
+        ],
+        'pickers' => [
+            'title' => 'Pickers',
+            'intro' => 'Guided choices: searchable combobox and date picker (Cally).',
+        ],
+        'overlays' => [
+            'title' => 'Overlays',
+            'intro' => 'Dialog, side sheet, dropdown menu, tooltip and toast notifications.',
+        ],
+        'content' => [
+            'title' => 'Content',
+            'intro' => 'Tabs, accordion, skeleton, empty states and avatars.',
+        ],
+        'domain' => [
+            'title' => 'Domain',
+            'intro' => 'ArkVel components: animal and organization cards, stats, section headings and CTA bands.',
+        ],
+        'shell' => [
+            'title' => 'Shell',
+            'intro' => 'Public site navigation: menu items, language switcher, header and footer.',
+        ],
+        'media' => [
+            'title' => 'Media',
+            'intro' => 'Responsive images (AVIF, WebP, JPEG) with a blurred placeholder, and a gallery with a lightbox.',
+        ],
+        'motion' => [
+            'title' => 'Motion',
+            'intro' => 'Micro-interactions and animations: reveal on scroll, the favorite heart, toast confirmation and the photo flying from the card to the profile. All of them respect “reduce motion”.',
+        ],
+        'map' => [
+            'title' => 'Map',
+            'intro' => 'Map with approximate locations (MapLibre and OpenFreeMap tiles), its accessible alternative list and the view switch.',
+        ],
+    ],
+
     'sections' => [
         'preview' => 'Preview',
         'colors' => 'Colors',
@@ -64,6 +113,7 @@ return [
     ],
 
     'contrast' => [
+        'table' => 'Contrast table',
         'intro' => 'Ratios computed by the browser for the active theme. Text needs at least 4.5:1; control borders and focus at least 3:1. ColorContrastTest checks the same pairs.',
         'pair' => 'Pair',
         'sample' => 'Sample',

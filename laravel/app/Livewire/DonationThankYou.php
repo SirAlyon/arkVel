@@ -6,6 +6,8 @@ namespace App\Livewire;
 
 use App\Enums\OrganizationStatus;
 use App\Models\Organization;
+use App\Support\Seo\InteractsWithSeo;
+use App\Support\Seo\PublicPageSeo;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\View as ViewFacade;
 use Livewire\Component;
@@ -21,6 +23,8 @@ use Livewire\Component;
  */
 class DonationThankYou extends Component
 {
+    use InteractsWithSeo;
+
     public Organization $organization;
 
     public function mount(Organization $organization): void
@@ -33,9 +37,8 @@ class DonationThankYou extends Component
     public function render(): View
     {
         $view = ViewFacade::make('livewire.donation-thank-you');
+        $view->layoutData(['themeable' => true]); // @phpstan-ignore method.notFound
 
-        $view->title(__('donations.public.thanks_title').' — ArkVel'); // @phpstan-ignore method.notFound
-
-        return $view;
+        return $this->withSeo($view, app(PublicPageSeo::class)->donationThanks($this->organization));
     }
 }

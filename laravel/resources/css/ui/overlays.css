@@ -1,0 +1,112 @@
+/*
+ | Gruppo "overlays": movimento di dialog e drawer e colore del ::backdrop.
+ | Importato da resources/js/ui/overlays.js. Colori, forme e spazi stanno nelle utility
+ | dei componenti; qui solo ciò che le utility non coprono bene:
+ |
+ | - il ::backdrop, un velo derivato dai token (color-mix) e solo decorativo, mai fondo
+ |   di testo;
+ | - entrata e uscita con @starting-style e `transition-behavior: allow-discrete`
+ |   (display e overlay restano nel top layer fino alla fine della transizione).
+ |
+ | Le durate sono i token di motion: con prefers-reduced-motion vanno a ~0 (app.css).
+ | Lo stato aperto usa `none` (non `0`/`1`) per translate e scale: un elemento con una
+ | trasformazione diventa il riferimento degli elementi `fixed` al suo interno, e
+ | sposterebbe menu e tooltip posizionati da x-anchor.
+ */
+
+/*
+ | Focus nei livelli flottanti. Dialog, drawer e menu sono figli (nel DOM) del punto in cui
+ | sono scritti: dentro un blocco colorato (bg-inverse, bg-block-*…) erediterebbero il focus
+ | del blocco (es. bianco), invisibile sulla loro superficie rialzata. `.ui-layer` riporta il
+ | focus al valore del tema, letto sulla radice.
+ */
+:root {
+    --ui-focus-default: var(--color-focus);
+}
+
+.ui-layer {
+    --color-focus: var(--ui-focus-default);
+}
+
+.ui-overlay::backdrop {
+    background-color: color-mix(in oklch, var(--color-fg) 55%, transparent);
+    opacity: 0;
+    transition-property: opacity, display, overlay;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-out);
+    transition-behavior: allow-discrete;
+}
+
+.dark .ui-overlay::backdrop {
+    background-color: color-mix(in oklch, var(--color-canvas) 80%, transparent);
+}
+
+.ui-overlay[open]::backdrop {
+    opacity: 1;
+}
+
+@starting-style {
+    .ui-overlay[open]::backdrop {
+        opacity: 0;
+    }
+}
+
+/* Dialog: dissolvenza con un piccolo rimbalzo verso l'alto. */
+.ui-dialog {
+    opacity: 0;
+    scale: 0.96;
+    translate: 0 0.75rem;
+    transition-property: opacity, scale, translate, display, overlay;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-out);
+    transition-behavior: allow-discrete;
+}
+
+.ui-dialog[open] {
+    opacity: 1;
+    scale: none;
+    translate: none;
+}
+
+@starting-style {
+    .ui-dialog[open] {
+        opacity: 0;
+        scale: 0.96;
+        translate: 0 0.75rem;
+    }
+}
+
+/* Drawer: scorre dal suo lato (data-side), dal basso come bottom sheet (data-sheet sotto i 640 px). */
+.ui-drawer {
+    --ui-drawer-from: 100% 0;
+
+    translate: var(--ui-drawer-from);
+    transition-property: translate, display, overlay;
+    transition-duration: var(--duration-slow);
+    transition-timing-function: var(--ease-out);
+    transition-behavior: allow-discrete;
+}
+
+.ui-drawer[data-side='left'] {
+    --ui-drawer-from: -100% 0;
+}
+
+.ui-drawer[data-side='bottom'] {
+    --ui-drawer-from: 0 100%;
+}
+
+@media (width < 40rem) {
+    .ui-drawer[data-sheet] {
+        --ui-drawer-from: 0 100%;
+    }
+}
+
+.ui-drawer[open] {
+    translate: none;
+}
+
+@starting-style {
+    .ui-drawer[open] {
+        translate: var(--ui-drawer-from);
+    }
+}

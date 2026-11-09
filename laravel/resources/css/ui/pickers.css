@@ -1,0 +1,187 @@
+/*
+ | Gruppo "pickers": stile del calendario Cally (<calendar-date> / <calendar-month>) e
+ | dei popup di combobox e date-picker. Importato da resources/js/ui/pickers.js.
+ |
+ | Cally vive nello shadow DOM: si stila solo con ::part() e le custom property, che
+ | attraversano il confine. Le regole ::part() del documento vincono su quelle interne di
+ | Cally (contesto esterno), quindi non servono !important. Solo token (var(--color-…)):
+ |
+ | - giorni tondi, larghi fino a 44 px: la griglia occupa la larghezza disponibile e i
+ |   giorni si stringono solo sotto i 340 px circa di spazio (mai sotto i 24 px di WCAG 2.5.8);
+ | - giorno scelto: primary / on-primary; oggi: anello di 2 px in `fg` e peso 800 (non
+ |   solo colore); giorni non disponibili: fg-muted e barrati;
+ | - focus: lo stesso anello globale di 3 px di app.css (nello shadow DOM non arriva da solo).
+ */
+
+/*
+ | Focus nei popup. Lista e calendario sono figli (nel DOM) del punto in cui sono scritti:
+ | dentro un blocco colorato (bg-inverse, bg-block-*…) erediterebbero il focus del blocco,
+ | invisibile sulla loro superficie rialzata. `.ui-picker-layer` riporta il focus al valore
+ | del tema, letto sulla radice.
+ */
+:root {
+    --ui-picker-focus: var(--color-focus);
+}
+
+.ui-picker-layer {
+    --color-focus: var(--ui-picker-focus);
+}
+
+/* Il pannello del date-picker non esce dallo schermo (x-anchor lo sposta, qui lo stringe). */
+.ui-date-picker-panel {
+    max-inline-size: calc(100vw - 2 * var(--spacing-gutter));
+}
+
+/* ── Calendario ──────────────────────────────────────────────────────────── */
+
+.ui-calendar {
+    display: block;
+    inline-size: 22rem;
+    max-inline-size: 100%;
+    color: var(--color-fg);
+}
+
+.ui-calendar::part(container) {
+    gap: 0.5rem;
+}
+
+.ui-calendar::part(header) {
+    gap: 0.5rem;
+}
+
+.ui-calendar::part(heading) {
+    font-size: var(--text-h5);
+    font-weight: 800;
+    letter-spacing: var(--text-h5--letter-spacing);
+}
+
+/* Bottoni "mese precedente / successivo": tondi da 44 px. */
+.ui-calendar::part(button) {
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    border: 0;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--color-fg);
+    font-family: inherit;
+    transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.ui-calendar::part(button):hover {
+    background: var(--color-surface);
+}
+
+.ui-calendar::part(button):focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+.ui-calendar::part(disabled) {
+    opacity: 1;
+    color: var(--color-fg-muted);
+    cursor: not-allowed;
+}
+
+.ui-calendar::part(disabled):hover {
+    background: transparent;
+}
+
+/*
+ | Griglia del mese. Cally scrive l'anno nell'intestazione di calendar-date e il mese sopra
+ | la griglia: noi mostriamo "mese anno" nello slot `heading` (x-ui.date-picker.calendar) e
+ | nascondiamo il titolo del mese, che resta il nome della tabella (aria-labelledby).
+ | Nota: anche le intestazioni dei giorni (th) hanno la parte `day`, per questo i giorni
+ | si selezionano con `::part(button day)`.
+ */
+.ui-calendar calendar-month {
+    inline-size: 100%;
+}
+
+.ui-calendar calendar-month::part(heading) {
+    display: none;
+}
+
+.ui-calendar calendar-month::part(table) {
+    inline-size: 100%;
+    table-layout: fixed;
+    font-size: var(--text-small);
+}
+
+.ui-calendar calendar-month::part(th) {
+    inline-size: auto;
+    block-size: 2rem;
+    font-size: var(--text-caption);
+    font-weight: 700;
+    color: var(--color-fg-muted);
+}
+
+.ui-calendar calendar-month::part(td) {
+    padding-block: 0.125rem;
+}
+
+.ui-calendar calendar-month::part(button day) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 100%;
+    max-inline-size: 2.75rem;
+    block-size: auto;
+    aspect-ratio: 1;
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--color-fg);
+    font-family: inherit;
+    font-weight: 600;
+    opacity: 1;
+    transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.ui-calendar calendar-month::part(button day):hover {
+    background: var(--color-surface);
+}
+
+.ui-calendar calendar-month::part(button day):focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+    background: transparent;
+    color: var(--color-fg);
+}
+
+/* Oggi: anello e peso, non solo colore (Cally aggiunge anche aria-current="date"). */
+.ui-calendar calendar-month::part(today) {
+    border-color: var(--color-fg);
+    font-weight: 800;
+}
+
+/* Non disponibili (disallowed: aria-disabled; fuori da min/max: disabled): barrati. */
+.ui-calendar calendar-month::part(disallowed) {
+    opacity: 1;
+    color: var(--color-fg-muted);
+    text-decoration: line-through;
+    cursor: not-allowed;
+}
+
+.ui-calendar calendar-month::part(disallowed):hover {
+    background: transparent;
+}
+
+.ui-calendar calendar-month::part(button day):disabled {
+    opacity: 1;
+    color: var(--color-fg-muted);
+    text-decoration: line-through;
+    cursor: not-allowed;
+    background: transparent;
+}
+
+/* Scelto: pieno primary, anche con il focus. */
+.ui-calendar calendar-month::part(selected),
+.ui-calendar calendar-month::part(selected):focus-visible {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-weight: 800;
+}
+
+.ui-calendar calendar-month::part(selected):hover {
+    background: var(--color-primary-hover);
+}

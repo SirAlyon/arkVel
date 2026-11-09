@@ -87,21 +87,20 @@ it('lets a verified user reach the profile page', function () {
         ->assertOk();
 });
 
-it('redirects an unverified user to the email verification prompt', function () {
+it('redirects an unverified user to the public email verification notice', function () {
     $user = User::factory()->unverified()->create();
 
-    // La verifica email è OBBLIGATORIA sul pannello adopter: il middleware
-    // `verified` devia le rotte PROTETTE verso la prompt di verifica. La radice
-    // /account è solo un redirect alla pagina profilo (la rotta protetta), quindi
-    // asseriamo la protezione direttamente sulla pagina.
+    // La verifica email è OBBLIGATORIA sul pannello adopter: dalla fase UI-5 il
+    // middleware `verified` di Laravel (authMiddleware del pannello) devia ogni rotta
+    // protetta alla pagina pubblica /verifica-email (tests/Feature/Auth).
     $this->actingAs($user)
         ->get(route('filament.adopter.pages.manage-adopter-profile'))
-        ->assertRedirect(route('filament.adopter.auth.email-verification.prompt'));
+        ->assertRedirect(route('verification.notice'));
 });
 
-it('redirects a guest visiting the adopter panel to its login', function () {
+it('redirects a guest visiting the adopter panel to the public login', function () {
     $this->get('/account')
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 });
 
 // --- assegnazione del ruolo Adopter (team-independent) --------------------------

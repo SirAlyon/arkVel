@@ -1,0 +1,90 @@
+/*
+ | Gruppo "motion" (UI-7): stati del reveal allo scroll (x-reveal) e transizione della foto
+ | card → scheda (View Transitions di wire:navigate). Importato da resources/js/ui/motion.js,
+ | quindi è nel CSS di ogni pagina. Solo token: durate ed easing da app.css, che con
+ | prefers-reduced-motion valgono ~0.
+ */
+
+/* ── Reveal allo scroll ────────────────────────────────────────────────────────────────
+ | Lo stato lo mette solo il JS: «init» (in attesa della prima notifica, visibile),
+ | «pending» (sotto la piega, nascosto), «shown» (in entrata). Finito il reveal l'attributo
+ | sparisce e l'elemento torna alle sue transizioni (es. il sollevamento delle card).
+ | Solo opacity e transform: niente CLS. `transform` non tocca le proprietà `translate` e
+ | `scale` usate dalle utility di Tailwind 4 (hover delle card), quindi si sommano. */
+[data-reveal-state='pending'],
+[data-reveal-state='shown'] {
+    transition-property: opacity, transform;
+    transition-duration: var(--duration-reveal);
+    transition-timing-function: var(--ease-out);
+    /* Una riga di card entra in sequenza: un ottavo della durata per passo (60 ms). */
+    transition-delay: calc(var(--reveal-order, 0) * var(--duration-reveal) / 8);
+}
+
+[data-reveal-state='pending'] {
+    opacity: 0;
+    transform: translateY(1.5rem);
+}
+
+/* Mai nascosto quando serve vederlo: focus da tastiera dentro, stampa, motion ridotto
+   (la preferenza può cambiare a pagina aperta, dopo che il JS ha deciso). */
+[data-reveal-state='pending']:focus-within {
+    opacity: 1;
+    transform: none;
+    transition-delay: 0s;
+}
+
+@media print {
+    [data-reveal-state] {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-reveal-state] {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
+
+/* ── Foto card → scheda (View Transitions) ────────────────────────────────────────────
+ | La foto di x-ui.animal-card, quella della hero della home e la galleria della scheda
+ | hanno wire:transition.navigate="animal-photo-<id>" (App\Support\Site\AnimalPhotoTransition):
+ | durante una navigazione wire:navigate Livewire dà il nome alla foto della pagina vecchia
+ | e a quella della nuova, e il browser la sposta e ridimensiona dall'una all'altra. Con
+ | prefers-reduced-motion Livewire salta la transizione.
+ | La classe di transizione raggruppa tutte le foto in un solo insieme di regole. I browser
+ | senza view-transition-class ignorano queste regole e usano la dissolvenza predefinita. */
+[data-photo-transition] {
+    view-transition-class: animal-photo;
+}
+
+::view-transition-group(*.animal-photo) {
+    animation-duration: var(--duration-slow);
+    animation-timing-function: var(--ease-out);
+}
+
+/* Le due foto hanno proporzioni diverse (card 4:5, galleria 3:2): riempiono il riquadro
+   che si trasforma, ritagliate come object-cover, con gli angoli delle immagini. */
+::view-transition-image-pair(*.animal-photo) {
+    overflow: clip;
+    border-radius: var(--radius-media);
+}
+
+::view-transition-old(*.animal-photo),
+::view-transition-new(*.animal-photo) {
+    block-size: 100%;
+    object-fit: cover;
+    animation-duration: var(--duration-slow);
+    animation-timing-function: var(--ease-out);
+}
+
+/* Foto presenti in una sola delle due pagine (le altre card della griglia, gli animali
+   simili): escono ed entrano come il resto di <main> (keyframes in app.css). */
+html:active-view-transition-type(navigate)::view-transition-old(*.animal-photo):only-child {
+    animation: site-navigate-out var(--duration-fast) var(--ease-in-out) both;
+}
+
+html:active-view-transition-type(navigate)::view-transition-new(*.animal-photo):only-child {
+    animation: site-navigate-in var(--duration-base) var(--ease-out) both;
+}

@@ -23,6 +23,13 @@ it('renders the three theme options as pressable buttons', function (): void {
         ->and(substr_count($html, '<button'))->toBe(3);
 });
 
+it('syncs aria-pressed with the saved choice before Alpine starts', function (): void {
+    // Lo script del tema conosce la scelta (localStorage): il selettore lo chiama subito
+    // dopo il suo markup, così lo stato iniziale è giusto senza aspettare Alpine.
+    $this->blade('<x-ui.theme-toggle />')
+        ->assertSeeInOrder(['data-theme-option="system"', '<script>window.arkvelTheme?.syncToggle(document.currentScript.parentElement)</script>', '</div>'], escape: false);
+});
+
 it('translates the option labels', function (string $locale, array $labels): void {
     App::setLocale($locale);
 

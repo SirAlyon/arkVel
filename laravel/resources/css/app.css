@@ -223,39 +223,13 @@
     --color-warning-subtle: var(--color-sun-100);
     --color-on-warning-subtle: var(--color-sun-900);
     --color-danger: var(--color-cherry-600);
+    --color-danger-hover: var(--color-cherry-700);
     --color-on-danger: var(--color-white);
     --color-danger-subtle: var(--color-cherry-50);
     --color-on-danger-subtle: var(--color-cherry-800);
     --color-info: var(--color-navy-600);
     --color-info-subtle: var(--color-navy-50);
     --color-on-info-subtle: var(--color-navy-800);
-
-    /* ── Legacy (da rimuovere in UI-6) ──────────────────────────────────── */
-    /* Le pagine attuali usano ancora brand-* (ex terracotta) e accent-* (ex teal).
-       Fino alla loro migrazione puntano alla nuova palette: brand → sabbia/navy,
-       accent → verde, scalato di un passo perché il bianco sopra resti >= 4.5:1. */
-    --color-brand-50: var(--color-sand-50);
-    --color-brand-100: var(--color-sand-100);
-    --color-brand-200: var(--color-sand-200);
-    --color-brand-300: var(--color-navy-300);
-    --color-brand-400: var(--color-navy-400);
-    --color-brand-500: var(--color-navy-500);
-    --color-brand-600: var(--color-navy-600);
-    --color-brand-700: var(--color-navy-700);
-    --color-brand-800: var(--color-navy-800);
-    --color-brand-900: var(--color-navy-900);
-    --color-brand-950: var(--color-navy-950);
-    --color-accent-50: var(--color-leaf-50);
-    --color-accent-100: var(--color-leaf-100);
-    --color-accent-200: var(--color-leaf-200);
-    --color-accent-300: var(--color-leaf-300);
-    --color-accent-400: var(--color-leaf-400);
-    --color-accent-500: var(--color-leaf-600);
-    --color-accent-600: var(--color-leaf-700);
-    --color-accent-700: var(--color-leaf-800);
-    --color-accent-800: var(--color-leaf-900);
-    --color-accent-900: var(--color-leaf-950);
-    --color-accent-950: var(--color-leaf-950);
 
     /* ── Forme ──────────────────────────────────────────────────────────── */
     /* Raggi generosi per gerarchia: pannello > card > passo > immagine > icona.
@@ -274,6 +248,9 @@
 
     /* ── Spazi e layout ─────────────────────────────────────────────────── */
     --container-page: 77.5rem;
+    /* Larghezza massima di una voce intermedia del breadcrumb (x-ui.breadcrumb): oltre,
+       i puntini. In ch, così segue la dimensione del testo. */
+    --container-crumb: 10ch;
     --spacing-gutter: clamp(1rem, 0.6rem + 1.6vw, 1.5rem);
     --spacing-panel: clamp(1.5rem, 0.6rem + 3.6vw, 3.5rem);
     --spacing-section: clamp(2.5rem, 1.5rem + 4vw, 4rem);
@@ -301,7 +278,10 @@
      | Il giallo resta accento (bottoni, badge, numeri), mai grande superficie: il blocco
      | hero diventa una superficie scura e la card "inverse" un navy più chiaro (niente
      | grandi superfici crema che abbagliano). Pesca e menta diventano blocchi scuri con
-     | testo chiaro; il verde resta leaf-700, più luminoso della menta per distinguerli.
+     | testo chiaro: pesca peach-800 (non peach-700, quasi identico al rosso cherry-700 degli
+     | errori), menta leaf-800 (staccata dalla surface navy-800, dove leaf-900 spariva) e
+     | verde leaf-600, un gradino più chiaro di leaf-700 per restare distinto dalla menta.
+     | ColorContrastTest verifica le distanze (ΔE OKLab) tra questi fondi.
      */
     .dark {
         color-scheme: dark;
@@ -335,9 +315,9 @@
         --color-on-block-sun: var(--color-sand-50);
         --color-block-peach: var(--color-peach-800);
         --color-on-block-peach: var(--color-peach-100);
-        --color-block-mint: var(--color-leaf-900);
+        --color-block-mint: var(--color-leaf-800);
         --color-on-block-mint: var(--color-leaf-100);
-        --color-block-leaf: var(--color-leaf-700);
+        --color-block-leaf: var(--color-leaf-600);
         --color-on-block-leaf: var(--color-white);
 
         --color-success: var(--color-leaf-300);
@@ -347,11 +327,14 @@
         --color-warning-subtle: var(--color-sun-950);
         --color-on-warning-subtle: var(--color-sun-100);
         --color-danger: var(--color-cherry-300);
+        --color-danger-hover: var(--color-cherry-200);
         --color-on-danger: var(--color-navy-950);
         --color-danger-subtle: var(--color-cherry-950);
         --color-on-danger-subtle: var(--color-cherry-100);
         --color-info: var(--color-navy-300);
-        --color-info-subtle: var(--color-navy-800);
+        /* navy-600, non 800 (= surface) né 700 (= surface-raised): il badge info resta
+           visibile su ogni superficie; on-info-subtle (navy-100) ci sta sopra a ~6:1. */
+        --color-info-subtle: var(--color-navy-600);
         --color-on-info-subtle: var(--color-navy-100);
 
         --shadow-overlay: 0 1px 2px oklch(0% 0 0 / 0.3), 0 12px 32px -8px oklch(0% 0 0 / 0.55);
@@ -407,4 +390,48 @@
             scroll-behavior: auto !important;
         }
     }
+}
+
+/*
+ | Shell pubblica (UI-3): View Transitions di wire:navigate e barra di progresso.
+ |
+ | - <main wire:transition.navigate> è la regione animata (nome `livewire-navigate`):
+ |   dissolvenza con un piccolo spostamento, durate ed easing dai token. Header e footer
+ |   restano fermi (Livewire spegne la transizione della radice). Con
+ |   prefers-reduced-motion Livewire salta la transizione e le durate sono comunque ~0;
+ |   Firefox ignora i tipi di transizione e usa la dissolvenza predefinita.
+ | - Barra di progresso di Livewire (nprogress): il colore è il token primary
+ |   (config/livewire.php → --livewire-progress-bar-color). Qui solo la forma: 3 px,
+ |   niente bagliore (peg) né spinner, coerente con "nessuna ombra". `html` alza la
+ |   specificità sopra lo stile che Livewire inietta a runtime.
+ */
+@keyframes site-navigate-out {
+    to {
+        opacity: 0;
+        transform: translateY(-0.5rem);
+    }
+}
+
+@keyframes site-navigate-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.5rem);
+    }
+}
+
+html:active-view-transition-type(navigate)::view-transition-old(livewire-navigate) {
+    animation: site-navigate-out var(--duration-fast) var(--ease-in-out) both;
+}
+
+html:active-view-transition-type(navigate)::view-transition-new(livewire-navigate) {
+    animation: site-navigate-in var(--duration-base) var(--ease-out) both;
+}
+
+html #nprogress .bar {
+    height: 3px;
+}
+
+html #nprogress .peg,
+html #nprogress .spinner {
+    display: none;
 }

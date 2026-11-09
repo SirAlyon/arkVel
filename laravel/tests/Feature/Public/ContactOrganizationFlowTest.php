@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Organizations\AddOrganizationMember;
 use App\Enums\MembershipRole;
-use App\Livewire\AnimalDetail;
+use App\Livewire\AnimalDetail\ContactOrganizationForm;
 use App\Models\Animal;
 use App\Models\Message;
 use App\Models\MessageThread;
@@ -66,10 +66,10 @@ it('shows the contact CTA on the public animal page', function () {
 it('redirects a guest to the adopter login and creates no thread', function () {
     [$animal] = verifiedOrgAnimalWithMessageStaff();
 
-    Livewire::test(AnimalDetail::class, ['animal' => $animal])
+    Livewire::test(ContactOrganizationForm::class, ['animal' => $animal])
         ->set('contactBody', 'Vorrei saperne di più su Argo.')
         ->call('contact')
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 
     expect(MessageThread::query()->count())->toBe(0)
         ->and(session('url.intended'))->toBe(route('animals.show', $animal));
@@ -83,7 +83,7 @@ it('starts a conversation and notifies the org staff for an authenticated adopte
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
         ->set('contactBody', 'Vorrei saperne di più su Argo.')
         ->call('contact')
         ->assertHasNoErrors()
@@ -111,7 +111,7 @@ it('validates the contact form and creates no thread on empty input', function (
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
         ->call('contact')
         ->assertHasErrors(['contactBody']);
 
@@ -127,14 +127,14 @@ it('reuses the existing thread on a second contact (no duplicate)', function () 
 
     // Primo contatto: crea il thread.
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
         ->set('contactBody', 'Primo messaggio.')
         ->call('contact')
         ->assertHasNoErrors();
 
     // Secondo contatto per la stessa terna: posta sul thread esistente.
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
         ->set('contactBody', 'Secondo messaggio.')
         ->call('contact')
         ->assertHasNoErrors()
@@ -151,4 +151,35 @@ it('reuses the existing thread on a second contact (no duplicate)', function () 
 
     // Due notifiche in totale (una per messaggio) allo staff.
     Notification::assertSentToTimes($staff, NewMessageReceived::class, 2);
+});
+
+it('renders an error summary after a failed attempt and focuses the outcome after a successful one', function () {
+    [$animal] = verifiedOrgAnimalWithMessageStaff();
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
+        ->assertDontSeeHtml('id="contact-error-summary"')
+        ->call('contact')
+        ->assertSet('contactAttempts', 1)
+        ->assertSeeHtml('id="contact-error-summary"')
+        ->assertSeeHtml('wire:key="contact-errors-1"')
+        ->assertSeeHtml('href="#contact-body"')
+        ->assertSee(__('messaging.contact.empty'))
+        ->set('contactBody', 'Vorrei saperne di più.')
+        ->call('contact')
+        ->assertSet('contactAttempts', 2)
+        ->assertDontSeeHtml('id="contact-error-summary"')
+        ->assertSeeHtml('wire:key="contact-message-2"')
+        ->assertSeeHtml('data-animal-feedback="success"')
+        ->assertSeeHtml('tabindex="-1"');
+});
+
+it('sends a guest from the sign-in note to the login with the animal as intended page', function () {
+    [$animal] = verifiedOrgAnimalWithMessageStaff();
+
+    Livewire::test(ContactOrganizationForm::class, ['animal' => $animal])
+        ->call('signIn')
+        ->assertRedirect(route('login'));
+
+    expect(session('url.intended'))->toBe(route('animals.show', $animal));
 });

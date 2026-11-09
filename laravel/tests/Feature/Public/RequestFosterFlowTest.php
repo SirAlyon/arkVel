@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Actions\Organizations\AddOrganizationMember;
 use App\Enums\FosterApplicationStatus;
 use App\Enums\MembershipRole;
-use App\Livewire\AnimalDetail;
+use App\Livewire\AnimalDetail\FosterRequestForm;
 use App\Models\AdopterProfile;
 use App\Models\Animal;
 use App\Models\FosterApplication;
@@ -59,9 +59,9 @@ function verifiedOrgAnimalWithFosterStaff(): array
 it('redirects a guest to the adopter login and creates no foster application', function () {
     [$animal] = verifiedOrgAnimalWithFosterStaff();
 
-    Livewire::test(AnimalDetail::class, ['animal' => $animal])
+    Livewire::test(FosterRequestForm::class, ['animal' => $animal])
         ->call('requestFoster')
-        ->assertRedirect(route('filament.adopter.auth.login'));
+        ->assertRedirect(route('login'));
 
     expect(FosterApplication::query()->count())->toBe(0)
         ->and(session('url.intended'))->toBe(route('animals.show', $animal));
@@ -77,7 +77,7 @@ it('redirects an authenticated user without a complete profile to the profile pa
     AdopterProfile::factory()->forUser($user)->withoutConsent()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(FosterRequestForm::class, ['animal' => $animal])
         ->call('requestFoster')
         ->assertRedirect(route('filament.adopter.pages.manage-adopter-profile'));
 
@@ -92,7 +92,7 @@ it('redirects an authenticated user with no profile at all to the profile page (
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(FosterRequestForm::class, ['animal' => $animal])
         ->call('requestFoster')
         ->assertRedirect(route('filament.adopter.pages.manage-adopter-profile'));
 
@@ -108,7 +108,7 @@ it('submits the foster request and notifies the org staff for a user with a comp
     AdopterProfile::factory()->forUser($user)->complete()->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(FosterRequestForm::class, ['animal' => $animal])
         ->call('requestFoster')
         ->assertSet('hasRequestedFoster', true)
         ->assertSet('fosterMessageIsError', false)
@@ -138,7 +138,7 @@ it('surfaces a friendly duplicate message on a second foster request and keeps a
     FosterApplication::factory()->submitted()->forAnimal($animal)->forAdopter($user)->create();
 
     Livewire::actingAs($user)
-        ->test(AnimalDetail::class, ['animal' => $animal])
+        ->test(FosterRequestForm::class, ['animal' => $animal])
         ->call('requestFoster')
         ->assertSet('hasRequestedFoster', true)
         ->assertSet('fosterMessageIsError', false)

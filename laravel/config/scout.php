@@ -159,9 +159,19 @@ return [
                     'breed',
                     'featured',
                 ],
+                // `featured` serve all'ordinamento predefinito del catalogo senza ricerca
+                // (App\Enums\CatalogSort). Dopo una modifica: php artisan scout:sync-index-settings.
                 'sortableAttributes' => [
                     'created_at',
+                    'featured',
                     'name',
+                ],
+                // Valori per faccetta (Meilisearch: 100 di default). La faccetta «Ente» dà
+                // anche i segnaposto della vista «Mappa» del catalogo
+                // (App\Actions\Map\BuildCatalogMap): con il limite di default oltre 100 enti
+                // la mappa ne perderebbe alcuni.
+                'faceting' => [
+                    'maxValuesPerFacet' => 1000,
                 ],
             ],
         ],

@@ -1,0 +1,37 @@
+/*
+ | Gruppo "media": tema della lightbox PhotoSwipe (x-ui.gallery). Importato da
+ | resources/js/ui/media.js insieme a PhotoSwipe, solo quando una galleria si inizializza.
+ |
+ | Solo token. Fondo scuro in entrambi i temi (inverse in chiaro, canvas in scuro), icone
+ | e focus in on-inverse: come sui blocchi `bg-inverse`, l'anello globale di app.css
+ | (3 px) resta visibile sul fondo.
+ */
+.pswp {
+    --pswp-bg: var(--color-inverse);
+    --pswp-placeholder-bg: var(--color-surface);
+    --pswp-icon-color: var(--color-on-inverse);
+    --pswp-icon-color-secondary: var(--color-inverse);
+    --pswp-icon-stroke-color: var(--color-inverse);
+    --pswp-error-text-color: var(--color-on-inverse);
+    --pswp-preloader-color: var(--color-on-inverse);
+    --pswp-preloader-color-secondary: var(--color-inverse);
+    --color-focus: var(--color-on-inverse);
+
+    font-family: var(--font-sans);
+}
+
+.dark .pswp {
+    --pswp-bg: var(--color-canvas);
+    --pswp-icon-color-secondary: var(--color-canvas);
+    --pswp-icon-stroke-color: var(--color-canvas);
+    --pswp-preloader-color-secondary: var(--color-canvas);
+}
+
+.pswp__counter {
+    font-weight: 600;
+    opacity: 1;
+}
+
+.pswp__button:focus-visible {
+    outline-offset: -3px;
+}

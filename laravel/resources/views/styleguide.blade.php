@@ -1,11 +1,10 @@
 {{--
  | Styleguide del design system (direzione "B · Pop affettuoso", piano UI §1-bis).
  | Solo in ambiente local (route `styleguide`, middleware EnsureLocalEnvironment).
- | Usa esclusivamente i token di resources/css/app.css; in UI-2 accoglierà la
- | documentazione dei componenti x-ui.*.
+ | Usa esclusivamente i token di resources/css/app.css. I componenti x-ui.* sono
+ | documentati nelle pagine dei gruppi (/_styleguide/{group}, styleguide/groups/*).
 --}}
 @php
-    use App\Enums\AppLocale;
     use App\Support\DesignTokens\ContrastKind;
     use App\Support\DesignTokens\ContrastPairs;
     use Illuminate\Support\Number;
@@ -20,7 +19,7 @@
         'status' => [
             ['success-subtle', 'on-success-subtle'], ['warning-subtle', 'on-warning-subtle'],
             ['danger-subtle', 'on-danger-subtle'], ['info-subtle', 'on-info-subtle'],
-            ['success', null], ['warning', null], ['danger', 'on-danger'], ['info', null],
+            ['success', null], ['warning', null], ['danger', 'on-danger'], ['danger-hover', 'on-danger'], ['info', null],
         ],
     ];
 
@@ -62,50 +61,10 @@
         ['ease-pop', '--ease-pop', 'duration-(--duration-slow)', '--duration-slow · 300ms'],
     ];
 
+
     $locale = app()->getLocale();
 @endphp
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', $locale) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="robots" content="noindex, nofollow">
-    <title>{{ __('styleguide.title') }}</title>
-
-    @include('partials.theme-script')
-    @vite(['resources/css/app.css'])
-    @livewireStyles
-</head>
-<body class="min-h-screen bg-canvas font-sans text-body text-fg antialiased">
-    <header class="mx-auto flex max-w-page flex-wrap items-center justify-between gap-4 px-gutter py-5">
-        <div class="flex items-center gap-3">
-            <span class="inline-flex size-11 items-center justify-center rounded-icon bg-highlight text-on-highlight">
-                <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg>
-            </span>
-            <span class="text-h4">arkvel</span>
-            <span class="text-small font-semibold text-fg-muted">{{ __('styleguide.heading') }}</span>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3">
-            <x-ui.theme-toggle />
-
-            <div role="group" aria-label="{{ __('styleguide.language') }}" class="inline-flex gap-1 rounded-full bg-surface p-1">
-                @foreach (AppLocale::cases() as $option)
-                    <form method="POST" action="{{ route('locale.update', $option) }}">
-                        @csrf
-                        <button
-                            type="submit"
-                            lang="{{ $option->value }}"
-                            aria-pressed="{{ $option->value === $locale ? 'true' : 'false' }}"
-                            class="inline-flex min-h-11 items-center rounded-full px-4 text-small font-semibold text-fg hover:bg-surface-raised aria-pressed:bg-primary aria-pressed:text-on-primary"
-                        >{{ $option->getLabel() }}</button>
-                    </form>
-                @endforeach
-            </div>
-        </div>
-    </header>
-
-    <main id="main" class="mx-auto flex max-w-page flex-col gap-section px-gutter pb-section">
+<x-styleguide.layout :title="__('styleguide.title')">
         <div class="flex flex-col gap-5 pt-4 md:pt-8">
             <h1 class="text-h1">{{ __('styleguide.heading') }}</h1>
             <p class="max-w-2xl text-lead text-fg-muted">{{ __('styleguide.intro') }}</p>
@@ -253,7 +212,7 @@
                 <p class="max-w-2xl rounded-card bg-warning-subtle px-5 py-4 text-on-warning-subtle">{{ __('styleguide.contrast.forbidden') }}</p>
             </div>
 
-            <div class="overflow-x-auto rounded-card bg-surface p-2" tabindex="0" role="region" aria-label="{{ __('styleguide.sections.contrast') }}">
+            <div class="overflow-x-auto rounded-card bg-surface p-2" tabindex="0" role="region" aria-label="{{ __('styleguide.contrast.table') }}" data-contrast-region>
                 <table
                     class="w-full min-w-[40rem] border-separate border-spacing-y-1 text-left text-small"
                     data-contrast-table
@@ -402,11 +361,8 @@
                 @endforeach
             </ul>
         </section>
-    </main>
 
-    {{-- Alpine (via Livewire) per il selettore del tema e le demo. --}}
-    @livewireScripts
-
+    <x-slot:scripts>
     <script>
         (() => {
             const canvas = document.createElement('canvas');
@@ -473,5 +429,5 @@
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => requestAnimationFrame(update));
         })();
     </script>
-</body>
-</html>
+    </x-slot:scripts>
+</x-styleguide.layout>

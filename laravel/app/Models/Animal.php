@@ -11,6 +11,8 @@ use App\Enums\Sex;
 use App\Enums\Size;
 use App\Enums\Species;
 use App\Models\Concerns\GeneratesUniqueSlug;
+use App\Support\Media\CleansImageMetadata;
+use App\Support\Media\ImageConversions;
 use Database\Factories\AnimalFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -65,7 +67,7 @@ use Spatie\Translatable\HasTranslations;
  * @property bool $featured
  * @property-read Collection<int, MedicalRecord> $medicalRecords
  */
-class Animal extends Model implements HasMedia
+class Animal extends Model implements CleansImageMetadata, HasMedia
 {
     use GeneratesUniqueSlug;
 
@@ -316,13 +318,31 @@ class Animal extends Model implements HasMedia
             ->singleFile();
     }
 
+    /**
+     * Foto e avatar arrivano spesso dal telefono di un volontario o di un affidatario:
+     * l'originale va ripulito da EXIF/GPS appena caricato
+     * (App\Listeners\Media\StripUploadedImageMetadata).
+     *
+     * @return list<string>
+     */
+    public function imageMetadataCollections(): array
+    {
+        return ['photos', 'avatar'];
+    }
+
     public function registerMediaConversions(?Media $media = null): void
     {
-        // Anteprima quadrata leggera per griglie/tabelle. Sincrona (nonQueued):
-        // GD e disponibile nel container, la conversione e minimale.
+        // Anteprima leggera entro 400×400 per griglie/tabelle e, sul sito pubblico, finché
+        // le conversioni in coda non sono pronte (App\Support\Media\MediaPictures).
+        // Sincrona (nonQueued): GD è disponibile nel container, la conversione è minimale.
+        // Fit::Max: come Contain, ma senza ingrandire le foto più piccole.
         $this->addMediaConversion('thumb')
             ->nonQueued()
             ->performOnCollections('photos', 'avatar')
-            ->fit(Fit::Contain, 400, 400);
+            ->fit(Fit::Max, 400, 400);
+
+        // Foto del sito pubblico (card 4:5, hero 3:2, og, zoom) in AVIF/WebP/JPEG con
+        // responsive images, tutte in coda: vedi App\Enums\ImageConversion.
+        resolve(ImageConversions::class)->register($this, ['photos', 'avatar']);
     }
 }

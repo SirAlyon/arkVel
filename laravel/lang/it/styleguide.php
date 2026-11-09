@@ -13,6 +13,55 @@ return [
     'language' => 'Lingua',
     'toc' => 'Sezioni',
 
+    'page_title' => ':group — :styleguide',
+    'pages' => 'Pagine della styleguide',
+    'tokens' => 'Token',
+    'a11y' => 'Accessibilità',
+    'show_code' => 'Mostra il codice',
+    'examples' => 'Esempi',
+    'groups' => [
+        'actions' => [
+            'title' => 'Azioni',
+            'intro' => 'Icone, bottoni, link, badge e chip: gli elementi base con cui si agisce e si etichetta.',
+        ],
+        'forms' => [
+            'title' => 'Moduli',
+            'intro' => 'Campi, etichette, aiuti ed errori: input, area di testo, select, checkbox, radio e interruttore.',
+        ],
+        'pickers' => [
+            'title' => 'Selettori',
+            'intro' => 'Scelte guidate: combobox con ricerca e selettore di date (Cally).',
+        ],
+        'overlays' => [
+            'title' => 'Livelli',
+            'intro' => 'Dialog, pannello laterale, menu a tendina, tooltip e notifiche toast.',
+        ],
+        'content' => [
+            'title' => 'Contenuti',
+            'intro' => 'Schede, accordion, skeleton, stati vuoti e avatar.',
+        ],
+        'domain' => [
+            'title' => 'Dominio',
+            'intro' => 'I componenti di ArkVel: card animale ed ente, numeri, titoli di sezione e bande CTA.',
+        ],
+        'shell' => [
+            'title' => 'Shell',
+            'intro' => 'Navigazione del sito pubblico: voci di menu, selettore della lingua, header e footer.',
+        ],
+        'media' => [
+            'title' => 'Media',
+            'intro' => 'Immagini responsive (AVIF, WebP, JPEG) con placeholder sfocato e galleria con lightbox.',
+        ],
+        'motion' => [
+            'title' => 'Movimento',
+            'intro' => 'Micro-interazioni e animazioni: reveal allo scroll, cuore dei preferiti, conferma dei toast e foto che vola dalla card alla scheda. Tutte rispettano «riduci movimento».',
+        ],
+        'map' => [
+            'title' => 'Mappa',
+            'intro' => 'Mappa con posizioni approssimate (MapLibre e tile OpenFreeMap), il suo elenco alternativo accessibile e il selettore di vista.',
+        ],
+    ],
+
     'sections' => [
         'preview' => 'Anteprima',
         'colors' => 'Colori',
@@ -64,6 +113,7 @@ return [
     ],
 
     'contrast' => [
+        'table' => 'Tabella dei contrasti',
         'intro' => 'Rapporti calcolati dal browser sul tema attivo. Testo almeno 4,5:1; bordi dei controlli e focus almeno 3:1. Le stesse coppie sono verificate dal test ColorContrastTest.',
         'pair' => 'Coppia',
         'sample' => 'Esempio',

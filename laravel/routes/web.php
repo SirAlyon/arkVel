@@ -2,13 +2,24 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Auth\SendEmailVerificationController;
+use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CalendarFeedController;
 use App\Http\Controllers\GoogleCalendarConnectController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\LogoutController;
+use App\Http\Controllers\RobotsTxtController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\StyleguideGroupController;
 use App\Http\Middleware\EnsureLocalEnvironment;
 use App\Livewire\AnimalCatalog;
 use App\Livewire\AnimalDetail;
+use App\Livewire\Auth\ForgotPasswordPage;
+use App\Livewire\Auth\LoginPage;
+use App\Livewire\Auth\RegisterPage;
+use App\Livewire\Auth\ResetPasswordPage;
+use App\Livewire\Auth\VerifyEmailPage;
 use App\Livewire\DonationCancelled;
 use App\Livewire\DonationThankYou;
 use App\Livewire\Home;
@@ -34,21 +45,77 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', Home::class)->name('home');
 
 /*
+ | SEO (UI-3): sitemap delle pagine pubbliche indicizzabili e robots.txt generato
+ | (l'URL della sitemap deve essere assoluto e viene da APP_URL). Vedi App\Support\Seo.
+ | Fuori dallo stack `web` (sessione, cookie, CSRF, SetLocale): sono documenti statici per
+ | i crawler, uguali per tutti, e non devono aprire una sessione né impostare cookie.
+ */
+Route::get('/sitemap.xml', SitemapController::class)->withoutMiddleware('web')->name('seo.sitemap');
+Route::get('/robots.txt', RobotsTxtController::class)->withoutMiddleware('web')->name('seo.robots');
+
+/*
+ | Autenticazione dell'adottante sul sito pubblico (UI-5): pagine Livewire con le route
+ | standard di Laravel (login, register, password.*, verification.*), usate anche dal
+ | middleware `auth` (redirectGuestsTo) e `verified` e dal pannello /account, che non ha
+ | più login, registrazione, reset né prompt di verifica propri. /manage e /admin tengono
+ | il login di Filament. La logica è nelle Action di app/Actions/Auth.
+ |
+ |  - /accedi, /registrati, /password-dimenticata, /reimposta-password/{token}: solo
+ |    ospiti (`guest`: chi è già dentro va a /account, come le pagine di Filament);
+ |  - /verifica-email: avviso per l'utente da verificare; il link della mail
+ |    (/verifica-email/{id}/{hash}) è firmato e limitato, come il reinvio (POST).
+ | Rate limit dei moduli: nelle Action (per email + IP, per IP o per utente).
+ */
+Route::middleware('guest')->group(function (): void {
+    Route::get('/accedi', LoginPage::class)->name('login');
+    Route::get('/registrati', RegisterPage::class)->name('register');
+    Route::get('/password-dimenticata', ForgotPasswordPage::class)->name('password.request');
+    Route::get('/reimposta-password/{token}', ResetPasswordPage::class)->name('password.reset');
+});
+
+Route::middleware('auth')->group(function (): void {
+    Route::get('/verifica-email', VerifyEmailPage::class)->name('verification.notice');
+
+    Route::get('/verifica-email/{id}/{hash}', VerifyEmailController::class)
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
+
+    Route::post('/verifica-email/reinvia', SendEmailVerificationController::class)
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+});
+
+/*
+ | Uscita dal sito pubblico: chiude la sessione e torna alla home (POST con CSRF).
+ | Non passa dai pannelli Filament (il logout del pannello adottante attraversa il suo
+ | authMiddleware, che darebbe il ruolo Adopter anche allo staff degli enti). La usa anche
+ | la voce "Esci" del menu utente del pannello /account (AdopterPanelProvider).
+ | Per un ospite (sessione già scaduta) è un no-op che porta alla home.
+ */
+Route::post('/esci', LogoutController::class)->name('logout');
+
+/*
  | Selettore lingua: salva la scelta in sessione (letta da SetLocale) e torna indietro.
  | {locale} è risolto sull'enum AppLocale: un codice non supportato risponde 404.
  */
 Route::post('/lingua/{locale}', LocaleController::class)->name('locale.update');
 
 /*
- | Styleguide del design system (token, tipografia, forme, motion): solo in `local`,
+ | Styleguide del design system (token e componenti x-ui): solo in `local`,
  | altrove 404 (EnsureLocalEnvironment). Vedi docs/PIANO-UI-FRONTEND.md §5 UI-1.
  */
-Route::view('/_styleguide', 'styleguide')
-    ->middleware(EnsureLocalEnvironment::class)
-    ->name('styleguide');
+Route::middleware(EnsureLocalEnvironment::class)->group(function (): void {
+    Route::view('/_styleguide', 'styleguide')->name('styleguide');
+
+    // Una pagina per gruppo di componenti x-ui (App\Support\Styleguide\StyleguideGroups).
+    Route::get('/_styleguide/{group}', StyleguideGroupController::class)
+        ->where('group', '[a-z-]+')
+        ->name('styleguide.group');
+});
 
 Route::get('/animali', AnimalCatalog::class)->name('catalog');
-Route::get('/animali/{animal}', AnimalDetail::class)->name('animals.show');
+// Solo id numerici: /animali/luna risponde 404 (non 500 dal binding su una colonna intera).
+Route::get('/animali/{animal}', AnimalDetail::class)->whereNumber('animal')->name('animals.show');
 
 Route::get('/enti', OrganizationIndex::class)->name('organizations.index');
 Route::get('/enti/{organization:slug}', OrganizationPage::class)->name('organizations.show');

@@ -4,14 +4,22 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Actions\Animals\FindFavoritedAnimalIds;
 use App\Actions\Donations\StartDonationCheckout;
 use App\Actions\Donations\StartRecurringDonationCheckout;
+use App\Actions\Organizations\SummarizeOrganizationAnimals;
 use App\Enums\OrganizationStatus;
 use App\Exceptions\DonationsNotConfigured;
 use App\Models\Animal;
 use App\Models\Organization;
 use App\Models\User;
 use App\Support\Billing\StripeConfig;
+use App\Support\Map\ApproximateLocation;
+use App\Support\Seo\InteractsWithSeo;
+use App\Support\Seo\PublicPageSeo;
+use App\Support\Site\PublicLocation;
+use App\Support\Site\TranslatedText;
+use App\Support\Site\WebUrl;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -34,9 +42,20 @@ use Livewire\WithPagination;
  * una nota localizzata. Componente SOTTILE: valida l'input e delega a
  * {@see StartDonationCheckout}, poi redirige all'URL di Stripe Checkout. Le guardie di
  * dominio (importo, identità, config) vivono nell'Action.
+ *
+ * Numeri dell'ente (animali in adozione, adozioni concluse) da
+ * {@see SummarizeOrganizationAnimals}. La pagina segue il tema (`themeable`).
+ *
+ * Dati di presentazione calcolati qui, non nella vista: la descrizione nella lingua
+ * corrente con fallback e la lingua in cui è scritta ({@see TranslatedText}, per `lang`),
+ * la località pubblica ({@see PublicLocation}), la zona APPROSSIMATA per la mappa
+ * ({@see ApproximateLocation}: le coordinate salvate non arrivano mai alla vista), il sito
+ * solo se http(s) ({@see WebUrl}) e i preferiti dell'utente tra gli animali della pagina,
+ * in una query ({@see FindFavoritedAnimalIds}).
  */
 class OrganizationPage extends Component
 {
+    use InteractsWithSeo;
     use WithPagination;
 
     public Organization $organization;
@@ -75,6 +94,13 @@ class OrganizationPage extends Component
     #[Locked]
     public ?string $donationError = null;
 
+    /**
+     * Invii del modulo di donazione: solo la chiave del riepilogo errori (x-ui.error-summary
+     * viene ricreato a ogni tentativo fallito e riprende il focus). Non è stato di dominio.
+     */
+    #[Locked]
+    public int $donationAttempts = 0;
+
     public function mount(Organization $organization): void
     {
         abort_unless($organization->status === OrganizationStatus::Verified, 404);
@@ -95,6 +121,8 @@ class OrganizationPage extends Component
         StartRecurringDonationCheckout $startRecurringDonationCheckout,
         StripeConfig $stripeConfig,
     ): mixed {
+        $this->donationAttempts++;
+
         if (! $stripeConfig->configured()) {
             $this->donationError = __('donations.public.not_configured');
 
@@ -159,12 +187,21 @@ class OrganizationPage extends Component
         $animals = $this->organization
             ->animals()
             ->publiclyVisible()
-            ->with(['media', 'organization'])
+            ->with('media')
             ->latest()
             ->paginate(12);
 
+        $locale = app()->getLocale();
+
         $view = ViewFacade::make('livewire.organization-page', [
             'animals' => $animals,
+            'favoriteIds' => app(FindFavoritedAnimalIds::class)->handle(Auth::user(), $animals->items()),
+            'locale' => $locale,
+            'description' => TranslatedText::pick($this->organization, 'description', $locale),
+            'location' => PublicLocation::of($this->organization),
+            'mapArea' => ApproximateLocation::of($this->organization),
+            'website' => WebUrl::safe($this->organization->getAttribute('website')),
+            'summary' => app(SummarizeOrganizationAnimals::class)->handle($this->organization),
             'donationsEnabled' => app(StripeConfig::class)->configured(),
             'donationPresets' => [5, 10, 25, 50],
             'isGuestDonor' => ! Auth::user() instanceof User,
@@ -172,10 +209,9 @@ class OrganizationPage extends Component
             // account per gestirla/disdirla dal pannello /account.
             'canDonateMonthly' => Auth::user() instanceof User,
         ]);
+        $view->layoutData(['themeable' => true]); // @phpstan-ignore method.notFound
 
-        $view->title($this->organization->name.' — ArkVel'); // @phpstan-ignore method.notFound
-
-        return $view;
+        return $this->withSeo($view, app(PublicPageSeo::class)->organization($this->organization, $animals->currentPage(), $animals->lastPage()));
     }
 
     /**

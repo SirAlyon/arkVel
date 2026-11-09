@@ -4,7 +4,7 @@
 > open-source / gratuito**. I pannelli Filament (`/account`, `/manage`, `/admin`) **non si toccano**,
 > con un'unica eccezione concordata: lo spostamento di login/registrazione adottante (fase UI-5).
 >
-> Stato: proposta approvata il 2026-11-03. UI-0 e UI-1 completate. Ogni fase va lanciata in una chat nuova con il
+> Stato: proposta approvata il 2026-11-03. UI-0…UI-8 completate: refactor della UI pubblica concluso. Ogni fase va lanciata in una chat nuova con il
 > super-prompt in fondo al documento.
 
 ---
@@ -227,14 +227,14 @@ Mockup di riferimento: canvas "ArkVel — Direzioni visive", artboard **B · Pop
 > |---|---|---|
 > | Major | Etichette degli enum in italiano anche nella versione EN (`getLabel()` hard-coded in 27 enum; pubblici: `Species`, `Sex`, `Size`, `EnergyLevel`, `AppointmentType`, `OrganizationType`) → `__('enums.…')` + `lang/{it,en}/enums.php`, con test | **UI-1** ✅ risolto |
 > | Major | Contrasto sotto AA (`stone-400`/`stone-500` su `brand-50`, testo chiaro sul gradiente CTA) | UI-1 (token) ✅ token AA verificati da test → UI-6 (pagine) |
-> | Major | Overflow orizzontale a 320 px causato dalla nav dell'header | UI-3 |
+> | Major | Overflow orizzontale a 320 px causato dalla nav dell'header | UI-3 ✅ |
 > | Major | Font mai caricato (manca `@fonts` nel layout) | UI-1 ✅ risolto (Fontsource) |
-> | Minor | Nessun selettore di lingua visibile (Major se UI-0 va in produzione prima di UI-3) | UI-3 |
-> | Minor | Echo/Reverb importato su ogni pagina ospite (errori WebSocket in console) → import dinamico solo dove serve | UI-3 |
-> | Minor | Salto di titoli `h1` → `h3` nel catalogo; bottoni preferiti con nome identico | UI-2 (`animal-card` v2) |
-> | Minor | Immagini senza `width`/`height`, foto della scheda = miniatura 400×300 ingrandita, `alt` della galleria tutti uguali | UI-4 |
-> | Nit | Mancano `Vary: Accept-Language` e `Content-Language` | UI-8 (prima di qualsiasi cache o CDN) |
-> | Nit | Suffisso " — ArkVel" hard-coded in `AnimalDetail` e `OrganizationPage` → `public.titles.*` | UI-3 (SEO) |
+> | Minor | Nessun selettore di lingua visibile (Major se UI-0 va in produzione prima di UI-3) | UI-3 ✅ |
+> | Minor | Echo/Reverb importato su ogni pagina ospite (errori WebSocket in console) → import dinamico solo dove serve | UI-3 ✅ il layout pubblico non carica più `app.js` (Echo serve solo ai pannelli) |
+> | Minor | Salto di titoli `h1` → `h3` nel catalogo; bottoni preferiti con nome identico | UI-2 ✅ `x-ui.animal-card` con `heading-level` e preferito «Salva <nome> nei preferiti» (anche il Livewire `FavoriteButton`); il catalogo adotta la card in UI-6b |
+> | Minor | Immagini senza `width`/`height`, foto della scheda = miniatura 400×300 ingrandita, `alt` della galleria tutti uguali | UI-4 ✅ componenti pronti (`x-ui.picture`, `x-ui.gallery` con alt per foto); le pagine li adottano in UI-6 |
+> | Nit | Mancano `Vary: Accept-Language` e `Content-Language` | UI-8 ✅ |
+> | Nit | Suffisso " — ArkVel" hard-coded in `AnimalDetail` e `OrganizationPage` → `public.titles.*` | UI-3 ✅ (`seo.titles.*`) |
 > | Nit | Ricerca del catalogo senza label visibile | UI-6b |
 
 Elenco originale della fase:
@@ -324,9 +324,9 @@ Elenco originale della fase:
 > | `line-strong` | `dusk-400` (≥ 3,7:1 su tutte le superfici) |
 > | `primary`, `highlight`, `focus`, `link`, `stamp` | giallo `sun-300` con testo navy |
 > | `block-sun` | navy-800, cioè la hero è una superficie scura con accenti gialli |
-> | `block-peach` | peach-800, testo `peach-100` |
-> | `block-mint` | leaf-900, testo `leaf-100` |
-> | `block-leaf` | leaf-700, testo bianco (più chiaro della menta, così restano distinguibili) |
+> | `block-peach` | peach-800, testo `peach-100` (9,9:1). In UI-2 era passato a peach-700, ma in UI-6 si è visto che è quasi identico al rosso di `danger` (1,03:1): meglio un pesca scuro che un blocco che sembra un errore |
+> | `block-mint` | leaf-800, testo `leaf-100` (7,7:1; era leaf-900, invisibile sulla card) |
+> | `block-leaf` | leaf-600, testo bianco (4,64:1, AA al limite: più chiaro della menta, così restano distinguibili) |
 >
 > **Esito `/ui-review` della styleguide e review degli standard (2026-11-03).**
 >
@@ -349,11 +349,11 @@ Elenco originale della fase:
 >
 >   | Gravità | Punto | Fase |
 >   |---|---|---|
->   | Minor | `block-peach` in dark (#5A2A20) si legge marrone ruggine più che pesca. Alternativa da valutare a occhio: un corallo-rosa intorno a `oklch(40% 0.11 22)` | UI-2 (quando le card animale lo usano) |
->   | Minor | Il toggle ha `aria-pressed="false"` su tutti i bottoni finché Alpine non parte (si nota solo in local, con `livewire.js` non minificato). Si può leggere lo stato già nello script del tema | UI-3 |
->   | Nit | Skip link e `preload` del woff2 latin nella shell pubblica | UI-3 |
->   | Nit | `x-ui.icon` (Lucide) al posto delle icone SVG inline del toggle (`{!! !!}` con markup costante) | UI-2 |
->   | Nit | Gli override del focus valgono sulle classi esatte `bg-inverse`, `bg-stamp`, `bg-block-*`. Una variante con opacità (`bg-inverse/90`) non li eredita: i componenti `x-ui` devono usare le classi piene | UI-2 |
+>   | Minor | `block-peach` in dark (#5A2A20) si legge marrone ruggine più che pesca. Alternativa da valutare a occhio: un corallo-rosa intorno a `oklch(40% 0.11 22)` | UI-2 ✅ ora peach-700 (vedi §5 UI-2: resta un Nit estetico) |
+>   | Minor | Il toggle ha `aria-pressed="false"` su tutti i bottoni finché Alpine non parte (si nota solo in local, con `livewire.js` non minificato). Si può leggere lo stato già nello script del tema | UI-3 ✅ |
+>   | Nit | Skip link e `preload` del woff2 latin nella shell pubblica | UI-3 ✅ |
+>   | Nit | `x-ui.icon` (Lucide) al posto delle icone SVG inline del toggle (`{!! !!}` con markup costante) | UI-2 ✅ |
+>   | Nit | Gli override del focus valgono sulle classi esatte `bg-inverse`, `bg-stamp`, `bg-block-*`. Una variante con opacità (`bg-inverse/90`) non li eredita: i componenti `x-ui` devono usare le classi piene | UI-2 ✅ rispettato in tutta la libreria; i livelli flottanti (`.ui-layer`, `.ui-picker-layer`) rimettono il focus del tema |
 >   | Nit | Con una CSP, gli script inline (tema, styleguide) richiederanno un nonce | UI-8 |
 >
 > **Note tecniche utili alle fasi successive:**
@@ -388,6 +388,106 @@ Elenco originale della fase:
 - Pagina `/_styleguide` solo in `local` (route condizionata all'ambiente).
 
 ### UI-2 · Libreria componenti `x-ui.*`
+
+> **Stato: completata il 2026-11-08** (branch `feat/ui-2-components`, partito da `main`; un commit
+> per gruppo di componenti, ognuno verificato in isolamento: pint, phpstan, Pest completo e
+> suite browser. A fine fase: 1737 test, suite browser 78/78).
+>
+> **Cosa è stato fatto:**
+> - **Dipendenze (§2):** `mallardduck/blade-lucide-icons` 2.0 (icone Lucide) e `cally` 0.9 (date
+>   picker, import dinamico). `blade-ui-kit/blade-icons` c'era già, tramite Filament.
+> - **Libreria `x-ui.*`** in `resources/views/components/ui/`, sei gruppi:
+>   - **actions:** `icon`, `button` (5 varianti, 3 dimensioni ≥ 44 px, link, solo icona, attesa
+>     con `data-loading` di Livewire), `link`, `badge`, `tag` (filtro con `aria-pressed`,
+>     rimovibile);
+>   - **forms:** `field` (componente a classe `App\View\Components\Ui\Field`), `input`,
+>     `textarea`, `select`, `checkbox(-group)`, `radio(-group)`, `switch`;
+>   - **pickers:** `combobox` (APG, x-anchor, ricerca lato server), `date-picker` (Cally,
+>     popover o inline);
+>   - **overlays:** `dialog`, `drawer` (laterale o bottom sheet), `dropdown`, `tooltip`, `toast`
+>     + `toaster`;
+>   - **content:** `tabs`, `accordion`, `skeleton`, `empty-state`, `avatar` (+ gruppo);
+>   - **domain:** `animal-card` v2 (+ `favorite`, `cta`, `skeleton`), `organization-card`,
+>     `stat`, `section-heading`, `cta-band`.
+> - `x-ui.theme-toggle` usa `x-ui.icon`. Il Livewire `FavoriteButton` usa
+>   `x-ui.animal-card.favorite`: nome fisso «Salva <nome> nei preferiti» e stato in
+>   `aria-pressed` (toggle APG), senza cambiare comportamento.
+> - **Token:** nuovo `danger-hover`; in dark `block-peach` passa a peach-700. Coppie nuove in
+>   `ContrastPairs`: `on-danger`/`danger-hover`, `primary` su `canvas` e `surface` (controlli
+>   selezionati), `focus` su `danger-subtle`, `danger` su `surface-raised`.
+> - **Styleguide:** una pagina per gruppo (`/_styleguide/{group}`, `StyleguideGroups`), con
+>   layout e componenti di documentazione `x-styleguide.*` (sezione, esempio con codice, note di
+>   accessibilità). Ogni componente ha esempi per variante e stato, anche su fondi colorati e in
+>   dark.
+> - **Test:** per ogni gruppo un file di rendering (`tests/Feature/Ui/Components`) e uno browser
+>   (`tests/Browser/Components`: axe in light e dark, tastiera, target ≥ 44 px, overflow a
+>   mobile). Unit per `App\Support\Ui` (`ControlAttributes`, `FieldControl`, `ResolvedControl`).
+>   Helper condiviso `Tests\Support\Ui\BrowserScripts`.
+> - **Docker:** `icu-data-full` nell'immagine `php`: senza, `Number::format(locale: 'it')`
+>   formattava all'inglese.
+>
+> **Note tecniche utili alle fasi successive:**
+> - **Shell (UI-3):** il layout pubblico deve caricare `@vite(['resources/css/app.css',
+>   'resources/js/app.js', 'resources/js/ui.js'])`, includere `partials.theme-script` e un solo
+>   `<x-ui.toaster />` in fondo al `<body>`. Da Livewire un toast si lancia con
+>   `$this->dispatch('toast', type: 'success', title: …)`; anche `session('toast')` viene letto.
+> - **JS dei componenti:** `resources/js/ui.js` carica ogni `resources/js/ui/<gruppo>.js` (glob
+>   che esclude i nomi con spazio); i moduli registrano store e `Alpine.data()` su `alpine:init`.
+>   Il CSS di un gruppo (`resources/css/ui/<gruppo>.css`) è importato dal suo modulo JS.
+> - **Moduli:** dentro `x-ui.field` i controlli prendono id, name, `required`, aiuto ed errore dal
+>   field con `@aware(['uiField' => null])`. Un id, name o `required` proprio e diverso lancia
+>   un'eccezione (usare `for` / `name` / `required` del field). `@aware` non attraversa un
+>   componente Livewire figlio: il field va dentro la vista Livewire. Fuori da un field l'errore
+>   si legge anche dalla chiave `wire:model`.
+> - **Livelli flottanti:** menu, tooltip, liste di combobox e calendario sono `popover="manual"`
+>   nel top layer, posizionati con `x-anchor` (`.fixed`). Un dialog modale rende inerte tutto il
+>   resto, anche i popover esterni: per questo ogni dialog e drawer ha il suo outlet dei toast.
+> - **Card animale:** link esteso sul nome (pseudo-elemento), preferito come fratello sopra
+>   (z-index), `heading-level` da allineare alla gerarchia della pagina. Foto con `<img>`
+>   semplice e proporzioni fisse: `x-ui.picture` arriva in UI-4.
+> - **Workflow multi-agente:** i gruppi sono stati costruiti in parallelo sulla stessa working
+>   copy (Docker monta solo `./laravel`, quindi niente worktree), con file di proprietà per
+>   gruppo (viste, pagina di styleguide, `lang/*/ui_<gruppo>.php` e `styleguide_<gruppo>.php`,
+>   test, modulo JS) e build + test browser serializzati da uno script con lock.
+> - **Copie di sincronizzazione:** il client di sync della cartella ricrea copie `"file 2.ext"`,
+>   soprattutto dopo `git stash`. Le migrazioni duplicate rompono i test e un modulo JS duplicato
+>   registrava due volte i listener: controllare `git status` e spostarle via prima di testare.
+> - **Copertura:** il container non ha pcov/xdebug, quindi la copertura al 100% delle classi in
+>   `App\Support\Ui` è verificata a mano (ogni ramo ha un test).
+>
+> **Esito `/ui-review` della styleguide (2026-11-08).**
+>
+> - **Misure** (375 px, CPU 4×, rete lenta): LCP 1,28–1,32 s, CLS ≤ 0,029, INP ≤ 56 ms. axe:
+>   nessuna violazione su 7 pagine in light e dark; nessun overflow da 320 px; console pulita.
+> - **Corretti nella fase** (review degli standard e `/ui-review`):
+>   - toast sotto il backdrop di un dialog aperto, e quindi non annunciati: ogni dialog e drawer
+>     ha il suo outlet;
+>   - toast che coprivano l'elemento con il focus (WCAG 2.4.11): la pagina scorre per mostrarlo,
+>     su mobile restano al massimo 2 toast, Esc chiude quelli non di errore;
+>   - scheda di `x-ui.tabs` con il focus fuori dalla lista scorrevole a 320–375 px;
+>   - header e footer fissi del drawer sopra l'elemento con il focus; CTA del footer a capo dentro
+>     la pill;
+>   - `id` proprio di un controllo dentro `x-ui.field` che staccava label e descrizioni;
+>     regole su id ed errore duplicate in 7 viste (ora in `App\Support\Ui`); `x-ui.field`
+>     riconosciuto da qualunque antenato con `label` (ora `@aware(['uiField'])`);
+>   - intestazione del date picker che non seguiva i cambi di valore dall'esterno; id del
+>     combobox che cambiava a ogni ricerca lato server; `label for` puntato a un `div`;
+>   - skeleton con `aria-busy` che impediva l'annuncio; focus perso su `body` chiudendo un toast;
+>   - avatar giallo invisibile in dark su una superficie; iniziali tagliate nei gruppi di
+>     avatar; badge info invisibile in dark (`info-subtle` ora navy-600);
+>   - bottone preferiti con nome che cambiava insieme ad `aria-pressed`; nome di landmark
+>     duplicato nella pagina dei token; testi inglesi misti UK/US (ora US, come il resto
+>     dell'app); modulo JS caricato due volte da una copia di sincronizzazione.
+> - **Aperti:**
+>
+>   | Gravità | Punto | Fase |
+>   |---|---|---|
+>   | Nit | In dark `block-peach` per un revisore si legge mattone/terracotta; le alternative più rosse si confondono con `danger` | UI-6 ✅ peach-800 (vedi tabella dark di UI-1) |
+>   | Nit | In dark `primary`, `highlight` e `stamp` sono lo stesso giallo: documentato nella styleguide (un solo CTA giallo per gruppo); il bollino «In evidenza» giallo su una foto gialla si separa solo col bordo | UI-6 |
+>   | Nit | CLS 0,029 sulla pagina domain per lo swap del font: `preload` del woff2 | UI-3 ✅ (preload nel layout pubblico; la styleguide ha un layout suo) |
+>   | Minor | Combobox in ricerca lato server: id delle opzioni per indice, `aria-activedescendant` può puntare a un'altra opzione dopo una risposta; modalità da provare su una pagina vera | UI-8 (il catalogo usa select e radio, non il combobox) |
+>   | Minor | Dialog alti su mobile: la pila dei toast può coprire il fondo del dialog (restano chiudibili e raggiungibili) | UI-7 |
+>   | Nit | `x-ui.checkbox`/`x-ui.radio` riconoscono il gruppo con `@aware` (legend + name); contatore della textarea non aggiornato se Livewire azzera il valore dal server | UI-6c |
 - **Primitivi:** button (varianti/dimensioni/stato loading via `data-loading`), link, badge, tag,
   input, textarea, select, checkbox/radio/switch, field (label + help + errore), combobox
   (Alpine Anchor), date picker (wrapper Cally).
@@ -398,6 +498,67 @@ Elenco originale della fase:
   di accessibilità.
 
 ### UI-3 · Shell del sito
+
+> **Stato: completata il 2026-11-08** (branch `feat/ui-3-shell`, partito da `feat/ui-2-components`;
+> quality gate e suite browser verdi: 1928 test, browser 112/112). Shell e SEO sono state
+> costruite in parallelo da due agenti con file separati, poi riviste (standard + `/ui-review`)
+> e corrette prima del commit.
+>
+> **Cosa è stato fatto:**
+> - **Layout pubblico** (`layouts/app.blade.php`): token semantici, skip link, preload del woff2
+>   (`App\Support\Site\FontPreload` dal manifest Vite), solo `app.css` + `ui.js` (Echo resta
+>   ai pannelli), un `<x-ui.toaster />`, `@livewireStyles`/`@livewireScripts` espliciti.
+> - **Opt-in per pagina** con `->layoutData([...])`: `themeable` (tema scuro; senza, la pagina
+>   resta chiara con `data-theme-forced="light"` e il selettore del tema non compare) e
+>   `transparentHeader` (header trasparente sulla hero, solido allo scroll). In UI-6 ogni pagina
+>   migrata passa `themeable => true`; la Home anche `transparentHeader => true`.
+> - **Header** (`components/site/header`): logo, nav a pillole (`x-ui.nav-link`, `aria-current`
+>   `page` sulla pagina e `true` sulla sezione), lingua (`x-ui.language-switcher`, form POST senza
+>   JS), menu account (`x-ui.dropdown`) o Accedi/Registrati; sotto `md` tutto passa in un
+>   `x-ui.drawer`. Voci centralizzate in `App\Support\Site\SiteNavigation`.
+> - **Account:** `App\Support\Site\AccountLinks` è l'unico punto con gli URL di login,
+>   registrazione, area adottante, gestione ente e logout. Oggi login e registrazione puntano al
+>   pannello Filament adottante: **in UI-5 cambiano solo `login()` e `register()`**. Il link a
+>   `/manage` compare ai membri verificati di un ente operabile (`operableOrganizations()`, la
+>   stessa regola del pannello shelter). Logout pubblico `POST /esci` (`logout.public`, Action
+>   `LogoutUser`): non passa dal pannello adottante, che assegnerebbe il ruolo Adopter.
+> - **Footer:** link, newsletter segnaposto (form disabilitato), note legali «in arrivo» senza
+>   link rotti (TODO pagine legali), lingua, tema.
+> - **Navigazione:** `wire:navigate.hover` sui link interni, `wire:transition.navigate` sul
+>   `<main>` (animazione con i token, saltata con reduced-motion), barra di progresso con
+>   `var(--color-primary)` (`config/livewire.php`), regione `aria-live` persistente che annuncia
+>   la pagina caricata; i dialog aperti si chiudono prima di navigare.
+> - **SEO** (`App\Support\Seo`): `SeoData` per pagina (title, description, canonical, robots,
+>   Open Graph, Twitter card) costruito da `PublicPageSeo`; JSON-LD (WebSite, Organization,
+>   AnimalShelter/NGO per gli enti con indirizzo solo città/regione, ItemPage + Thing per la scheda
+>   animale, BreadcrumbList) **nel body**, perché con `wire:navigate` gli script del `<head>` si
+>   accumulerebbero; breadcrumb visibili (`x-ui.breadcrumb`); niente hreflang (stessa URL per IT
+>   ed EN, lingua in sessione); `noindex` su donazioni, ricerche testuali, catalogo vuoto, pagine
+>   fuori range.
+> - **Sitemap e robots:** `/sitemap.xml` con gli stessi scope di visibilità delle pagine
+>   (cache 10 minuti, XMLWriter) e `/robots.txt` dinamico, entrambi senza sessione e con URL
+>   sempre da `APP_URL` (`CanonicalUrl`). Nginx passa `/robots.txt` a Laravel.
+> - **Host fidati:** `trustHosts` (host di `APP_URL` + `APP_TRUSTED_HOSTS`) fuori da local e test:
+>   un header Host falso riceve 400 e non può avvelenare canonical, OG o la sitemap in cache.
+>   In produzione gli health check per IP vanno aggiunti a `APP_TRUSTED_HOSTS`.
+> - **Styleguide:** pagina `/_styleguide/shell` (nav-link, lingua, anteprima di header e footer).
+>
+> **Esito delle review (2026-11-08):** `/ui-review` «ship» (nessun overflow da 320 a 1440 px,
+> nessun WebSocket, tema chiaro forzato sulle pagine legacy, axe 0 violazioni sulla shell, anche
+> in dark simulato; LCP 0,7–1 s, CLS 0, INP ≤ 56 ms a 375 px). Corretti prima del commit:
+> avvelenamento della sitemap via header Host, entità HTML nelle descrizioni SEO, logout che
+> assegnava il ruolo Adopter, sessione inutile per i crawler, pagine fuori range indicizzabili,
+> nome del menu account, «Registrati» che non si nascondeva sotto `lg`, breadcrumb a 320 px,
+> shell assente dalla styleguide.
+>
+> **Aperti:**
+>
+> | Gravità | Punto | Fase |
+> |---|---|---|
+> | Minor | Pagine legacy dentro la shell nuova: disallineamento di ~45 px tra breadcrumb/header (`max-w-page`) e contenuto vecchio a 1440 px; contrasti e `heading-order` delle pagine già noti | UI-6 ✅ |
+> | Nit | Con il mouse `wire:navigate.hover` prefetcha e poi richiede di nuovo la pagina al click (2 fetch): verificare il comportamento di Livewire 4 | UI-8 |
+> | Nit | Nginx locale senza compressione né Cache-Control su `/build/*` | UI-8 ✅ |
+> | Nit | Breadcrumb a 320 px: le voci intermedie si accorciano presto (tetto 10ch) | UI-6 ✅ tetto solo sotto `md` |
 - Header nuovo (trasparente sulla hero, poi solido allo scroll), menu mobile a drawer,
   selettore lingua, menu account (link a `/account` e, per i membri di un ente, a `/manage`).
 - Footer (newsletter placeholder, link legali, lingue).
@@ -407,6 +568,58 @@ Elenco originale della fase:
   da valutare, `BreadcrumbList`), sitemap, breadcrumb.
 
 ### UI-4 · Pipeline immagini
+
+> **Stato: completata il 2026-11-08** (branch `feat/ui-4-images`, partito da `feat/ui-3-shell`;
+> 2039 test, browser 123/123). Componenti e pipeline pronti; **l'adozione nelle pagine è in UI-6**.
+>
+> **Cosa è stato fatto:**
+> - **Conversioni** (`App\Enums\ImageConversion`, `App\Support\Media\ImageConversions`): `card`
+>   800×1000 (4:5), `hero` 1536×1024 (3:2: proporzione nativa delle fotocamere, ritaglia meno un
+>   animale), `og` 1200×630 JPEG, `zoom` (fino a 2048 px, per la lightbox: senza, si caricherebbe
+>   l'originale). Ognuna in JPEG + `-webp` + `-avif` se GD li supporta (il nome semplice è sempre
+>   JPEG), tutte in coda con responsive images e placeholder (`og` senza). `thumb` invariata e
+>   sincrona (la usano Filament e le pagine legacy).
+> - **Docker:** GD con `libwebp` e `libavif`. Senza, i formati non vengono registrati e resta il JPEG.
+> - **Privacy:** al caricamento l'originale delle foto (`photos`, `avatar` di `Animal`, contratto
+>   `CleansImageMetadata`) viene ricodificato senza EXIF/GPS (`StripImageMetadata`, sincrono,
+>   prima delle conversioni, idempotente, in caso di errore logga e non blocca l'upload). Il
+>   markup non usa mai l'URL dell'originale: finché le conversioni sono in coda si mostra la
+>   `thumb` con le proporzioni del preset. Non coperti: gli allegati di `MedicalRecord`.
+> - **`x-ui.picture`:** `Media`, oggetto `Picture` o URL statici; `<source>` AVIF/WebP, `srcset`/
+>   `sizes`, `width`/`height`, `loading=lazy` o `priority` (`fetchpriority=high`), placeholder come
+>   sfondo CSS, `alt` obbligatorio (o `decorative`), fallback con la zampa.
+> - **`x-ui.gallery`:** Embla Carousel 8.6 e PhotoSwipe 5.4 (MIT) con import dinamico (Embla solo
+>   con più foto, il core di PhotoSwipe solo all'apertura); slide fuori vista `inert`, «n di N»,
+>   bottoni e miniature (`thumb`), frecce, lightbox modale con ritorno del focus, alt per foto
+>   (proprietà `alt` del media o «Foto n di N di <nome>»), reduced-motion anche nello swipe;
+>   senza JS è una lista scorrevole.
+> - **Comando** `php artisan arkvel:media:regenerate` (`--model`, `--collection`, `--conversion`,
+>   `--only-missing`, `--dry-run`, `--force`) sopra l'Action `RegenerateImageConversions`. Va
+>   rilanciato dopo un cambio di driver, librerie o conversioni, a coda vuota.
+> - **SEO:** `og:image` dalla conversione `og`, con `thumb` finché è in coda.
+> - **Styleguide:** `/_styleguide/media` con immagini d'esempio statiche.
+>
+> **Note per UI-6 (integrazione):**
+> - card: `<x-ui.picture :media="$animal->getFirstMedia('photos') ?? $animal->getFirstMedia('avatar')"
+>   conversion="card" fill :alt="…" sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" />`
+>   nel box 4:5; `x-ui.animal-card` accetta un `Media`; nelle query del catalogo `with('media')`;
+> - scheda: `<x-ui.gallery :media="$animal->getMedia('photos')" :name="$animal->name" priority
+>   sizes="(min-width: 1024px) 60vw, 100vw" />`;
+> - dopo il deploy: `php artisan arkvel:media:regenerate --only-missing`.
+>
+> **Esito della review degli standard (2026-11-08):** corretti prima del commit l'originale con
+> EXIF/GPS usato come fallback e nel link senza JS, `og` generata ma non usata, ordine dei formati
+> (il JPEG ora viene generato per primo), miniature sovradimensionate, `Fit::Crop` sulla thumb
+> (ora `Fit::Max`, niente ingrandimenti), stato globale nella galleria, reduced-motion nello swipe.
+>
+> **Aperti:**
+>
+> | Gravità | Punto | Fase |
+> |---|---|---|
+> | Minor | Un `PerformConversionsJob` su una foto da 12 MP dura 6–12 s (AVIF): serve una coda `media` dedicata (`MEDIA_QUEUE`) con `--timeout=300` e `retry_after` più alto, oppure almeno `--timeout=120` sul worker unico (`docker-compose.yml`, deploy) | UI-8 |
+> | Minor | `card`/`hero`/`og` ritagliano e possono ingrandire foto piccole: valutare una risoluzione minima all'upload in `AnimalForm` (Filament: va concordato) | UI-8 |
+> | Nit | `--only-missing` lanciato con job ancora in coda può accodarli due volte (innocuo) | — |
+> | Nit | Allegati delle schede mediche (`MedicalRecord`) non ripuliti dai metadati | UI-8 |
 - Conversioni medialibrary: `card` (4:5), `hero` (16:9 / 3:2), `og` (1200×630), WebP + AVIF,
   `withResponsiveImages()` (placeholder sfocato incluso), tutte in coda.
 - Componente `x-ui.picture`: `srcset`/`sizes`, `fetchpriority="high"` per l'immagine LCP,
@@ -415,6 +628,52 @@ Elenco originale della fase:
 - Galleria scheda animale: Embla + PhotoSwipe (import dinamico).
 
 ### UI-5 · Auth pubblica in Livewire (login/registrazione adottante)
+
+> **Stato: completata il 2026-11-08** (branch `feat/ui-5-auth`, partito da `feat/ui-4-images`;
+> 2223 test, browser 142/142). Rivista da una review di sicurezza (confronto con le pagine
+> Filament sostituite) e da `/ui-review`, corrette prima del commit.
+>
+> **Com'era con Filament (analisi iniziale):** pagine native del pannello adottante (nessuna
+> custom), nessun observer su `User`; la registrazione creava solo l'utente (niente profilo né
+> consensi) e mandava la mail di verifica; il ruolo Adopter lo assegnava `EnsureAdopterRole` alla
+> prima richiesta del pannello; il reset diceva se l'email non esisteva; rate limit 5/min sul
+> login per IP, 2/min su registrazione e reset.
+>
+> **Cosa è stato fatto:**
+> - **Pagine** (`app/Livewire/Auth`, layout pubblico, `themeable`, `noindex`): `/accedi`
+>   (`login`), `/registrati` (`register`), `/password-dimenticata` (`password.request`),
+>   `/reimposta-password/{token}` (`password.reset`), `/verifica-email` (`verification.notice`),
+>   `verification.verify` firmato e `verification.send`; logout `POST /esci` ora si chiama `logout`.
+> - **Action** in `app/Actions/Auth` con DTO in `app/Data/Auth` (email normalizzata minuscola):
+>   `AuthenticateUser`, `RegisterAdopter` (crea l'utente, assegna il ruolo Adopter, registra la
+>   presa visione dell'informativa con versione in activitylog), `SendPasswordResetLink`,
+>   `ResetPassword` (nessun login automatico), `VerifyUserEmail`, `SendEmailVerification`,
+>   `AssignAdopterRole` (estratta da `EnsureAdopterRole`).
+> - **Sicurezza:** rate limit per email+IP e per IP sul login (anti password spraying), limite
+>   per IP su ogni invio della registrazione **prima** della validazione (niente enumerazione degli
+>   iscritti), honeypot con tempo minimo, reset con risposta sempre uguale, `IntendedUrl` (solo
+>   redirect interni), sessione rigenerata, password svuotate dopo un errore, `GuestOnly` anche
+>   sulle richieste Livewire, `TRUSTED_PROXIES` da env per avere gli IP reali dietro un proxy.
+> - **Destinazione dopo il login** (`App\Support\Auth\PostLoginDestination`): Super Admin →
+>   `/admin`, membro di un ente operabile → `/manage`, altri → `/account`. Lo staff non riceve
+>   più il ruolo Adopter entrando dal sito pubblico.
+> - **Pannello adottante** (unica modifica Filament, solo configurazione): rimossi login,
+>   registrazione, reset e verifica; `AuthenticateAdopter` manda gli ospiti a `/accedi`,
+>   `EnsureEmailIsVerified` gli utenti non verificati a `/verifica-email`; middleware di auth
+>   **persistenti** (altrimenti Livewire non li riapplica su `/livewire/update`). `/manage` e
+>   `/admin` mantengono il login Filament.
+> - **Mail** di verifica e reset (`app/Notifications/Auth`) con testi `auth_public.mail.*` nella
+>   lingua dell'utente; `/manage` continua a usare le notifiche Filament.
+> - `App\Support\Site\AccountLinks` punta alle nuove route; nuovo `x-ui.error-summary`.
+>
+> **Aperti:**
+>
+> | Gravità | Punto | Fase |
+> |---|---|---|
+> | **Blocker per la produzione** | Manca la pagina dell'informativa privacy (e dei termini): la registrazione registra la presa visione con `config('arkvel.privacy_policy_version')`, il link comparirà da solo quando esisterà la route `legal.privacy` (`App\Support\Site\LegalLinks`) | prima del rilascio |
+> | Minor | Le registrazioni fatte dai pannelli Filament (es. `/manage`) non normalizzano l'email in minuscolo: un account con maiuscole non accederebbe da `/accedi`. Oggi non ci sono dati legacy; una migrazione che porta le email in minuscolo chiude il punto | UI-8 ✅ |
+> | Nit | I link di verifica/reset già inviati con le vecchie URL del pannello (`/account/email-verification/…`) rispondono 404 dopo il deploy (scadono in 60 minuti) | — |
+> | Nit | `pest --parallel` si è bloccato una volta su un worker: la suite seriale impiega ~20 minuti | UI-8 |
 - Pagine Livewire pubbliche col nuovo design:
   - `/accedi` (`login`), `/registrati` (`register`), `/password-dimenticata` (`password.request`);
   - `/reimposta-password/{token}` (`password.reset`);
@@ -438,6 +697,59 @@ Elenco originale della fase:
   - i test esistenti di `tests/Feature/Adopter` restano verdi.
 
 ### UI-6 · Pagine (un commit per pagina)
+
+> **Stato: completata il 2026-11-09** (branch `feat/ui-6-pages`, partito da `feat/ui-5-auth`;
+> 2500 test, browser 195/195). Le quattro pagine sono state costruite in parallelo da quattro
+> agenti con file separati (testi in `lang/*/page_{home,catalog,animal,organizations}.php`), poi
+> riviste (standard + `/ui-review`) e corrette.
+>
+> **Commit:** la scheda animale è passata prima da un refactor a comportamento invariato
+> (`11ad59e`, componenti figli `AnimalDetail/*` e Action `ContactOrganizationAboutAnimal`), poi
+> card con foto (`657f2b5`), pagine (`6e5bae1`) e pulizia del legacy (`0e3c118`). **Deviazione
+> voluta dal "un commit per pagina":** le modifiche condivise (paginazione, card, preferiti,
+> bottone, breadcrumb) sono intrecciate con tutte le pagine e un commit per pagina non passava
+> il gate in isolamento.
+>
+> **Cosa è stato fatto:**
+> - **Home:** hero bento (ricerca, animale in copertina, numeri reali), vetrina filtrabile per
+>   specie in un'island Livewire, «come funziona» in 4 passi, segnaposto onesto per le storie,
+>   banda donazione; header trasparente sulla hero.
+> - **Catalogo:** ricerca istantanea con label visibile e live region, faccette con conteggi
+>   (`CountsCatalogFacets`: Meilisearch o database secondo `scout.driver`, sempre limitati agli enti
+>   verificati), chip dei filtri attivi, drawer dei filtri su mobile, ordinamento, caricamento
+>   continuo (`wire:intersect`) con «Carica altri» e paginazione di riserva, stati vuoti; form GET
+>   senza JS; query string compatibile (`q`, `species`…).
+> - **Scheda animale:** galleria, schede informative (identikit, carattere, compatibilità, salute),
+>   descrizioni nella lingua disponibile con `lang`, pannello azioni sticky su desktop e bottom
+>   sheet su mobile con candidatura, affido, prenotazione (date picker + orario libero: nessuna
+>   regola nuova) e contatto, riepilogo errori e messaggi di esito con focus, nota per gli ospiti,
+>   animali simili (`FindSimilarAnimals`).
+> - **Enti:** indice con filtri (`q`, `region`, `type`; i vecchi `regione`/`tipo` sono ancora
+>   letti), pagina ente con animali, numeri e widget donazione (comportamento Stripe invariato),
+>   pagine grazie/annullo.
+> - **Condivisi:** `x-ui.pagination`, `x-site.animal-card` (foto, località `PublicLocation`, età
+>   `AnimalAge`), preferiti con una query per pagina (`FindFavoritedAnimalIds` + prop `favorited`
+>   di `FavoriteButton`), `WebUrl::safe()`, re-indicizzazione degli animali al cambio di stato di un
+>   ente (`OrganizationObserver` → `SyncOrganizationAnimalsSearchIndex`), route `animals.show`
+>   solo numerica, bottoni che vanno a capo su mobile, fix di `x-ui.toast` (un `@foreach` con
+>   destrutturazione e un apostrofo in un commento rompevano lo stato dei loop di Livewire 4).
+> - **Pulizia:** rimossi gli alias `brand-*`/`accent-*`, i componenti legacy (`x-animal-card`,
+>   `x-badge`, `x-button`, `x-filter-select`) e le chiavi `public.*` orfane. Token dark dei
+>   blocchi rivisti (tabella di UI-1).
+>
+> **Passi di deploy:** `php artisan scout:sync-index-settings` (senza, l'ordinamento su `featured`
+> fallisce: il catalogo degrada e logga un warning) e `php artisan arkvel:media:regenerate
+> --only-missing`.
+>
+> **Aperti:**
+>
+> | Gravità | Punto | Fase |
+> |---|---|---|
+> | Minor | Catalogo: cliccando un link di paginazione mentre `wire:intersect` sta ancora caricando la pagina successiva compaiono errori in console (drawer e toaster morfati a navigazione già partita) | UI-8 ✅ |
+> | Nit | Dopo «Carica altri» tutte le pagine caricate sono marcate `aria-current` nella paginazione | UI-8 ✅ |
+> | Nit | Transizione animata card → scheda non fatta (richiede `view-transition-name` per animale su card e galleria) | UI-7 ✅ |
+> | Nit | Le foto coprono il blocco colorato della card: lo «sfondo colorato» della direzione B si vede solo senza foto | UI-7 ✅ cornice nel tono della card |
+> | Nit | Bianco su `block-leaf` in dark a 4,64:1: AA ma con poco margine | — |
 - **UI-6a Home:** hero a blocchi (bento) come da §1-bis, griglia di animali in evidenza con chip filtro,
   numeri chiave, "come funziona l'adozione" in 3-4 passi, storie di adozione (placeholder),
   CTA donazione/enti.
@@ -457,6 +769,50 @@ Elenco originale della fase:
   grazie/annulla curate.
 
 ### UI-7 · Motion, micro-interazioni e mappa
+
+> **Stato: completata il 2026-11-09** (branch `feat/ui-7-motion-map`, partito da `feat/ui-6-pages`;
+> 2593 test, browser 234/234). Motion e mappa costruiti in parallelo da due agenti, poi riviste
+> (standard + `/ui-review`) e corrette.
+>
+> **Mappa** (`maplibre-gl` 6, BSD-3; tile OpenFreeMap, stili `positron`/`fiord` configurabili con
+> `MAP_STYLE_LIGHT`/`MAP_STYLE_DARK`):
+> - catalogo con vista «Elenco / Mappa» (`?view=map`, nella cronologia): enti con animali che
+>   corrispondono ai filtri (`BuildCatalogMap`, stesse regole di visibilità del catalogo), marker e
+>   cluster come bottoni da 44 px nell'ordine dell'elenco, riquadro `dialog` sempre dentro la
+>   cornice, etichette nella lingua della pagina, Ctrl/⌘ + rotella o due dita per muovere la mappa,
+>   elenco alternativo sempre presente, fallback se le tile non arrivano; in vista mappa non si
+>   caricano griglia né preferiti;
+> - pagina ente: sezione «Dove si trova» con un cerchio sull'area approssimata;
+> - **privacy:** le coordinate degli enti sono pubblicate solo come centro di una cella di una
+>   griglia (`ApproximateLocation`, `MAP_GRID_DEGREES`, default 0,02° ≈ 2 km; raggio del cerchio
+>   1,6 km, che contiene sempre la posizione reale); mai indirizzo, CAP o coordinate esatte;
+> - **host esterno:** quando una mappa entra in vista il browser contatta `tiles.openfreemap.org`
+>   (vede IP e area consultata; niente chiavi, cookie o tracker). Va citato nell'informativa
+>   privacy; in produzione si può passare a tile self-hosted cambiando solo l'URL dello stile.
+> - Bug trovato in verifica manuale e corretto: `maplibre-gl.css` rimetteva il contenitore in
+>   `position: relative` (altezza 0, mappa invisibile pur «pronta»): c'è un test di regressione.
+>
+> **Motion:** `motion` 14 (MIT) solo come `motion/mini` per il cuore dei preferiti (5 KB gzip,
+> caricato al primo hover/focus); il resto in CSS. Comparsa allo scroll con `x-reveal`
+> (IntersectionObserver, mai sopra la piega né sull'LCP, visibile senza JS e con reduced-motion,
+> disattivabile con `UI_REVEAL=false`), pop dell'icona dei toast, foto che passa dalla card alla
+> scheda con le View Transitions di Livewire (`AnimalPhotoTransition`, nomi univoci per pagina),
+> cornice nel tono della card intorno alla foto. Scostamento voluto dal piano: niente
+> `wire:intersect` + Motion per le reveal (più leggero così).
+>
+> **Test e ambiente:** phpunit.xml e `TestCase` forzano `SCOUT_DRIVER=collection` (l'indice
+> Meilisearch di sviluppo si era sporcato con una prova manuale); il catalogo filtra gli enti
+> verificati anche nella query al motore, quindi un indice stantio non mostra card fantasma.
+>
+> **Misure** (375 px, CPU 4×): LCP 0,6–0,9 s, CLS 0 (anche con reveal e mappa), INP ≤ 72 ms.
+>
+> **Aperti:**
+>
+> | Gravità | Punto | Fase |
+> |---|---|---|
+> | Minor | La suite browser lanciata subito dopo Pest completo a volte si blocca dopo `HomeTest`; da sola passa sempre in ~2,5 minuti | UI-8 |
+> | Nit | Stile `fiord` (dark): etichette maiuscole e un triangolo più chiaro a zoom basso (stile upstream) | — |
+> | Nit | Tile vettoriali bloccate ma stile caricato: mappa vuota senza messaggio (l'elenco c'è) | — |
 - Micro-interazioni: preferito (cuore animato), hover delle card, reveal allo scroll con
   `wire:intersect` + Motion, conferme toast. Tutto disattivato con `prefers-reduced-motion`.
 - Mappa MapLibre (import dinamico, `wire:ignore` + Alpine) su catalogo e pagina ente, con
@@ -464,6 +820,48 @@ Elenco originale della fase:
 - GSAP solo se una sezione d'effetto lo giustifica.
 
 ### UI-8 · Qualità e rilascio
+
+> **Stato: completata il 2026-11-09** (branch `feat/ui-8-quality`, partito da
+> `feat/ui-7-motion-map`). Gli agenti di questa fase si sono fermati più volte per lo stop del
+> Mac: il lavoro è stato diviso in pezzi piccoli e in parte completato dalla sessione principale.
+>
+> **Cosa è stato fatto:**
+> - **CI:** job `browser` in `.github/workflows/ci.yml` (Node 22, `npm ci && npm run build`,
+>   cache dei browser Playwright sulla sua versione, Pest `tests/Browser`, screenshot come
+>   artifact se fallisce; `memory_limit=1G`). Validato con actionlint; la prima esecuzione reale
+>   su GitHub va osservata.
+> - **Nginx:** gzip (brotli non disponibile nell'immagine alpine), `immutable` per `/build/*`,
+>   `no-cache` per il manifest, una settimana per `/images/*`.
+> - **Header di lingua:** middleware `ContentLanguage` (`Content-Language` e
+>   `Vary: Accept-Language` sulle sole risposte HTML).
+> - **Catalogo:** le richieste Livewire in volo dei componenti sostituiti vengono annullate
+>   all'avvio di `wire:navigate` (`shell.js`: niente più errori in console seguendo la
+>   paginazione durante il caricamento continuo); una sola pagina `aria-current` nella
+>   paginazione, le altre caricate sono «già mostrate».
+> - **Email:** forma canonica (minuscolo, senza spazi) in un punto unico (`EmailAddress`) usata dai
+>   DTO dei moduli e dal mutator di `User` (copre anche i pannelli Filament senza toccarli);
+>   migrazione per le email esistenti che salta e logga gli account in conflitto.
+> - **Documenti:** [WCAG-CHECKLIST.md](WCAG-CHECKLIST.md) (criteri WCAG 2.2 AA, come sono
+>   soddisfatti e dove sono testati) e [RILASCIO-UI.md](RILASCIO-UI.md) (bloccanti, variabili,
+>   passi di deploy, worker, nginx, verifiche).
+>
+> **Core Web Vitals finali** (375 px, CPU 4×, rete ~1,6 Mbps / 150 ms, asset compressi):
+>
+> | Pagina | LCP | CLS |
+> |---|---|---|
+> | Home | 0,92 s | 0 |
+> | Catalogo (griglia) | 0,84 s | 0 |
+> | Catalogo (mappa) | 0,79 s | 0 |
+> | Scheda animale | 0,89 s | 0 |
+> | Indice enti | 0,78 s | 0 |
+> | Pagina ente | 0,80 s | 0 |
+> | Accedi | 0,76 s | 0 |
+>
+> INP misurato nelle fasi UI-6/UI-7 sulle interazioni principali: ≤ 72 ms. Budget §4 rispettato
+> ovunque.
+>
+> **Resta aperto:** vedi la sezione «Punti aperti residui» di [RILASCIO-UI.md](RILASCIO-UI.md).
+> Bloccante per la produzione: la pagina dell'informativa privacy.
 - Suite browser su tutte le pagine pubbliche e sui flussi auth: viewport mobile/desktop,
   light/dark, screenshot di confronto, assert di accessibilità.
 - Audit Chrome DevTools MCP sui Core Web Vitals; correggere fino a rispettare il budget §4.

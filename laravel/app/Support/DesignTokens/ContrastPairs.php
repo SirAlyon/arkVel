@@ -58,7 +58,10 @@ final class ContrastPairs
                 ['on-warning-subtle', 'warning-subtle'],
                 ['danger', 'canvas'],
                 ['danger', 'surface'],
+                // Voce di menu distruttiva (x-ui.dropdown.item) sul livello flottante.
+                ['danger', 'surface-raised'],
                 ['on-danger', 'danger'],
+                ['on-danger', 'danger-hover'],
                 ['on-danger-subtle', 'danger-subtle'],
                 ['info', 'canvas'],
                 ['on-info-subtle', 'info-subtle'],
@@ -98,6 +101,13 @@ final class ContrastPairs
                 ['focus', 'canvas'],
                 ['focus', 'surface'],
                 ['focus', 'surface-raised'],
+                // Controlli di modulo selezionati (checkbox, radio, switch acceso).
+                ['primary', 'canvas'],
+                ['primary', 'surface'],
+                // Voce di navigazione attiva e opzione premuta nei livelli (drawer del menu).
+                ['primary', 'surface-raised'],
+                // Link nel riepilogo degli errori di un modulo (fondo danger-subtle).
+                ['focus', 'danger-subtle'],
                 ...array_map(
                     static fn (string $background, string $focus): array => [$focus, $background],
                     array_keys(self::focusScopes()),

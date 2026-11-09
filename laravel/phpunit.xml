@@ -28,7 +28,15 @@
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SCOUT_DRIVER" value="collection"/>
+        <!-- Ricerca: i test non toccano MAI l'indice Meilisearch di sviluppo. Driver
+             `collection` (sul database di test) forzato anche se l'ambiente esporta
+             SCOUT_DRIVER, e host di Meilisearch irraggiungibile: un test che passa al driver
+             meilisearch deve usare un client finto (vedi tests/Feature/Public/CatalogSortFallbackTest).
+             Doppia guardia in tests/TestCase.php. -->
+        <env name="SCOUT_DRIVER" value="collection" force="true"/>
+        <env name="SCOUT_QUEUE" value="false" force="true"/>
+        <env name="MEILISEARCH_HOST" value="http://127.0.0.1:9" force="true"/>
+        <env name="MEILISEARCH_KEY" value="" force="true"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
