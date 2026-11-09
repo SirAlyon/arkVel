@@ -103,4 +103,16 @@ describe('x-ui.breadcrumb', function (): void {
         $this->blade('<x-ui.breadcrumb :items="[[\'name\' => \'Home\', \'url\' => \'https://arkvel.test\']]" />')
             ->assertSee('<nav aria-label="Breadcrumb"', escape: false);
     });
+
+    it('caps the intermediate items only below md, where the space is short', function (): void {
+        $html = (string) $this->blade('<x-ui.breadcrumb :items="$items" />', ['items' => [
+            ['name' => 'Home', 'url' => 'https://arkvel.test'],
+            ['name' => 'Associazione Amici degli Animali della Valle', 'url' => 'https://arkvel.test/enti/amici'],
+            ['name' => 'Argo', 'url' => 'https://arkvel.test/animali/1'],
+        ]]);
+
+        expect($html)->toContain('max-md:max-w-crumb')
+            ->and(preg_match('/(?<![:\w-])max-w-crumb/', $html))->toBe(0)
+            ->and(substr_count($html, 'max-md:max-w-crumb'))->toBe(1);
+    });
 });

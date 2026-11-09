@@ -6,7 +6,9 @@ namespace App\Models;
 
 use App\Enums\OrganizationStatus;
 use App\Enums\OrganizationType;
+use App\Observers\OrganizationObserver;
 use Database\Factories\OrganizationFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -34,6 +36,7 @@ use Spatie\Translatable\HasTranslations;
  * @property string|null $calendar_feed_token
  * @property-read Collection<int, Animal> $animals
  */
+#[ObservedBy(OrganizationObserver::class)]
 class Organization extends Model
 {
     /** @use HasFactory<OrganizationFactory> */

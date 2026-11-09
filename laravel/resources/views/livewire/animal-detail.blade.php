@@ -1,143 +1,315 @@
-<div class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-    <div class="grid grid-cols-1 gap-10 lg:grid-cols-2">
-        {{-- Galleria --}}
-        <div>
-            @php
-                $cover = $animal->getFirstMediaUrl('photos', 'thumb') ?: $animal->getFirstMediaUrl('avatar', 'thumb');
-            @endphp
-            <div class="aspect-[4/3] overflow-hidden rounded-2xl border border-brand-100 bg-brand-100">
-                @if ($cover)
-                    <img src="{{ $cover }}" alt="{{ __('public.animal.photo_alt', ['name' => $animal->name]) }}"
-                         class="h-full w-full object-cover">
+{{--
+ | Scheda pubblica di un animale (App\Livewire\AnimalDetail, UI-6c), direzione "B · Pop
+ | affettuoso", tutta a token (themeable).
+ |
+ | Desktop (≥ lg): a sinistra galleria e schede informative, a destra intestazione e
+ | pannello azioni che resta visibile scorrendo (sticky sotto l'header). Mobile: galleria,
+ | intestazione, schede; il pannello vive in un bottom sheet (x-ui.drawer side=bottom)
+ | aperto dalla barra fissa in fondo.
+ |
+ | Il pannello (candidatura e affido, due componenti Livewire figli) esiste una volta sola:
+ | Alpine lo sposta nel DOM tra la colonna desktop e il bottom sheet al cambio di
+ | breakpoint, così i figli non sono mai duplicati e tengono il loro stato. La pagina non ha
+ | azioni proprie e non si ri-renderizza; wire:ignore sui due contenitori lo garantisce
+ | comunque. Prenotazione e contatto stanno in due drawer (laterali su desktop, bottom sheet
+ | sotto i 640 px), aperti dai bottoni del pannello.
+ |
+ | Galleria: x-ui.gallery con la prima foto come LCP (priority); senza foto, la foto
+ | profilo o la zampa con le stesse proporzioni (nessun CLS).
+ | Transizione animata card → scheda: rinviata (vedi il report di UI-6c), perché serve un
+ | view-transition-name unico per animale sulla foto della card e sulla prima slide.
+--}}
+@use('App\Enums\OrganizationStatus')
+
+@php
+    $name = $animal->name;
+    $organization = $animal->organization;
+    $location = collect([$organization->city, $organization->region])->filter(filled(...))->implode(', ');
+
+    $traits = array_values(array_filter([
+        $animal->species->getLabel(),
+        $animal->sex->getLabel(),
+        $age,
+        $animal->size ? __('page_animal.header.size', ['size' => mb_strtolower($animal->size->getLabel())]) : null,
+    ], filled(...)));
+
+    // Compatibilità tri-stato (null = l'ente non lo sa): testo + icona, mai il solo colore.
+    $compatibility = static fn (?bool $value): array => match ($value) {
+        true => ['circle-check', __('page_animal.facts.compatible.yes')],
+        false => ['circle-x', __('page_animal.facts.compatible.no')],
+        null => ['circle-help', __('page_animal.facts.compatible.unknown')],
+    };
+    $health = static fn (bool $done): array => $done
+        ? ['circle-check', __('page_animal.facts.done')]
+        : ['circle-help', __('page_animal.facts.not_done')];
+    $notSpecified = __('page_animal.facts.not_specified');
+
+    // Larghezza mostrata della foto: colonna di 7/12 (max-w-page, gap-x-12) su desktop.
+    $gallerySizes = '(min-width: 1240px) 675px, (min-width: 1024px) 55vw, calc(100vw - 2rem)';
+@endphp
+
+<div
+    data-animal-detail
+    x-data="{
+        query: null,
+        onChange: null,
+        init() {
+            this.query = window.matchMedia('(min-width: 64rem)');
+            this.onChange = () => this.place();
+            this.query.addEventListener('change', this.onChange);
+            {{-- Dopo l'inizializzazione di tutto l'albero: spostare un nodo mentre Alpine lo
+                 percorre potrebbe saltarne una parte. --}}
+            this.$nextTick(() => this.place());
+        },
+        destroy() {
+            this.query?.removeEventListener('change', this.onChange);
+        },
+        place() {
+            const desktop = this.query.matches;
+            const panel = this.$root.querySelector('[data-animal-actions]');
+            const host = this.$root.querySelector(desktop ? '[data-animal-actions-dock]' : '[data-animal-actions-sheet]');
+
+            if (desktop) {
+                this.$dispatch('close-drawer', 'animal-actions');
+            }
+
+            if (panel && host && panel.parentElement !== host) {
+                host.append(panel);
+            }
+        },
+    }"
+>
+    <div class="mx-auto flex w-full max-w-page flex-col gap-section px-gutter pt-6 pb-section">
+        <div class="grid gap-8 lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:gap-x-12 lg:gap-y-section">
+            {{-- Galleria (prima foto = LCP) --}}
+            <div class="min-w-0 lg:col-span-7" data-animal-gallery>
+                @if ($photos->isNotEmpty())
+                    <x-ui.gallery id="animal-gallery" :media="$photos" :name="$name" priority :sizes="$gallerySizes" />
                 @else
-                    <div class="flex h-full w-full items-center justify-center text-brand-300" aria-hidden="true">
-                        <svg class="h-24 w-24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8.5 5.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0ZM5 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm14 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm-7 1c2 0 3.6 1.3 4.6 3 .8 1.3 1.4 2.7-.1 3.6-.9.6-2.2.1-3.3-.2a4.7 4.7 0 0 0-2.4 0c-1.1.3-2.4.8-3.3.2-1.5-.9-.9-2.3-.1-3.6C8.4 13.3 10 12 12 12Z"/>
-                        </svg>
-                    </div>
+                    <x-ui.picture
+                        :media="$avatar"
+                        conversion="hero"
+                        :alt="__('public.animal.photo_alt', ['name' => $name])"
+                        :sizes="$gallerySizes"
+                        priority
+                        data-animal-photo-fallback
+                    />
                 @endif
             </div>
 
-            @if ($photos->count() > 1)
-                <div class="mt-3 grid grid-cols-4 gap-3">
-                    @foreach ($photos->take(4) as $photo)
-                        <div class="aspect-square overflow-hidden rounded-xl border border-brand-100 bg-brand-100">
-                            <img src="{{ $photo->getUrl('thumb') }}" alt="{{ __('public.animal.photo_alt', ['name' => $animal->name]) }}"
-                                 loading="lazy" class="h-full w-full object-cover">
+            {{-- Intestazione e pannello azioni (sticky su desktop) --}}
+            <div class="flex min-w-0 flex-col gap-8 lg:col-span-5 lg:row-span-2">
+                <header class="flex flex-col gap-5" data-animal-header>
+                    @if ($animal->featured)
+                        <p><x-ui.badge variant="stamp" icon="star" class="-rotate-2">{{ __('public.animal.featured') }}</x-ui.badge></p>
+                    @endif
+
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex min-w-0 flex-col gap-2">
+                            <h1 class="text-h1 [overflow-wrap:anywhere]">{{ $name }}</h1>
+                            @if (filled($animal->breed))
+                                <p class="text-lead text-fg-muted [overflow-wrap:anywhere]">{{ $animal->breed }}</p>
+                            @endif
                         </div>
-                    @endforeach
-                </div>
-            @endif
+                        <div class="shrink-0 rounded-full bg-surface p-1" data-animal-favorite>
+                            <livewire:favorite-button :animal="$animal" :favorited="in_array($animal->id, $favoriteIds, true)" :key="'fav-detail-'.$animal->id" />
+                        </div>
+                    </div>
+
+                    <ul role="list" aria-label="{{ __('page_animal.header.traits', ['name' => $name]) }}" class="flex flex-wrap gap-2" data-animal-traits>
+                        @foreach ($traits as $trait)
+                            <li><x-ui.badge>{{ $trait }}</x-ui.badge></li>
+                        @endforeach
+                    </ul>
+
+                    <div class="flex flex-col gap-2 text-fg-muted">
+                        @if ($location !== '')
+                            <p class="flex items-center gap-2" data-animal-location>
+                                <x-ui.icon name="map-pin" class="shrink-0" />
+                                <span class="sr-only">{{ __('page_animal.header.location') }}</span>
+                                <span class="min-w-0">{{ $location }}</span>
+                            </p>
+                        @endif
+                        <p class="flex items-center gap-2" data-animal-organization>
+                            <x-ui.icon name="house" class="shrink-0" />
+                            <span class="sr-only">{{ __('page_animal.header.organization') }}</span>
+                            <x-ui.link :href="route('organizations.show', $organization)" wire:navigate.hover class="min-w-0 [overflow-wrap:anywhere]">{{ $organization->name }}</x-ui.link>
+                        </p>
+                    </div>
+                </header>
+
+                <aside aria-labelledby="animal-actions-title" class="hidden lg:sticky lg:top-24 lg:block" data-animal-actions-dock wire:ignore>
+                    {{-- Il pannello: su mobile Alpine lo sposta nel bottom sheet qui sotto. --}}
+                    <div class="flex flex-col gap-6 rounded-panel bg-surface p-6 [dialog_&]:rounded-none [dialog_&]:bg-transparent [dialog_&]:p-0" data-animal-actions>
+                        {{-- Nel bottom sheet titolo e presentazione sono quelli del drawer. --}}
+                        <div class="flex flex-col gap-2 [dialog_&]:hidden">
+                            <h2 id="animal-actions-title" class="text-h4">{{ __('public.detail.cta_title', ['name' => $name]) }}</h2>
+                            <p class="text-fg-muted">{{ __('public.detail.cta_body') }}</p>
+                        </div>
+
+                        <livewire:animal-detail.adoption-application-form :animal="$animal" :key="'apply-'.$animal->id" />
+
+                        <livewire:animal-detail.foster-request-form :animal="$animal" :key="'foster-'.$animal->id" />
+
+                        <div class="flex flex-col gap-3 border-t-2 border-line pt-6">
+                            <h3 class="text-h5">{{ __('page_animal.actions.meet_title') }}</h3>
+                            <p class="text-small text-fg-muted">{{ __('page_animal.actions.meet_body', ['name' => $name]) }}</p>
+                            <x-ui.button variant="secondary" icon="calendar-days" class="w-full" aria-haspopup="dialog" x-on:click="$dispatch('open-drawer', 'animal-booking')" data-animal-open="booking">
+                                {{ __('page_animal.actions.book') }}
+                            </x-ui.button>
+                            <x-ui.button variant="secondary" icon="message-circle" class="w-full" aria-haspopup="dialog" x-on:click="$dispatch('open-drawer', 'animal-contact')" data-animal-open="contact">
+                                {{ __('page_animal.actions.contact') }}
+                            </x-ui.button>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            {{-- Presentazione, schede informative, ente --}}
+            <div class="flex min-w-0 flex-col gap-section lg:col-span-7">
+                <section aria-labelledby="animal-about-title" class="flex flex-col gap-5" data-animal-about>
+                    <x-ui.section-heading id="animal-about-title" size="h3" :title="__('page_animal.about.title', ['name' => $name])" />
+                    @if ($description !== null)
+                        <p class="max-w-prose whitespace-pre-line text-lead [overflow-wrap:anywhere]" @if ($description->differsFrom($locale)) lang="{{ $description->locale }}" @endif data-animal-description>{{ $description->text }}</p>
+                    @else
+                        <p class="max-w-prose text-fg-muted">{{ __('page_animal.about.empty', ['name' => $name]) }}</p>
+                    @endif
+                </section>
+
+                <section aria-labelledby="animal-facts-title" class="flex flex-col gap-5" data-animal-facts>
+                    <x-ui.section-heading id="animal-facts-title" size="h3" :title="__('page_animal.facts.title', ['name' => $name])" />
+
+                    <x-ui.tabs id="animal-facts" selected="profile">
+                        <x-ui.tabs.list :label="__('page_animal.facts.tabs', ['name' => $name])">
+                            <x-ui.tabs.tab name="profile">{{ __('page_animal.facts.tab.profile') }}</x-ui.tabs.tab>
+                            <x-ui.tabs.tab name="character">{{ __('page_animal.facts.tab.character') }}</x-ui.tabs.tab>
+                            <x-ui.tabs.tab name="compatibility">{{ __('page_animal.facts.tab.compatibility') }}</x-ui.tabs.tab>
+                            <x-ui.tabs.tab name="health">{{ __('page_animal.facts.tab.health') }}</x-ui.tabs.tab>
+                        </x-ui.tabs.list>
+
+                        <x-ui.tabs.panel name="profile" class="rounded-panel bg-surface p-3 sm:p-4">
+                            <dl class="grid gap-3 sm:grid-cols-2">
+                                <x-site.animal.fact :label="__('page_animal.facts.species')">{{ $animal->species->getLabel() }}</x-site.animal.fact>
+                                <x-site.animal.fact :label="__('page_animal.facts.breed')">{{ filled($animal->breed) ? $animal->breed : $notSpecified }}</x-site.animal.fact>
+                                <x-site.animal.fact :label="__('page_animal.facts.sex')">{{ $animal->sex->getLabel() }}</x-site.animal.fact>
+                                <x-site.animal.fact :label="__('page_animal.facts.age')">{{ $age ?? $notSpecified }}</x-site.animal.fact>
+                                <x-site.animal.fact :label="__('page_animal.facts.size')">{{ $animal->size?->getLabel() ?? $notSpecified }}</x-site.animal.fact>
+                            </dl>
+                        </x-ui.tabs.panel>
+
+                        <x-ui.tabs.panel name="character" class="rounded-panel bg-surface p-3 sm:p-4">
+                            <dl class="grid gap-3 sm:grid-cols-2">
+                                <x-site.animal.fact :label="__('page_animal.facts.temperament')">{{ filled($animal->temperament) ? $animal->temperament : $notSpecified }}</x-site.animal.fact>
+                                <x-site.animal.fact :label="__('page_animal.facts.energy')">{{ $animal->energy_level?->getLabel() ?? $notSpecified }}</x-site.animal.fact>
+                            </dl>
+                        </x-ui.tabs.panel>
+
+                        <x-ui.tabs.panel name="compatibility" class="flex flex-col gap-3 rounded-panel bg-surface p-3 sm:p-4">
+                            <dl class="grid gap-3 sm:grid-cols-3">
+                                @foreach (['kids' => $animal->good_with_kids, 'dogs' => $animal->good_with_dogs, 'cats' => $animal->good_with_cats] as $key => $value)
+                                    <x-site.animal.fact :label="__('page_animal.facts.'.$key)" :icon="$compatibility($value)[0]" :data-compatibility="$key">{{ $compatibility($value)[1] }}</x-site.animal.fact>
+                                @endforeach
+                            </dl>
+                            <p class="px-2 pb-1 text-small text-fg-muted">{{ __('page_animal.facts.compatibility_note') }}</p>
+                        </x-ui.tabs.panel>
+
+                        <x-ui.tabs.panel name="health" class="flex flex-col gap-3 rounded-panel bg-surface p-3 sm:p-4">
+                            <dl class="grid gap-3 sm:grid-cols-3">
+                                @foreach (['vaccinated' => $animal->vaccinated, 'sterilized' => $animal->sterilized, 'dewormed' => $animal->dewormed] as $key => $value)
+                                    <x-site.animal.fact :label="__('page_animal.facts.'.$key)" :icon="$health((bool) $value)[0]" :data-health="$key">{{ $health((bool) $value)[1] }}</x-site.animal.fact>
+                                @endforeach
+                            </dl>
+                            <p class="px-2 pb-1 text-small text-fg-muted">{{ __('page_animal.facts.health_note') }}</p>
+                        </x-ui.tabs.panel>
+                    </x-ui.tabs>
+                </section>
+
+                <section aria-labelledby="animal-organization-title" class="flex flex-col gap-5" data-animal-organization-section>
+                    <x-ui.section-heading id="animal-organization-title" size="h3" :title="__('page_animal.organization.title', ['name' => $name])" />
+                    <x-ui.organization-card
+                        :name="$organization->name"
+                        :href="route('organizations.show', $organization)"
+                        :city="$organization->city"
+                        :region="$organization->region"
+                        :type="$organization->type->getLabel()"
+                        :verified="$organization->status === OrganizationStatus::Verified"
+                        heading-level="3"
+                    />
+                    @if ($organizationDescription !== null)
+                        <p class="line-clamp-6 max-w-prose whitespace-pre-line text-fg-muted [overflow-wrap:anywhere]" @if ($organizationDescription->differsFrom($locale)) lang="{{ $organizationDescription->locale }}" @endif data-organization-description>{{ $organizationDescription->text }}</p>
+                    @endif
+                </section>
+            </div>
         </div>
 
-        {{-- Dettagli --}}
-        <div>
-            <div class="flex flex-wrap items-center gap-2">
-                <x-badge color="brand">{{ $animal->species->getLabel() }}</x-badge>
-                @if ($animal->featured)
-                    <x-badge color="accent">&#9733; {{ __('public.animal.featured') }}</x-badge>
-                @endif
-            </div>
+        {{-- Animali simili (App\Actions\Public\FindSimilarAnimals) --}}
+        @if ($similarAnimals->isNotEmpty())
+            <section aria-labelledby="animal-similar-title" class="flex flex-col gap-8" data-animal-similar>
+                <x-ui.section-heading id="animal-similar-title" :title="__('page_animal.similar.title')" :description="__('page_animal.similar.description')">
+                    <x-slot:action>
+                        <x-ui.button variant="secondary" :href="route('catalog')" wire:navigate.hover icon-trailing="arrow-right">{{ __('page_animal.similar.browse') }}</x-ui.button>
+                    </x-slot:action>
+                </x-ui.section-heading>
 
-            <div class="mt-3 flex items-start justify-between gap-3">
-                <h1 class="text-3xl font-bold tracking-tight text-stone-900">{{ $animal->name }}</h1>
-                <livewire:favorite-button :animal="$animal" :key="'fav-detail-'.$animal->id" />
-            </div>
+                <ul role="list" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach ($similarAnimals as $similar)
+                        <li>
+                            <x-site.animal-card
+                                :animal="$similar"
+                                :favorited="in_array($similar->id, $favoriteIds, true)"
+                                :tone="['sun', 'peach', 'mint'][$loop->index % 3]"
+                                heading-level="3"
+                            />
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
+    </div>
 
-            @if ($animal->breed)
-                <p class="mt-1 text-stone-500">{{ $animal->breed }}</p>
-            @endif
+    {{-- Prenotazione e contatto: drawer laterali su desktop, bottom sheet sotto i 640 px. --}}
+    <x-ui.drawer
+        name="animal-booking"
+        sheet
+        icon="calendar-days"
+        :title="__('appointments.booking.cta_title')"
+        :description="__('appointments.booking.cta_body', ['name' => $name])"
+    >
+        <livewire:animal-detail.appointment-booking :animal="$animal" :key="'booking-'.$animal->id" />
+    </x-ui.drawer>
 
-            {{-- Anagrafica --}}
-            <dl class="mt-6 grid grid-cols-2 gap-4 rounded-2xl border border-brand-100 bg-white p-5 sm:grid-cols-3">
-                <div>
-                    <dt class="text-xs uppercase tracking-wide text-stone-400">{{ __('public.detail.sex') }}</dt>
-                    <dd class="mt-0.5 text-sm font-medium text-stone-800">{{ $animal->sex->getLabel() }}</dd>
-                </div>
-                @if ($animal->size)
-                    <div>
-                        <dt class="text-xs uppercase tracking-wide text-stone-400">{{ __('public.detail.size') }}</dt>
-                        <dd class="mt-0.5 text-sm font-medium text-stone-800">{{ $animal->size->getLabel() }}</dd>
-                    </div>
-                @endif
-                @if ($animal->energy_level)
-                    <div>
-                        <dt class="text-xs uppercase tracking-wide text-stone-400">{{ __('public.detail.energy') }}</dt>
-                        <dd class="mt-0.5 text-sm font-medium text-stone-800">{{ $animal->energy_level->getLabel() }}</dd>
-                    </div>
-                @endif
-                @if ($animal->estimated_age_months)
-                    <div>
-                        <dt class="text-xs uppercase tracking-wide text-stone-400">{{ __('public.detail.age') }}</dt>
-                        <dd class="mt-0.5 text-sm font-medium text-stone-800">
-                            {{ trans_choice('public.detail.age_months', $animal->estimated_age_months, ['count' => $animal->estimated_age_months]) }}
-                        </dd>
-                    </div>
-                @endif
-            </dl>
+    <x-ui.drawer
+        name="animal-contact"
+        sheet
+        icon="message-circle"
+        :title="__('messaging.contact.cta_title')"
+        :description="__('messaging.contact.cta_body', ['name' => $name])"
+    >
+        <livewire:animal-detail.contact-organization-form :animal="$animal" :key="'contact-'.$animal->id" />
+    </x-ui.drawer>
 
-            {{-- Temperamento / compatibilità --}}
-            @if ($animal->temperament || $animal->good_with_kids !== null || $animal->good_with_dogs !== null || $animal->good_with_cats !== null)
-                <div class="mt-5">
-                    <h2 class="text-sm font-semibold text-stone-700">{{ __('public.detail.character') }}</h2>
-                    <div class="mt-2 flex flex-wrap gap-1.5">
-                        @if ($animal->temperament)
-                            <x-badge color="stone">{{ $animal->temperament }}</x-badge>
-                        @endif
-                        @if ($animal->good_with_kids)
-                            <x-badge color="accent">{{ __('public.detail.good_with_kids') }}</x-badge>
-                        @endif
-                        @if ($animal->good_with_dogs)
-                            <x-badge color="accent">{{ __('public.detail.good_with_dogs') }}</x-badge>
-                        @endif
-                        @if ($animal->good_with_cats)
-                            <x-badge color="accent">{{ __('public.detail.good_with_cats') }}</x-badge>
-                        @endif
-                    </div>
-                </div>
-            @endif
+    {{-- Mobile: il pannello azioni in un bottom sheet, aperto dalla barra in fondo. --}}
+    <x-ui.drawer
+        name="animal-actions"
+        side="bottom"
+        :title="__('page_animal.actions.sheet_title', ['name' => $name])"
+        :description="__('page_animal.actions.sheet_description')"
+    >
+        <div data-animal-actions-sheet wire:ignore></div>
+    </x-ui.drawer>
 
-            {{-- Descrizione (locale corrente) --}}
-            @php
-                $description = $animal->getTranslation('description', app()->getLocale(), false);
-            @endphp
-            @if ($description)
-                <div class="mt-6">
-                    <h2 class="text-sm font-semibold text-stone-700">{{ __('public.detail.about') }}</h2>
-                    <p class="mt-2 whitespace-pre-line text-stone-600">{{ $description }}</p>
-                </div>
-            @endif
-
-            {{-- CTA candidatura --}}
-            <div class="mt-8 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 p-6 text-white shadow-sm">
-                <h2 class="text-lg font-semibold">{{ __('public.detail.cta_title', ['name' => $animal->name]) }}</h2>
-                <p class="mt-1 text-sm text-brand-100">{{ __('public.detail.cta_body') }}</p>
-
-                <livewire:animal-detail.adoption-application-form :animal="$animal" :key="'apply-'.$animal->id" />
-
-                {{-- CTA affido: accanto alla candidatura di adozione. --}}
-                <livewire:animal-detail.foster-request-form :animal="$animal" :key="'foster-'.$animal->id" />
-            </div>
-
-            {{-- CTA prenotazione e "Contatta l'ente": form con input, ciascuno nel suo componente. --}}
-            <livewire:animal-detail.appointment-booking :animal="$animal" :key="'booking-'.$animal->id" />
-
-            <livewire:animal-detail.contact-organization-form :animal="$animal" :key="'contact-'.$animal->id" />
-
-            {{-- Ente --}}
-            @if ($animal->organization)
-                <a href="{{ route('organizations.show', $animal->organization) }}" wire:navigate.hover
-                   class="mt-5 flex items-center gap-3 rounded-2xl border border-brand-100 bg-white p-4 transition hover:border-brand-200 hover:shadow-sm">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600" aria-hidden="true">
-                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-3v-4H7v4H4a1 1 0 0 1-1-1V4Zm3 2h2v2H6V6Zm6 0h2v2h-2V6ZM6 9h2v2H6V9Zm6 0h2v2h-2V9Z"/></svg>
-                    </span>
-                    <span class="min-w-0">
-                        <span class="block text-xs text-stone-400">{{ __('public.detail.managed_by') }}</span>
-                        <span class="block truncate font-medium text-stone-800">{{ $animal->organization->name }}</span>
-                    </span>
-                    <span class="ml-auto text-brand-500" aria-hidden="true">&rarr;</span>
-                </a>
-            @endif
+    {{-- Barra fissa in fondo (mobile): resta in vista scorrendo la scheda e si ferma sopra il
+         footer. scroll-padding sull'html: un elemento con il focus non finisce sotto la barra
+         (WCAG 2.4.11). --}}
+    <div class="sticky bottom-0 z-30 border-t-2 border-line bg-canvas lg:hidden max-lg:[html:has(&)]:scroll-pb-24" data-animal-actions-bar>
+        <div class="mx-auto flex max-w-page items-center gap-3 px-gutter py-3">
+            <p class="flex min-w-0 flex-1 flex-col">
+                <span class="truncate font-bold">{{ $name }}</span>
+                <span class="truncate text-small text-fg-muted">{{ $organization->name }}</span>
+            </p>
+            <x-ui.button aria-haspopup="dialog" x-on:click="$dispatch('open-drawer', 'animal-actions')" data-animal-actions-open>
+                {{ __('page_animal.actions.bar_open') }}
+            </x-ui.button>
         </div>
     </div>
 </div>

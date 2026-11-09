@@ -370,3 +370,12 @@ describe('styleguide page', function (): void {
             ->assertSee('Dismiss notification');
     });
 });
+
+it('leaves the Livewire loop state clean after rendering a toast (regression)', function (): void {
+    // Un @foreach con destrutturazione chiudeva il loop delle wire:key senza aprirlo:
+    // la richiesta successiva falliva al primo @foreach con "array offset on null".
+    $this->blade('<x-ui.toast title="Ciao" />');
+
+    $this->blade('@foreach ([1, 2] as $n) <span wire:key="n-{{ $n }}">{{ $n }}</span> @endforeach')
+        ->assertSee('n-2', escape: false);
+});

@@ -85,8 +85,8 @@ it('has no accessibility issues on a themeable page, in light and dark mode', fu
         ->assertNoAccessibilityIssues();
 });
 
-it('keeps legacy pages light even when the system prefers dark', function (): void {
-    visit(route('home'))->inDarkMode()->withLocale('it-IT')
+it('keeps pages without the themeable opt-in light even when the system prefers dark', function (): void {
+    visit(shellFixture('/_shell-light'))->inDarkMode()->withLocale('it-IT')
         ->assertScript('document.documentElement.dataset.themeForced', 'light')
         ->assertScript('document.documentElement.classList.contains("dark")', false)
         ->assertScript('document.querySelector("[data-theme-option]")', null);
@@ -175,16 +175,17 @@ it('colors the navigation progress bar with the primary token', function (): voi
 
 it('applies the theme of each page while navigating', function (): void {
     $path = shellFixture('/_shell-themeable', ['themeable' => true]);
+    $light = shellFixture('/_shell-light');
 
-    $page = visit(route('home'))->inDarkMode()->withLocale('it-IT');
+    $page = visit($light)->inDarkMode()->withLocale('it-IT');
 
     $page->assertScript('document.documentElement.classList.contains("dark")', false);
     $page->script('Livewire.navigate('.json_encode($path).')');
     $page->assertScript(shellEventually('location.pathname === '.json_encode($path).' && document.documentElement.classList.contains("dark")'), true)
         ->assertScript('document.documentElement.dataset.themeForced ?? null', null);
 
-    $page->click('[data-site-header] [data-site-logo]')
-        ->assertScript(shellEventually('location.pathname === "/" && !document.documentElement.classList.contains("dark")'), true)
+    $page->script('Livewire.navigate('.json_encode($light).')');
+    $page->assertScript(shellEventually('location.pathname === '.json_encode($light).' && !document.documentElement.classList.contains("dark")'), true)
         ->assertScript('document.documentElement.dataset.themeForced', 'light');
 });
 

@@ -37,6 +37,7 @@ class DonationCancelled extends Component
     public function render(): View
     {
         $view = ViewFacade::make('livewire.donation-cancelled');
+        $view->layoutData(['themeable' => true]); // @phpstan-ignore method.notFound
 
         return $this->withSeo($view, app(PublicPageSeo::class)->donationCancelled($this->organization));
     }

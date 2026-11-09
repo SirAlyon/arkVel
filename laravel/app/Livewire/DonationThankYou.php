@@ -37,6 +37,7 @@ class DonationThankYou extends Component
     public function render(): View
     {
         $view = ViewFacade::make('livewire.donation-thank-you');
+        $view->layoutData(['themeable' => true]); // @phpstan-ignore method.notFound
 
         return $this->withSeo($view, app(PublicPageSeo::class)->donationThanks($this->organization));
     }

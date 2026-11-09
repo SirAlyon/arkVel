@@ -242,12 +242,15 @@ describe('gallery', function (): void {
             ->and($html)->toMatch('/src="\/img\/slide1-960.jpg"[^>]*fetchpriority="high"/');
     });
 
-    it('renders hidden controls and thumbnail buttons, enabled by JavaScript', function (): void {
+    it('renders invisible controls and thumbnail buttons that keep their space until JavaScript is ready', function (): void {
         $html = (string) $this->blade('<x-ui.gallery :images="$images" name="Luna" />', ['images' => sampleGallery()]);
 
+        // invisible (visibility) e non hidden (display): lo spazio è riservato dal primo
+        // paint, così quando Embla è pronto il contenuto sotto non si sposta (CLS).
         expect($html)
-            ->toMatch('/data-gallery-controls hidden x-bind:hidden="!ready"/')
-            ->toMatch('/data-gallery-thumbs hidden x-bind:hidden="!ready"/')
+            ->toMatch('/class="invisible [^"]*" data-gallery-controls x-bind:class="\{ invisible: !ready \}"/')
+            ->toMatch('/data-gallery-thumbs x-bind:class="\{ invisible: !ready \}" class="invisible /')
+            ->not->toMatch('/data-gallery-(controls|thumbs) hidden/')
             ->toContain('aria-label="Foto precedente"')
             ->toContain('aria-label="Foto successiva"')
             ->toContain('x-bind:aria-disabled="atStart ? \'true\' : \'false\'"')

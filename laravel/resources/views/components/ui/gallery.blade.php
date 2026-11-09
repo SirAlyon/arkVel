@@ -24,6 +24,9 @@
  | (aria-live), lightbox con Invio o Spazio sulla foto e focus restituito alla foto mostrata
  | alla chiusura. Con reduced-motion gli spostamenti sono istantanei. Lo swipe ha sempre
  | l'alternativa dei bottoni (WCAG 2.5.7).
+ | Bottoni, contatore e miniature sono `invisible` (non `hidden`) finché Embla non è pronto:
+ | occupano già il loro spazio, così all'avvio il contenuto sotto la galleria non si sposta
+ | (CLS), e intanto restano fuori dall'albero accessibile e dal Tab.
  |
  | <x-ui.gallery :media="$animal->getMedia('photos')" :name="$animal->name" priority
  |     sizes="(min-width: 1024px) 60vw, 100vw" />
@@ -117,7 +120,7 @@
         </div>
 
         @if ($multiple)
-            <div class="flex items-center justify-between gap-3" data-gallery-controls hidden x-bind:hidden="!ready">
+            <div class="invisible flex items-center justify-between gap-3" data-gallery-controls x-bind:class="{ invisible: !ready }">
                 <p class="text-small font-semibold text-fg-muted" aria-live="polite" aria-atomic="true">
                     <span aria-hidden="true"><span x-text="current + 1">1</span> / {{ $total }}</span>
                     <span class="sr-only" x-text="counter()">{{ $t('counter', ['position' => 1, 'total' => $total]) }}</span>
@@ -146,7 +149,7 @@
                 </div>
             </div>
 
-            <div data-gallery-thumbs hidden x-bind:hidden="!ready" class="-m-2 overflow-x-auto p-2">
+            <div data-gallery-thumbs x-bind:class="{ invisible: !ready }" class="invisible -m-2 overflow-x-auto p-2">
                 <ul role="list" aria-label="{{ $t('thumbnails') }}" class="flex w-max gap-2">
                     @foreach ($items as $index => $image)
                         <li>

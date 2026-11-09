@@ -152,3 +152,34 @@ it('reuses the existing thread on a second contact (no duplicate)', function () 
     // Due notifiche in totale (una per messaggio) allo staff.
     Notification::assertSentToTimes($staff, NewMessageReceived::class, 2);
 });
+
+it('renders an error summary after a failed attempt and focuses the outcome after a successful one', function () {
+    [$animal] = verifiedOrgAnimalWithMessageStaff();
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ContactOrganizationForm::class, ['animal' => $animal])
+        ->assertDontSeeHtml('id="contact-error-summary"')
+        ->call('contact')
+        ->assertSet('contactAttempts', 1)
+        ->assertSeeHtml('id="contact-error-summary"')
+        ->assertSeeHtml('wire:key="contact-errors-1"')
+        ->assertSeeHtml('href="#contact-body"')
+        ->assertSee(__('messaging.contact.empty'))
+        ->set('contactBody', 'Vorrei saperne di più.')
+        ->call('contact')
+        ->assertSet('contactAttempts', 2)
+        ->assertDontSeeHtml('id="contact-error-summary"')
+        ->assertSeeHtml('wire:key="contact-message-2"')
+        ->assertSeeHtml('data-animal-feedback="success"')
+        ->assertSeeHtml('tabindex="-1"');
+});
+
+it('sends a guest from the sign-in note to the login with the animal as intended page', function () {
+    [$animal] = verifiedOrgAnimalWithMessageStaff();
+
+    Livewire::test(ContactOrganizationForm::class, ['animal' => $animal])
+        ->call('signIn')
+        ->assertRedirect(route('login'));
+
+    expect(session('url.intended'))->toBe(route('animals.show', $animal));
+});

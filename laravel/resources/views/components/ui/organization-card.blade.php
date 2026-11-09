@@ -7,19 +7,21 @@
  | - `name`, `href` (obbligatori): nome dell'ente e pagina pubblica;
  | - `logo`: URL del logo, in <x-ui.avatar shape="square">. Senza logo: le iniziali su un
  |   blocco colorato. L'avatar è decorativo, perché il nome è scritto accanto;
- | - `city`, `region`: la sede, mostrata come «città, regione» con icona;
+ | - `location`: la sede già pronta (App\Support\Site\PublicLocation::of($organization));
+ |   in alternativa `city` e `region`, composti nello stesso formato «città, regione»;
  | - `type`: tipo di ente già tradotto (es. `$organization->type->getLabel()`);
  | - `verified`: badge «Verificato» con icona (il significato è nel testo);
  | - `available`: numero di animali disponibili, formattato nella lingua corrente
  |   («Nessun animale disponibile», «1 animale disponibile», «1.240 animali disponibili»);
+ | - `navigate` (default true): il link usa wire:navigate.hover (navigazione SPA della shell),
+ |   come x-ui.animal-card;
  | - `heading-level` (default 3): livello del titolo (h2…h6) secondo la pagina.
  |
  | <x-ui.organization-card
  |     :name="$organization->name"
  |     :href="route('organizations.show', $organization)"
  |     :logo="$organization->getFirstMediaUrl('logo') ?: null"
- |     :city="$organization->city"
- |     :region="$organization->region"
+ |     :location="\App\Support\Site\PublicLocation::of($organization)"
  |     :type="$organization->type->getLabel()"
  |     :verified="$organization->isVerified()"
  |     :available="$organization->available_animals_count"
@@ -29,11 +31,13 @@
     'name',
     'href',
     'logo' => null,
+    'location' => null,
     'city' => null,
     'region' => null,
     'type' => null,
     'verified' => false,
     'available' => null,
+    'navigate' => true,
     'headingLevel' => 3,
 ])
 
@@ -41,7 +45,7 @@
 
 @php
     $level = min(6, max(2, (int) $headingLevel));
-    $location = collect([$city, $region])->filter(filled(...))->implode(', ');
+    $location = filled($location) ? (string) $location : (string) \App\Support\Site\PublicLocation::format($city, $region);
     $availableText = $available !== null
         ? trans_choice('ui_domain.organization_card.available', (int) $available, ['count' => Number::format((int) $available, locale: app()->getLocale())])
         : null;
@@ -62,6 +66,7 @@
             <h{{ $level }} class="text-h5 font-extrabold">
                 <a
                     href="{{ $href }}"
+                    @if ($navigate) wire:navigate.hover @endif
                     data-card-link
                     class="flex min-h-11 items-center rounded-sm text-fg no-underline decoration-2 underline-offset-4 group-hover/card:underline after:absolute after:inset-0 after:rounded-card"
                 >{{ $name }}</a>

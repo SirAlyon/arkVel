@@ -41,6 +41,14 @@ class ContactOrganizationForm extends Component
     #[Locked]
     public bool $contactMessageIsError = false;
 
+    /**
+     * Tentativi di invio: entra nel wire:key del riepilogo errori e del messaggio, così a
+     * ogni invio vengono ricreati e prendono il focus (WCAG 2.4.3 / 3.3.1). Solo stato di
+     * presentazione, come il contatore del widget donazione.
+     */
+    #[Locked]
+    public int $contactAttempts = 0;
+
     public function mount(Animal $animal): void
     {
         $this->animalId = $animal->getKey();
@@ -58,6 +66,8 @@ class ContactOrganizationForm extends Component
         // Chiunque autenticato può avviare una conversazione (le guardie di dominio
         // vivono nelle Action): manteniamo il gancio alla policy.
         $this->authorize('create', MessageThread::class);
+
+        $this->contactAttempts++;
 
         $validated = $this->validate();
 

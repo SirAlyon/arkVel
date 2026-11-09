@@ -2,7 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Enums\Sex;
+use App\Enums\Size;
+use App\Enums\Species;
 use App\Models\Animal;
+use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -223,6 +228,15 @@ describe('animal card skeleton', function (): void {
 });
 
 describe('organization card', function (): void {
+    it('takes a ready location and composes city and region the same way', function (): void {
+        $this->blade('<x-ui.organization-card name="Rifugio" href="#" location="Lucca, Toscana" city="Altro" />')
+            ->assertSee('Lucca, Toscana')
+            ->assertDontSee('Altro');
+
+        $this->blade('<x-ui.organization-card name="Rifugio" href="#" city="Aosta" region="Aosta" />')
+            ->assertSee('<span class="min-w-0 truncate">Aosta</span>', escape: false);
+    });
+
     it('renders the extended link, location, type, verified badge and count', function (): void {
         $html = (string) $this->blade('<x-ui.organization-card name="Rifugio Il Faro" href="/enti/faro" city="Genova" region="Liguria" type="Rifugio" verified :available="12" />');
 
@@ -262,6 +276,14 @@ describe('organization card', function (): void {
         [1, '1 animale disponibile'],
         [5, '5 animali disponibili'],
     ]);
+
+    it('navigates with wire:navigate by default, and can opt out', function (): void {
+        $this->blade('<x-ui.organization-card name="Ente" href="/enti/ente" />')
+            ->assertSee('wire:navigate.hover', escape: false);
+
+        $this->blade('<x-ui.organization-card name="Ente" href="/enti/ente" :navigate="false" />')
+            ->assertDontSee('wire:navigate', escape: false);
+    });
 
     it('lets the page choose the heading level and translates in English', function (): void {
         app()->setLocale('en');
@@ -386,6 +408,11 @@ describe('cta band', function (): void {
         ['mint', 'bg-block-mint text-on-block-mint'],
     ]);
 
+    it('accepts a level 1 heading with the h1 look', function (): void {
+        $this->blade('<x-ui.cta-band title="Grazie" heading-level="1" size="h1" id="thanks" />')
+            ->assertSee('<h1 id="thanks" class="text-h1">Grazie</h1>', escape: false);
+    });
+
     it('never puts yellow text on the green band', function (): void {
         $this->blade('<x-ui.cta-band title="T" icon="heart" />')
             ->assertDontSee('text-highlight', escape: false);
@@ -434,5 +461,49 @@ describe('animal card with media (UI-6)', function (): void {
     it('can opt out of wire:navigate', function (): void {
         $this->blade('<x-ui.animal-card name="Fido" href="/animali/fido" :navigate="false" />')
             ->assertDontSee('wire:navigate', escape: false);
+    });
+});
+
+describe('site animal card', function (): void {
+    it('builds the card from the model: photo, badges with age, public location, link and favorite', function (): void {
+        Storage::fake('public');
+        $organization = Organization::factory()->verified()->create(['city' => 'Lucca', 'region' => 'Toscana']);
+        $animal = Animal::factory()->available()->forOrganization($organization)->create([
+            'name' => 'Argo',
+            'species' => Species::Dog,
+            'sex' => Sex::Male,
+            'size' => Size::Large,
+            'estimated_age_months' => 8,
+            'featured' => true,
+        ]);
+        $animal->addMedia(UploadedFile::fake()->image('argo.jpg', 800, 1000))->toMediaCollection('photos');
+        $animal->load(['media', 'organization']);
+        // Il preferito passato vale solo per un utente autenticato (per un ospite è sempre no).
+        $this->actingAs(User::factory()->create());
+
+        $html = (string) $this->blade('<x-site.animal-card :animal="$animal" :favorited="true" priority heading-level="2" tone="mint" />', ['animal' => $animal]);
+
+        expect($html)
+            ->toContain('data-animal-card="mint"')
+            ->toMatch('/<h2 class="text-h4">\s*<a\s+href="'.preg_quote(route('animals.show', $animal), '/').'"/')
+            ->toContain('alt="Foto di Argo"')
+            ->toContain('fetchpriority="high"')
+            ->toContain('Cane')
+            ->toContain('Maschio')
+            ->toContain('8 mesi')
+            ->toContain('Taglia grande')
+            ->toContain('Lucca, Toscana')
+            ->toContain('data-animal-card-featured')
+            ->toMatch('/aria-pressed="true"\s+aria-label="Salva Argo nei preferiti"/');
+    });
+
+    it('leaves the location out where the page already gives it', function (): void {
+        $organization = Organization::factory()->verified()->create(['city' => 'Lucca', 'region' => 'Toscana']);
+        $animal = Animal::factory()->available()->forOrganization($organization)->create(['name' => 'Micia']);
+
+        $this->blade('<x-site.animal-card :animal="$animal" :with-location="false" />', ['animal' => $animal])
+            ->assertSee('Micia')
+            ->assertDontSee('Lucca, Toscana')
+            ->assertSee('data-animal-card-fallback', escape: false);
     });
 });

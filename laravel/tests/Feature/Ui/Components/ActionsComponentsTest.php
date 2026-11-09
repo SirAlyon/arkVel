@@ -1,9 +1,10 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /*
- | Componenti x-ui del gruppo "actions": icon, button, link, badge, tag.
+ | Componenti x-ui del gruppo "actions": icon, button, link, badge, tag, pagination.
  | Test di rendering (markup, ARIA, varianti). Comportamento nel browser:
  | tests/Browser/Components/ActionsComponentsTest.php.
  */
@@ -106,6 +107,77 @@ describe('button', function (): void {
         app()->setLocale('en');
 
         $this->blade('<x-ui.button loading>Save</x-ui.button>')->assertSee('Loading');
+    });
+
+    it('never grows wider than its container: long labels wrap, balanced and centred', function (): void {
+        $this->blade('<x-ui.button href="/enti">Scopri tutti gli enti che si prendono cura degli animali</x-ui.button>')
+            ->assertSee('max-w-full', escape: false)
+            ->assertSee('text-balance', escape: false)
+            ->assertSee('text-center', escape: false)
+            ->assertSee('<span class="min-w-0 wrap-break-word">', escape: false);
+
+        // Un bottone solo icona resta un cerchio: niente padding verticale.
+        $this->blade('<x-ui.button icon="x" label="Chiudi" />')->assertDontSee('py-2', escape: false);
+    });
+});
+
+describe('pagination', function (): void {
+    it('renders nothing for a single page', function (): void {
+        expect(trim((string) $this->blade('<x-ui.pagination :current="1" :last="1" :url="fn ($page) => \'/l?page=\'.$page" />')))->toBe('');
+    });
+
+    it('links every shown page with absolute urls, the current one marked', function (): void {
+        $html = (string) $this->blade('<x-ui.pagination :current="5" :last="9" :url="fn (int $page): string => url(\'/lista?page=\'.$page)" />');
+
+        expect($html)
+            ->toContain('<nav aria-label="Paginazione"')
+            ->toContain('Pagina 5 di 9')
+            ->toMatch('/href="'.preg_quote(url('/lista?page=4'), '/').'"[^>]*rel="prev"/s')
+            ->toMatch('/href="'.preg_quote(url('/lista?page=6'), '/').'"[^>]*rel="next"/s')
+            ->toMatch('/aria-current="page"\s+aria-label="Pagina 5"/')
+            ->toContain('data-pagination-page="1"')
+            ->toContain('data-pagination-page="9"')
+            ->not->toContain('data-pagination-page="2"')
+            ->toContain('aria-hidden="true"')
+            ->toContain('wire:navigate');
+    });
+
+    it('disables previous on the first page and next on the last one', function (): void {
+        $first = (string) $this->blade('<x-ui.pagination :current="1" :last="3" :url="fn ($page) => \'/l?page=\'.$page" />');
+        $last = (string) $this->blade('<x-ui.pagination :current="3" :last="3" :url="fn ($page) => \'/l?page=\'.$page" />');
+
+        expect($first)->toMatch('/aria-disabled="true"[^>]*aria-label="Pagina precedente"/s')
+            ->and($last)->toMatch('/aria-disabled="true"[^>]*aria-label="Pagina successiva"/s');
+    });
+
+    it('marks a range of loaded pages as current and summarises it', function (): void {
+        $html = (string) $this->blade('<x-ui.pagination :current="1" :current-to="3" :last="5" :url="fn ($page) => \'/l?page=\'.$page" label="Pagine del catalogo" />');
+
+        expect($html)->toContain('aria-label="Pagine del catalogo"')
+            ->toContain('Pagine da 1 a 3 di 5')
+            ->and(substr_count($html, 'aria-current="page"'))->toBe(3)
+            ->and($html)->toMatch('/href="\/l\?page=4"[^>]*rel="next"/s');
+    });
+
+    it('changes page in place inside a Livewire component, from a paginator', function (): void {
+        $paginator = new LengthAwarePaginator(range(1, 12), 30, 12, 2, ['path' => 'enti/il-faro']);
+
+        $html = (string) $this->blade('<x-ui.pagination :paginator="$paginator" mode="livewire" scroll-to="results" />', ['paginator' => $paginator]);
+
+        expect($html)
+            ->toContain('href="'.url('enti/il-faro?page=3').'"')
+            ->toContain('wire:click.prevent="nextPage(\'page\')"')
+            ->toContain('wire:click.prevent="gotoPage(3, \'page\')"')
+            ->toContain('getElementById(&#039;results&#039;)')
+            ->not->toContain('wire:navigate');
+    });
+
+    it('speaks English', function (): void {
+        app()->setLocale('en');
+
+        $this->blade('<x-ui.pagination :current="2" :last="3" :url="fn ($page) => \'/l?page=\'.$page" />')
+            ->assertSee('Page 2 of 3')
+            ->assertSee('aria-label="Previous page"', escape: false);
     });
 });
 

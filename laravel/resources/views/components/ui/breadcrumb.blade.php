@@ -9,8 +9,9 @@
  |   (WCAG 2.5.8: sono link testuali, non controlli) e sottolineati: mai solo colore;
  | - su una riga, senza overflow orizzontale a 320 px (il nome intero resta nel title):
  |   - la home e le voci intermedie non si restringono (shrink-0): sono i link per risalire,
- |     devono restare leggibili. Le intermedie hanno però un tetto in ch (`max-w-crumb`,
- |     token in app.css) oltre il quale vanno coi puntini (es. il nome lungo di un ente);
+ |     devono restare leggibili. Sotto md le intermedie hanno però un tetto in ch
+ |     (`max-w-crumb`, token in app.css) oltre il quale vanno coi puntini (es. il nome lungo
+ |     di un ente); da md lo spazio basta e il nome resta intero;
  |   - la pagina corrente (già nel titolo della pagina) prende lo spazio che resta
  |     (min-w-0 flex-1) e va coi puntini lei.
  |
@@ -46,7 +47,7 @@
                             wire:navigate.hover
                             data-text-link
                             title="{{ $item['name'] }}"
-                            @class(['inline-flex min-h-6 min-w-6 items-center rounded-sm underline decoration-1 underline-offset-4 transition-colors duration-(--duration-fast) ease-out hover:text-fg hover:decoration-2', 'max-w-crumb' => $index > 0])
+                            @class(['inline-flex min-h-6 min-w-6 items-center rounded-sm underline decoration-1 underline-offset-4 transition-colors duration-(--duration-fast) ease-out hover:text-fg hover:decoration-2', 'max-md:max-w-crumb' => $index > 0])
                         ><span class="truncate">{{ $item['name'] }}</span></a>
                     @endif
                 </li>

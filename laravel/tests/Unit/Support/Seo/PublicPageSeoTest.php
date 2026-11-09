@@ -113,6 +113,14 @@ it('builds the organization index, paged when needed', function (): void {
         ->noindex->toBeFalse();
 });
 
+it('keeps a filtered organization index out of the index, pointing to the base list', function (): void {
+    $seo = $this->seo->organizations(2, 3, isFiltered: true);
+
+    expect($seo->noindex)->toBeTrue()
+        ->and($seo->canonical)->toBe(route('organizations.index'))
+        ->and($seo->title)->toBe('Enti — ArkVel');
+});
+
 it('builds an animal page from its own description', function (): void {
     $animal = Animal::factory()->available()->create([
         'name' => 'Argo',

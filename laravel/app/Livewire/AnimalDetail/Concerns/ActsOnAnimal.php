@@ -6,6 +6,7 @@ namespace App\Livewire\AnimalDetail\Concerns;
 
 use App\Livewire\AnimalDetail;
 use App\Models\Animal;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -28,6 +29,20 @@ trait ActsOnAnimal
     protected function animal(): Animal
     {
         return Animal::query()->findOrFail($this->animalId);
+    }
+
+    /**
+     * Link "accedi" della nota per gli ospiti (x-site.animal.guest-note): lo stesso
+     * percorso di una CTA usata da ospite (scheda come intended, poi la login). Per un
+     * utente già autenticato non fa nulla.
+     */
+    public function signIn(): mixed
+    {
+        if (Auth::check()) {
+            return null;
+        }
+
+        return $this->redirectGuestToLogin($this->animal());
     }
 
     protected function redirectGuestToLogin(Animal $animal): mixed

@@ -7,6 +7,7 @@ namespace App\Support\Seo;
 use App\Enums\OrganizationType;
 use App\Models\Animal;
 use App\Models\Organization;
+use App\Support\Site\WebUrl;
 
 /**
  * Nodi schema.org (JSON-LD) del sito pubblico. Ogni metodo restituisce un nodo senza
@@ -209,13 +210,7 @@ final class SchemaOrg
      */
     private static function webUrl(mixed $value): ?string
     {
-        if (! is_string($value) || filter_var($value, FILTER_VALIDATE_URL) === false) {
-            return null;
-        }
-
-        $scheme = parse_url($value, PHP_URL_SCHEME);
-
-        return is_string($scheme) && in_array(mb_strtolower($scheme), ['http', 'https'], true) ? $value : null;
+        return WebUrl::safe($value);
     }
 
     private static function translated(mixed $value): ?string

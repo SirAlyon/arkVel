@@ -6,7 +6,8 @@
  | - `title` (obbligatorio): il titolo della banda;
  | - `tone`: leaf (default, verde) · inverse · sun · peach · mint. Testo nel colore on-*
  |   del fondo; il focus dei controlli dentro prende lo stesso colore (regole .bg-* di app.css);
- | - `heading-level` (default 2) e `size` (h2 default · h3): livello e aspetto del titolo;
+ | - `heading-level` (default 2, da 1 a 6) e `size` (h1 · h2 default · h3): livello e aspetto
+ |   del titolo. Livello 1 per una banda che è il contenuto principale della pagina;
  | - `icon`: icona Lucide decorativa in un quadrato stondato giallo (navy sul tono sun);
  | - `id`: id del titolo (aria-labelledby della <section>; default dallo slug del titolo);
  | - slot: il testo (text-lead); slot `actions`: i bottoni.
@@ -42,7 +43,7 @@
         'mint' => 'bg-block-mint text-on-block-mint',
     ];
     $tone = array_key_exists((string) $tone, $tones) ? $tone : 'leaf';
-    $level = min(6, max(2, (int) $headingLevel));
+    $level = min(6, max(1, (int) $headingLevel));
     // Slug del titolo; un titolo senza lettere latine ricade su un hash. Con titoli
     // ripetuti nella stessa pagina passare `id` esplicito (gli id devono essere unici).
     $id ??= 'cta-'.(Str::slug($title) ?: substr(md5($title), 0, 8));
@@ -59,7 +60,7 @@
                 <x-ui.icon :name="$icon" size="xl" />
             </span>
         @endif
-        <h{{ $level }} id="{{ $id }}" @class(['text-h3' => $size === 'h3', 'text-h2' => $size !== 'h3'])>{{ $title }}</h{{ $level }}>
+        <h{{ $level }} id="{{ $id }}" @class(['text-h1' => $size === 'h1', 'text-h3' => $size === 'h3', 'text-h2' => ! in_array($size, ['h1', 'h3'], true)])>{{ $title }}</h{{ $level }}>
         @if ($slot->isNotEmpty())
             <div class="text-lead">{{ $slot }}</div>
         @endif

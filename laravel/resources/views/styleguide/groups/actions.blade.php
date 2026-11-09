@@ -1,5 +1,5 @@
 {{--
- | Styleguide · gruppo "actions": icon, button, link, badge, tag, breadcrumb.
+ | Styleguide · gruppo "actions": icon, button, link, badge, tag, breadcrumb, pagination.
  | Testi in lang/{it,en}/styleguide_actions.php. Modello per le pagine degli altri gruppi:
  | un <x-styleguide.component> per componente, un <x-styleguide.example> per variante o stato.
 --}}
@@ -181,6 +181,21 @@
                     ['name' => $t('breadcrumb.animal'), 'url' => '#breadcrumb'],
                 ]" />
             </div>
+        </x-styleguide.example>
+    </x-styleguide.component>
+    <x-styleguide.component id="pagination" :title="$t('pagination.title')" :description="$t('pagination.description')" :a11y="[$t('pagination.a11y_landmark'), $t('pagination.a11y_current'), $t('pagination.a11y_target')]">
+        <x-styleguide.example :title="$t('pagination.middle')">
+            <x-slot:code>@verbatim<x-ui.pagination :paginator="$organizations" mode="livewire" scroll-to="organizations-results" />@endverbatim</x-slot:code>
+            <x-ui.pagination class="w-full" :current="6" :last="12" :url="static fn (int $page): string => '#pagination-'.$page" data-demo="pagination" />
+        </x-styleguide.example>
+
+        <x-styleguide.example :title="$t('pagination.range')" background="surface">
+            <x-slot:code>@verbatim<x-ui.pagination :current="$results->firstPage" :current-to="$results->lastLoadedPage" :last="$results->lastPage()" :url="$results->pageUrl(...)" :label="__('page_catalog.pagination.label')" />@endverbatim</x-slot:code>
+            <x-ui.pagination class="w-full" :current="1" :current-to="3" :last="5" :url="static fn (int $page): string => '#pagination-'.$page" data-demo="pagination-range" />
+        </x-styleguide.example>
+
+        <x-styleguide.example :title="$t('pagination.first')">
+            <x-ui.pagination class="w-full" :current="1" :last="2" :url="static fn (int $page): string => '#pagination-'.$page" data-demo="pagination-first" />
         </x-styleguide.example>
     </x-styleguide.component>
 </x-styleguide.layout>

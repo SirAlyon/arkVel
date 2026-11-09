@@ -159,8 +159,11 @@ return [
                     'breed',
                     'featured',
                 ],
+                // `featured` serve all'ordinamento predefinito del catalogo senza ricerca
+                // (App\Enums\CatalogSort). Dopo una modifica: php artisan scout:sync-index-settings.
                 'sortableAttributes' => [
                     'created_at',
+                    'featured',
                     'name',
                 ],
             ],

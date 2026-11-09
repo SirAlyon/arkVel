@@ -21,6 +21,8 @@ use Illuminate\Contracts\Translation\Translator;
  *  - catalogo: i filtri di faccetta (specie/taglia/sesso) puntano al catalogo base, la
  *    ricerca libera (`q`) e i risultati vuoti sono `noindex` (le pagine di ricerca
  *    interna non vanno indicizzate, i link restano seguiti);
+ *  - indice degli enti: con un filtro attivo (nome, regione, tipo) canonical all'indice
+ *    base e `noindex`;
  *  - liste paginate (catalogo, enti, pagina ente): una pagina oltre l'ultima (`?page=999`)
  *    è vuota, quindi `noindex` (altrimenti sarebbe un soft 404 indicizzabile);
  *  - landing di ritorno da Stripe (grazie/annullo): `noindex`;
@@ -76,9 +78,13 @@ final readonly class PublicPageSeo
         );
     }
 
-    public function organizations(int $page, int $lastPage): SeoData
+    /**
+     * @param  bool  $isFiltered  ricerca per nome, regione o tipo attivi: una pagina di
+     *                            ricerca interna, fuori dall'indice (come il catalogo filtrato)
+     */
+    public function organizations(int $page, int $lastPage, bool $isFiltered = false): SeoData
     {
-        $isPaged = $page > 1;
+        $isPaged = ! $isFiltered && $page > 1;
 
         $canonical = $isPaged ? route('organizations.index', ['page' => $page]) : route('organizations.index');
         $title = $isPaged ? __('seo.titles.organizations_paged', ['page' => $page]) : __('public.titles.organizations');
@@ -88,7 +94,7 @@ final readonly class PublicPageSeo
             title: $title,
             description: $description,
             canonical: $canonical,
-            noindex: self::isPastLastPage($page, $lastPage),
+            noindex: $isFiltered || self::isPastLastPage($page, $lastPage),
             breadcrumbs: [$this->homeCrumb(), $this->organizationsCrumb()],
             jsonLd: [$this->schema->collectionPage($title, $canonical, $description, $this->locale())],
         );

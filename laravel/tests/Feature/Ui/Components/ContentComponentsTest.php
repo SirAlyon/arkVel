@@ -156,6 +156,11 @@ describe('skeleton', function (): void {
 });
 
 describe('empty state', function (): void {
+    it('can be the main content of a page with a level 1 heading', function (): void {
+        $this->blade('<x-ui.empty-state icon="circle-x" title="Donazione annullata" heading-level="1" />')
+            ->assertSee('<h1 class="text-h1 text-fg">Donazione annullata</h1>', escape: false);
+    });
+
     it('renders a variant with its icon, block and translated texts', function (string $variant, string $icon, string $block, string $title): void {
         $this->blade('<x-ui.empty-state :variant="$variant" />', ['variant' => $variant])
             ->assertSee('data-empty-state="'.$variant.'"', escape: false)

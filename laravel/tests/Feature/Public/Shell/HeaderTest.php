@@ -19,9 +19,9 @@ uses(RefreshDatabase::class);
  */
 
 /** Solo l'header del sito (con il menu mobile) della risposta. */
-function siteHeaderOf(TestResponse $response): string
+function siteHeaderOf(TestResponse|string $response): string
 {
-    $html = (string) $response->getContent();
+    $html = is_string($response) ? $response : (string) $response->getContent();
     // Fino a <main>: dentro l'header ci sono altri <header> (quello del drawer).
     $start = strpos($html, '<header');
     $end = strpos($html, '<main');
@@ -163,7 +163,8 @@ it('does not use SPA navigation towards the Filament panels', function (): void 
 });
 
 it('is solid and sticky by default', function (): void {
-    $header = siteHeaderOf(test()->get(route('home')));
+    // Una pagina senza opt-in (la Home usa l'header trasparente da UI-6a).
+    $header = siteHeaderOf((string) test()->blade('@component("layouts::app", []) <p>Corpo</p> @endcomponent'));
 
     expect($header)
         ->toContain('data-transparent="false"')

@@ -73,7 +73,8 @@ it('lists the legal pages as text until they exist, without broken links', funct
 });
 
 it('shows the language switcher and the copyright', function (): void {
-    $footer = siteFooterOf(test()->get(route('home')));
+    // Una pagina senza opt-in del tema (le pagine migrate in UI-6 sono themeable).
+    $footer = siteFooterOf((string) test()->blade('@component("layouts::app", []) <p>Corpo</p> @endcomponent'));
 
     expect($footer)
         ->toContain('data-language-switcher')

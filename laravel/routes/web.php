@@ -114,7 +114,8 @@ Route::middleware(EnsureLocalEnvironment::class)->group(function (): void {
 });
 
 Route::get('/animali', AnimalCatalog::class)->name('catalog');
-Route::get('/animali/{animal}', AnimalDetail::class)->name('animals.show');
+// Solo id numerici: /animali/luna risponde 404 (non 500 dal binding su una colonna intera).
+Route::get('/animali/{animal}', AnimalDetail::class)->whereNumber('animal')->name('animals.show');
 
 Route::get('/enti', OrganizationIndex::class)->name('organizations.index');
 Route::get('/enti/{organization:slug}', OrganizationPage::class)->name('organizations.show');

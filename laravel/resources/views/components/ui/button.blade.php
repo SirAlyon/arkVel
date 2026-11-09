@@ -9,7 +9,11 @@
  | - `loading`: stato di attesa statico (aria-busy, disattivato). Con Livewire non serve:
  |   l'elemento che lancia la richiesta riceve `data-loading` e mostra lo spinner da solo;
  | - `disabled`: su <button> usa l'attributo nativo, su <a> toglie l'href e mette
- |   aria-disabled.
+ |   aria-disabled;
+ | - etichette lunghe: il bottone non supera mai la larghezza del contenitore
+ |   (max-w-full) e il testo va a capo bilanciato e centrato, con un padding verticale
+ |   che su una riga sola non cambia l'altezza (resta quella minima della dimensione).
+ |   Nessuna prop: vale sempre, così una traduzione lunga non crea scroll orizzontale.
  |
  | <x-ui.button wire:click="save" icon="check">{{ __('…') }}</x-ui.button>
  | <x-ui.button variant="highlight" size="lg" :href="route('catalog')">…</x-ui.button>
@@ -41,16 +45,16 @@
     ];
 
     $sizes = [
-        'sm' => [$iconOnly ? 'size-11' : 'min-h-11 px-4', 'text-small', 'sm'],
-        'md' => [$iconOnly ? 'size-12' : 'min-h-12 px-6', 'text-body', 'md'],
-        'lg' => [$iconOnly ? 'size-14' : 'min-h-14 px-7', 'text-lead', 'lg'],
+        'sm' => [$iconOnly ? 'size-11' : 'min-h-11 px-4 py-2', 'text-small', 'sm'],
+        'md' => [$iconOnly ? 'size-12' : 'min-h-12 px-6 py-2', 'text-body', 'md'],
+        'lg' => [$iconOnly ? 'size-14' : 'min-h-14 px-7 py-2', 'text-lead', 'lg'],
     ];
 
     [$variantClasses, $hoverClasses] = $variants[$variant] ?? $variants['primary'];
     [$boxClasses, $textClasses, $iconSize] = $sizes[$size] ?? $sizes['md'];
 
     $classes = [
-        'group/button relative inline-flex shrink-0 select-none items-center justify-center gap-2 rounded-full font-bold no-underline',
+        'group/button relative inline-flex max-w-full shrink-0 select-none items-center justify-center gap-2 rounded-full text-center font-bold text-balance no-underline',
         'transition-colors duration-(--duration-fast) ease-out',
         $boxClasses,
         $textClasses,
@@ -73,12 +77,12 @@
     data-variant="{{ $variant }}"
     {{ $attributes->class($classes) }}
 >
-    <span class="inline-flex items-center justify-center gap-2 group-data-loading/button:invisible">
+    <span class="inline-flex min-w-0 items-center justify-center gap-2 group-data-loading/button:invisible">
         @if ($icon)
             <x-ui.icon :name="$icon" :size="$iconSize" />
         @endif
         @unless ($iconOnly)
-            <span>{{ $slot }}</span>
+            <span class="min-w-0 wrap-break-word">{{ $slot }}</span>
         @endunless
         @if ($iconTrailing)
             <x-ui.icon :name="$iconTrailing" :size="$iconSize" />

@@ -1,48 +1,43 @@
-<div class="mt-8 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm">
-    <h2 class="text-lg font-semibold text-stone-900">{{ __('messaging.contact.cta_title') }}</h2>
-    <p class="mt-1 text-sm text-stone-500">{{ __('messaging.contact.cta_body', ['name' => $animal->name]) }}</p>
+{{-- Primo messaggio all'ente (App\Livewire\AnimalDetail\ContactOrganizationForm), nel drawer
+     "Scrivi all'ente" della scheda: titolo e presentazione sono quelli del drawer.
 
-    {{-- Feedback in-place (successo / errore di dominio o validazione). --}}
-    @if ($contactMessage)
-        <p class="mt-4 rounded-xl px-4 py-2.5 text-sm font-medium {{ $contactMessageIsError ? 'bg-red-50 text-red-700' : 'bg-brand-50 text-brand-800' }}"
-           role="status" aria-live="polite" wire:key="contact-message">
-            {{ $contactMessage }}
-        </p>
-    @endif
+     Focus dopo l'invio (WCAG 2.4.3 / 3.3.1): con errori il riepilogo (ricreato a ogni
+     tentativo grazie al contatore nel wire:key) prende il focus; con l'esito lo prende il
+     messaggio, che scorre in vista. --}}
+<div data-animal-cta="contact">
+    @guest
+        <x-site.animal.guest-note :message="__('page_animal.contact.guest_note')" class="mb-6" />
+    @endguest
 
-    <form wire:submit="contact" class="mt-4 space-y-4">
-        <div>
-            <label for="contact-body" class="block text-sm font-medium text-stone-700">
-                {{ __('messaging.reply.label') }}
-            </label>
-            <textarea
-                id="contact-body"
-                wire:model="contactBody"
-                rows="3"
-                placeholder="{{ __('messaging.contact.placeholder') }}"
-                class="mt-1 block w-full rounded-xl border-brand-200 text-sm shadow-sm focus:border-brand-400 focus:ring-brand-400"
-            ></textarea>
-            @error('contactBody')
-                <p class="mt-1 text-sm text-red-600" wire:key="err-contact-body">{{ $message }}</p>
-            @enderror
-        </div>
+    <form wire:submit="contact" novalidate class="flex flex-col gap-6">
+        <x-ui.error-summary
+            id="contact-error-summary"
+            :messages="$errors->has('contactBody') ? ['contact-body' => $errors->first('contactBody')] : []"
+            heading-level="3"
+            wire:key="contact-errors-{{ $contactAttempts }}"
+        />
 
-        <div class="flex flex-wrap items-center gap-3">
-            <x-button
-                type="submit"
-                variant="primary"
-                size="lg"
-                wire:loading.attr="disabled"
-                wire:target="contact"
-            >
-                <span wire:loading.remove wire:target="contact">{{ __('messaging.contact.submit') }}</span>
-                <span wire:loading wire:target="contact">{{ __('messaging.contact.submitting') }}</span>
-            </x-button>
+        <x-ui.field name="contactBody" for="contact-body" :label="__('messaging.reply.label')" required>
+            <x-ui.textarea wire:model="contactBody" rows="5" autoresize :placeholder="__('messaging.contact.placeholder')" />
+        </x-ui.field>
+
+        <div class="flex flex-wrap gap-3">
+            <x-ui.button type="submit" icon="send" wire:loading.attr="data-loading" wire:target="contact" data-animal-contact-submit>
+                {{ __('messaging.contact.submit') }}
+            </x-ui.button>
             @auth
-                <x-button :href="route('filament.adopter.pages.my-messages')" variant="outline" size="lg">
+                <x-ui.button :href="route('filament.adopter.pages.my-messages')" variant="secondary">
                     {{ __('messaging.contact.my_messages') }}
-                </x-button>
+                </x-ui.button>
             @endauth
         </div>
     </form>
+
+    {{-- Con errori di validazione il focus va al riepilogo: un esito precedente non si mostra. --}}
+    <x-site.animal.feedback
+        :message="$errors->any() ? null : $contactMessage"
+        :error="$contactMessageIsError"
+        focus
+        wire:key="contact-message-{{ $contactAttempts }}"
+    />
 </div>

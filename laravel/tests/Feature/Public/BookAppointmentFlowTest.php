@@ -170,3 +170,81 @@ it('validates the booking form and creates no appointment on empty input', funct
 
     Notification::assertNothingSent();
 });
+
+it('accepts any free time and passes it unchanged to the action', function (string $time) {
+    [$animal] = verifiedOrgAnimalWithAppointmentStaff();
+
+    $user = User::factory()->create();
+    $day = now()->addDays(3)->format('Y-m-d');
+
+    Livewire::actingAs($user)
+        ->test(AppointmentBooking::class, ['animal' => $animal])
+        ->set('appointmentType', AppointmentType::Visit->value)
+        ->set('appointmentScheduledAt', "{$day}T{$time}")
+        ->call('book')
+        ->assertHasNoErrors()
+        ->assertSet('bookingMessageIsError', false);
+
+    expect(Appointment::query()->sole()->scheduled_at->format('Y-m-d H:i'))->toBe("{$day} {$time}");
+})->with(['10:47', '20:15', '07:05']);
+
+it('renders an error summary linked to the fields after a failed attempt, recreated at every attempt', function () {
+    [$animal] = verifiedOrgAnimalWithAppointmentStaff();
+
+    $component = Livewire::actingAs(User::factory()->create())
+        ->test(AppointmentBooking::class, ['animal' => $animal])
+        ->assertDontSeeHtml('id="booking-error-summary"')
+        ->call('book')
+        ->assertSet('bookingAttempts', 1)
+        ->assertSeeHtml('id="booking-error-summary"')
+        ->assertSeeHtml('wire:key="booking-errors-1"')
+        ->assertSeeHtml('href="#field-appointmenttype-'.AppointmentType::cases()[0]->value.'"')
+        ->assertSeeHtml('href="#appointment-date"')
+        ->assertSee(__('appointments.booking.validation.type_required'))
+        ->assertSee(__('appointments.booking.validation.scheduled_at_required'));
+
+    $component->call('book')
+        ->assertSet('bookingAttempts', 2)
+        ->assertSeeHtml('wire:key="booking-errors-2"');
+});
+
+it('moves the focus to the outcome message, recreated at every attempt', function () {
+    [$animal] = verifiedOrgAnimalWithAppointmentStaff();
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(AppointmentBooking::class, ['animal' => $animal])
+        ->set('appointmentType', AppointmentType::Visit->value)
+        ->set('appointmentScheduledAt', now()->subDay()->startOfHour()->format('Y-m-d\TH:i'))
+        ->call('book')
+        ->assertSeeHtml('wire:key="booking-message-1"')
+        ->assertSeeHtml('data-animal-feedback="error"')
+        ->assertSeeHtml('tabindex="-1"')
+        ->assertDontSeeHtml('id="booking-error-summary"')
+        // Un nuovo tentativo con errori di validazione: il riepilogo prende il focus e
+        // l'esito precedente non si mostra.
+        ->set('appointmentType', '')
+        ->call('book')
+        ->assertSeeHtml('id="booking-error-summary"')
+        ->assertDontSeeHtml('data-animal-feedback=');
+});
+
+it('sends a guest from the sign-in note to the login with the animal as intended page', function () {
+    [$animal] = verifiedOrgAnimalWithAppointmentStaff();
+
+    Livewire::test(AppointmentBooking::class, ['animal' => $animal])
+        ->call('signIn')
+        ->assertRedirect(route('login'));
+
+    expect(session('url.intended'))->toBe(route('animals.show', $animal));
+});
+
+it('ignores the sign-in link for an authenticated user', function () {
+    [$animal] = verifiedOrgAnimalWithAppointmentStaff();
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(AppointmentBooking::class, ['animal' => $animal])
+        ->call('signIn')
+        ->assertNoRedirect();
+
+    expect(session('url.intended'))->toBeNull();
+});

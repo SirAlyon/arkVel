@@ -52,11 +52,15 @@
     data-toast
     {{ $attributes->class([
         'flex w-full items-start gap-3 rounded-card bg-surface-raised p-3 pe-2 text-fg shadow-overlay',
-        // Solo i toast dello store entrano ed escono animati; l'anteprima statica no.
+        // Solo i toast dello store entrano ed escono animati (non la versione statica).
         'transition-[opacity,translate] duration-(--duration-base) ease-out starting:translate-y-4 starting:opacity-0' => $bound,
     ]) }}
 >
-    @foreach ($types as $key => [$icon, $tone])
+    {{-- Niente destrutturazione nel @foreach: il precompilatore di Livewire 4 non apre il
+         loop delle wire:key (openLoop) ma lo chiude, e lo stato statico resta rotto per le
+         richieste successive dello stesso processo (test, Octane). --}}
+    @foreach ($types as $key => $spec)
+        @php([$icon, $tone] = $spec)
         @if ($bound || $key === $type)
             <span
                 @if ($bound) x-show="toast.type === '{{ $key }}'" @endif

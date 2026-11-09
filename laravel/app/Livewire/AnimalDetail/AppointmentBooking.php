@@ -39,9 +39,9 @@ class AppointmentBooking extends Component
     public string $appointmentType = '';
 
     /**
-     * Data/ora scelta, come stringa `datetime-local` (Y-m-d\TH:i). Il parsing verso
-     * Carbon e la guardia "slot nel futuro" vivono nell'Action; qui si validano solo
-     * presenza e formato.
+     * Data/ora scelta, come stringa `datetime-local` (Y-m-d\TH:i): la vista la compone da
+     * giorno e orario liberi. Il parsing verso Carbon e la guardia "slot nel futuro"
+     * vivono nell'Action; qui si validano solo presenza e formato.
      */
     public string $appointmentScheduledAt = '';
 
@@ -59,6 +59,14 @@ class AppointmentBooking extends Component
 
     #[Locked]
     public bool $bookingMessageIsError = false;
+
+    /**
+     * Tentativi di invio: entra nel wire:key del riepilogo errori e del messaggio, così a
+     * ogni invio vengono ricreati e prendono il focus (WCAG 2.4.3 / 3.3.1). Solo stato di
+     * presentazione, come il contatore del widget donazione.
+     */
+    #[Locked]
+    public int $bookingAttempts = 0;
 
     public function mount(Animal $animal): void
     {
@@ -81,6 +89,8 @@ class AppointmentBooking extends Component
         // Chiunque autenticato può prenotare (RequestAppointment impone le guardie
         // di dominio): manteniamo il gancio alla policy.
         $this->authorize('create', Appointment::class);
+
+        $this->bookingAttempts++;
 
         $validated = $this->validate();
 

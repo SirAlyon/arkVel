@@ -8,7 +8,9 @@
  |   arrivare dallo slot (per markup, come un link nel testo);
  | - `icon`, `block` (sun · peach · mint · leaf): l'icona (decorativa) e il colore del suo
  |   blocco. Il significato lo porta sempre il testo, mai il solo colore;
- | - `heading-level` (default 2): livello del titolo (h2…h6) secondo la pagina;
+ | - `heading-level` (default 2): livello del titolo (h1…h6) secondo la pagina. Con 1 il
+ |   blocco è il contenuto principale della pagina (es. il ritorno da un pagamento
+ |   annullato): il titolo prende l'aspetto text-h1;
  | - `framed` (default true): pannello su superficie; false per usarlo dentro una card;
  | - slot `actions`: uno o più <x-ui.button>;
  | - `id` sul blocco: titolo e descrizione ricevono `<id>-title` e `<id>-description`, da
@@ -55,7 +57,7 @@
     $block = $block ?? $preset['block'] ?? 'mint';
     $title ??= $preset !== null ? __('ui_content.empty_state.'.$variant.'.title') : null;
     $description ??= $preset !== null && $slot->isEmpty() ? __('ui_content.empty_state.'.$variant.'.description') : null;
-    $level = min(6, max(2, (int) $headingLevel));
+    $level = min(6, max(1, (int) $headingLevel));
     $rootId = $attributes->get('id');
     // Attributi pronti (con lo spazio davanti) per non lasciare doppi spazi senza id.
     $titleIdAttribute = $rootId ? ' id="'.e($rootId).'-title"' : '';
@@ -75,7 +77,7 @@
 
     <div class="flex max-w-prose flex-col gap-2">
         @if ($title)
-            <h{{ $level }}{!! $titleIdAttribute !!} class="text-h4 text-fg">{{ $title }}</h{{ $level }}>
+            <h{{ $level }}{!! $titleIdAttribute !!} @class(['text-h1' => $level === 1, 'text-h4' => $level !== 1, 'text-fg'])>{{ $title }}</h{{ $level }}>
         @endif
         @if ($description)
             <p{!! $descriptionIdAttribute !!} class="text-fg-muted">{{ $description }}</p>

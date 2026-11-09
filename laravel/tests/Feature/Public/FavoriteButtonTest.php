@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\Animals\FindFavoritedAnimalIds;
 use App\Livewire\AnimalDetail;
 use App\Livewire\FavoriteButton;
 use App\Models\Animal;
@@ -9,6 +10,7 @@ use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 
@@ -145,3 +147,78 @@ it('does not let the client tamper with the animal name', function () {
     Livewire::test(FavoriteButton::class, ['animal' => visibleAnimal()])
         ->set('animalName', 'Altro');
 })->throws(CannotUpdateLockedPropertyException::class);
+
+describe('initial state computed by the page', function () {
+    it('takes the favorited state from the page without querying the database', function (bool $known) {
+        $user = User::factory()->create();
+        $animal = visibleAnimal();
+
+        DB::enableQueryLog();
+
+        Livewire::actingAs($user)
+            ->test(FavoriteButton::class, ['animal' => $animal, 'favorited' => $known])
+            ->assertSet('favorited', $known);
+
+        $favoriteQueries = array_filter(DB::getQueryLog(), static fn (array $query): bool => str_contains($query['query'], 'favorites'));
+
+        expect($favoriteQueries)->toBe([]);
+    })->with([true, false]);
+
+    it('still asks the database when the page passes nothing', function () {
+        $user = User::factory()->create();
+        $animal = visibleAnimal();
+        $user->favorites()->attach($animal->getKey());
+
+        Livewire::actingAs($user)
+            ->test(FavoriteButton::class, ['animal' => $animal, 'favorited' => null])
+            ->assertSet('favorited', true);
+    });
+
+    it('never shows a guest a favorite, whatever the page passes', function () {
+        Livewire::test(FavoriteButton::class, ['animal' => visibleAnimal(), 'favorited' => true])
+            ->assertSet('favorited', false)
+            ->call('toggle')
+            ->assertRedirect(route('login'));
+    });
+
+    it('reads the real pivot after a toggle, not the state passed by the page', function () {
+        $user = User::factory()->create();
+        $animal = visibleAnimal();
+
+        // La pagina dice «preferito» ma la pivot è vuota: il toggle aggiunge e rilegge.
+        Livewire::actingAs($user)
+            ->test(FavoriteButton::class, ['animal' => $animal, 'favorited' => true])
+            ->call('toggle')
+            ->assertSet('favorited', true);
+
+        expect($user->favorites()->whereKey($animal->getKey())->exists())->toBeTrue();
+    });
+});
+
+describe('FindFavoritedAnimalIds', function () {
+    it('returns the ids of the given animals in the users wishlist, in one query', function () {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        [$first, $second, $third] = [visibleAnimal(), visibleAnimal(), visibleAnimal()];
+        $user->favorites()->attach([$third->getKey(), $first->getKey()]);
+        $other->favorites()->attach($second->getKey());
+
+        DB::enableQueryLog();
+
+        $ids = app(FindFavoritedAnimalIds::class)->handle($user, [$first, $second, $third->getKey()]);
+
+        expect($ids)->toBe([$first->getKey(), $third->getKey()])
+            ->and(DB::getQueryLog())->toHaveCount(1);
+    });
+
+    it('does not query for a guest or an empty page', function () {
+        DB::enableQueryLog();
+
+        expect(app(FindFavoritedAnimalIds::class)->handle(null, [visibleAnimal()]))->toBe([]);
+
+        DB::flushQueryLog();
+
+        expect(app(FindFavoritedAnimalIds::class)->handle(User::factory()->create(), []))->toBe([]);
+        expect(array_filter(DB::getQueryLog(), static fn (array $query): bool => str_contains($query['query'], 'favorites')))->toBe([]);
+    });
+});

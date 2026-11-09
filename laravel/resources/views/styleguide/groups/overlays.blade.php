@@ -108,7 +108,8 @@
                 @endphp
                 {{-- Nei tag dei componenti @js non si compila: Js::from è lo stesso, dentro {{ }}. --}}
                 <div x-data="@js($chosenFilters)" class="flex flex-col gap-6">
-                    @foreach ($filters as $filter => [$options, $chosen])
+                    @foreach ($filters as $filter => $spec)
+                        @php([$options, $chosen] = $spec)
                         <fieldset class="flex flex-col gap-3">
                             <legend class="mb-3 text-h5">{{ $t('drawer.'.$filter) }}</legend>
                             <div class="flex flex-wrap gap-2">

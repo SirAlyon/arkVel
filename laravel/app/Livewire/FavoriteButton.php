@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Actions\Animals\FindFavoritedAnimalIds;
 use App\Models\Animal;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -27,6 +28,14 @@ use Livewire\Component;
  *
  * L'`animalId` è `#[Locked]`: è identità del componente, non deve essere
  * manomessa lato client.
+ *
+ * Stato iniziale senza query: in una griglia la pagina calcola UNA volta i preferiti
+ * dell'utente tra i suoi animali ({@see FindFavoritedAnimalIds}) e li passa a ogni bottone
+ * con `:favorited`. Senza il parametro (null) il bottone lo chiede da sé al database.
+ * Lo stato passato vale solo per il primo render: dopo un toggle la verità è sempre la
+ * pivot dell'utente autenticato, riletta dal database.
+ *
+ *     <livewire:favorite-button :animal="$animal" :favorited="in_array($animal->id, $favoriteIds, true)" :key="'fav-'.$animal->id" />
  */
 class FavoriteButton extends Component
 {
@@ -41,13 +50,22 @@ class FavoriteButton extends Component
     #[Locked]
     public string $animalName = '';
 
-    public bool $favorited = false;
+    /**
+     * Già nei preferiti dell'utente autenticato. Dopo il mount è sempre un booleano: è
+     * nullable solo perché Livewire assegna il parametro omonimo `favorited` (che può
+     * valere null, «non noto») alla proprietà prima di chiamare mount().
+     */
+    public ?bool $favorited = false;
 
-    public function mount(Animal $animal): void
+    /**
+     * @param  bool|null  $favorited  stato già noto (calcolato dalla pagina per tutta la
+     *                                griglia); null per leggerlo dal database
+     */
+    public function mount(Animal $animal, ?bool $favorited = null): void
     {
         $this->animalId = $animal->getKey();
         $this->animalName = $animal->name;
-        $this->favorited = $this->resolveFavorited();
+        $this->favorited = Auth::user() instanceof User && ($favorited ?? $this->resolveFavorited());
     }
 
     public function toggle(): mixed

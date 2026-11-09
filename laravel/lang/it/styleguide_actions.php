@@ -115,4 +115,15 @@ return [
         'organization' => 'Associazione Amici a Quattro Zampe della Valle del Serchio',
         'animal' => 'Argo',
     ],
+
+    'pagination' => [
+        'title' => 'Paginazione',
+        'description' => 'Pagina corrente sul totale, precedente, numeri di pagina (la prima, l’ultima e quelle vicine, con i puntini nei salti) e successiva. Link veri con URL assoluti: funzionano senza JavaScript e per i motori di ricerca. Con un paginatore di Livewire il clic cambia pagina sul posto (mode="livewire"), altrimenti naviga (wire:navigate).',
+        'a11y_landmark' => 'Un <nav> con nome («Paginazione» o uno specifico, es. «Pagine del catalogo»); i puntini sono decorativi (aria-hidden).',
+        'a11y_current' => 'La pagina corrente ha aria-current="page" e un fondo pieno: non si distingue dal solo colore. Ogni numero ha un nome completo («Pagina 3»).',
+        'a11y_target' => 'Target da 44 px; precedente e successiva hanno rel="prev"/"next" e ai capi della lista restano visibili ma disattivati (aria-disabled).',
+        'middle' => 'Pagina nel mezzo di una lista lunga',
+        'range' => 'Più pagine caricate di seguito (catalogo, «Carica altri»)',
+        'first' => 'Prima pagina',
+    ],
 ];

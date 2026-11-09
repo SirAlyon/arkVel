@@ -1,27 +1,38 @@
-<div>
-    <section class="mx-auto flex max-w-2xl flex-col items-center px-4 py-20 text-center sm:px-6">
-        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-accent-100 text-accent-700">
-            <svg class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
-            </svg>
+{{--
+ | /enti/{slug}/grazie (App\Livewire\DonationThankYou): ritorno da Stripe Checkout dopo una
+ | donazione. Non conferma il pagamento (lo fa il webhook): lo dice la nota «in attesa».
+ | Pannello menta con il ringraziamento (h1), poi una banda con i passi successivi.
+ | noindex dalla SEO (PublicPageSeo::donationThanks); breadcrumb dal layout.
+--}}
+<div class="mx-auto flex w-full max-w-page flex-col gap-6 px-gutter pt-6 pb-section" data-donation-landing="thanks">
+    <section aria-labelledby="donation-thanks-title" class="flex flex-col items-center gap-6 rounded-panel bg-block-mint p-panel text-center text-on-block-mint">
+        <span class="inline-flex size-20 items-center justify-center rounded-icon-lg bg-canvas text-fg">
+            <x-ui.icon name="hand-heart" size="xl" />
+        </span>
+
+        <div class="flex max-w-3xl flex-col items-center gap-4">
+            <h1 id="donation-thanks-title" class="text-h1">{{ __('donations.public.thanks_title') }}</h1>
+            <p class="text-lead [overflow-wrap:anywhere]">{{ __('donations.public.thanks_body', ['name' => $organization->name]) }}</p>
         </div>
 
-        <h1 class="mt-6 text-3xl font-bold tracking-tight text-stone-900">
-            {{ __('donations.public.thanks_title') }}
-        </h1>
-
-        <p class="mt-3 text-stone-600">
-            {{ __('donations.public.thanks_body', ['name' => $organization->name]) }}
+        <p class="flex max-w-prose items-start gap-3 rounded-card bg-canvas px-5 py-4 text-start text-fg" data-donation-pending-note>
+            <x-ui.icon name="hourglass" class="mt-0.5" />
+            <span>{{ __('donations.public.thanks_pending_note') }}</span>
         </p>
 
-        <p class="mt-2 text-sm text-stone-500">
-            {{ __('donations.public.thanks_pending_note') }}
-        </p>
-
-        <div class="mt-8">
-            <x-button :href="route('organizations.show', $organization)" wire:navigate.hover variant="outline">
+        <div class="flex flex-wrap justify-center gap-3">
+            <x-ui.button :href="route('organizations.show', $organization)" wire:navigate.hover icon="arrow-left" data-donation-back>
                 {{ __('donations.public.back_to_organization') }}
-            </x-button>
+            </x-ui.button>
         </div>
     </section>
+
+    <x-ui.cta-band tone="inverse" :title="__('page_organizations.thanks.next_title')" icon="paw-print" id="donation-thanks-next">
+        {{ __('page_organizations.thanks.next_body') }}
+        <x-slot:actions>
+            <x-ui.button variant="highlight" size="lg" :href="route('catalog')" wire:navigate.hover icon-trailing="arrow-right">
+                {{ __('page_organizations.thanks.catalog') }}
+            </x-ui.button>
+        </x-slot:actions>
+    </x-ui.cta-band>
 </div>

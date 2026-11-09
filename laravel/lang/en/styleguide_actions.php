@@ -115,4 +115,15 @@ return [
         'organization' => 'Four-Legged Friends Association of the Serchio Valley',
         'animal' => 'Argo',
     ],
+
+    'pagination' => [
+        'title' => 'Pagination',
+        'description' => 'Current page out of the total, previous, page numbers (the first, the last and the nearby ones, with an ellipsis in the gaps) and next. Real links with absolute URLs: they work without JavaScript and for search engines. With a Livewire paginator a click changes page in place (mode="livewire"), otherwise it navigates (wire:navigate).',
+        'a11y_landmark' => 'A <nav> with a name (“Pagination” or a specific one, e.g. “Catalog pages”); the ellipses are decorative (aria-hidden).',
+        'a11y_current' => 'The current page has aria-current="page" and a solid background: it is not told apart by colour alone. Every number has a full name (“Page 3”).',
+        'a11y_target' => '44 px targets; previous and next have rel="prev"/"next" and at the ends of the list they stay visible but disabled (aria-disabled).',
+        'middle' => 'A page in the middle of a long list',
+        'range' => 'Several pages loaded in a row (catalog, “Load more”)',
+        'first' => 'First page',
+    ],
 ];
