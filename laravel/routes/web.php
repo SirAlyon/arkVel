@@ -23,6 +23,8 @@ use App\Livewire\Auth\VerifyEmailPage;
 use App\Livewire\DonationCancelled;
 use App\Livewire\DonationThankYou;
 use App\Livewire\Home;
+use App\Livewire\Legal\PrivacyPolicy;
+use App\Livewire\Legal\TermsOfService;
 use App\Livewire\OrganizationIndex;
 use App\Livewire\OrganizationPage;
 use Illuminate\Support\Facades\Route;
@@ -112,6 +114,15 @@ Route::middleware(EnsureLocalEnvironment::class)->group(function (): void {
         ->where('group', '[a-z-]+')
         ->name('styleguide.group');
 });
+
+/*
+ | Pagine legali pubbliche: informativa privacy (GDPR art. 13) e termini di servizio.
+ | Contenuto statico reso come le altre pagine pubbliche (layout `app`, tema, SEO). I link
+ | nel footer e la casella di presa visione in /registrati compaiono quando queste route
+ | esistono (App\Support\Site\LegalLinks). Indicizzabili.
+ */
+Route::get('/privacy', PrivacyPolicy::class)->name('legal.privacy');
+Route::get('/termini', TermsOfService::class)->name('legal.terms');
 
 Route::get('/animali', AnimalCatalog::class)->name('catalog');
 // Solo id numerici: /animali/luna risponde 404 (non 500 dal binding su una colonna intera).

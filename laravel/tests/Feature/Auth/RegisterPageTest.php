@@ -274,21 +274,17 @@ it('does not register anybody when the session signed in meanwhile', function ()
     expect(User::query()->where('email', 'nuova@example.com')->exists())->toBeFalse();
 });
 
-it('asks to acknowledge the privacy notice without links while the legal page does not exist', function (): void {
+it('asks to acknowledge the privacy notice with its text', function (): void {
     $this->get(route('register'))
         ->assertSee('Ho preso visione di come vengono trattati i miei dati per gestire l’account.')
         ->assertSee('Puoi chiedere in ogni momento di cancellare l’account.')
-        ->assertDontSee('Obbligatorio.')
-        ->assertDontSee('data-auth-privacy-link', false);
+        ->assertDontSee('Obbligatorio.');
 });
 
-it('links the privacy notice once the legal page exists', function (): void {
-    Route::get('/privacy', fn (): string => 'privacy')->name('legal.privacy');
-    app('router')->getRoutes()->refreshNameLookups();
-
+it('links the privacy notice now that the legal page exists', function (): void {
     $this->get(route('register'))
         ->assertSee('data-auth-privacy-link', false)
-        ->assertSee('href="'.url('/privacy').'"', false)
+        ->assertSee('href="'.route('legal.privacy').'"', false)
         ->assertSee('Leggi l’informativa sulla privacy');
 });
 

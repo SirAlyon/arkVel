@@ -18,10 +18,18 @@
 
 @inject('navigation', 'App\Support\Site\SiteNavigation')
 @inject('accountLinks', 'App\Support\Site\AccountLinks')
+@inject('legalLinks', 'App\Support\Site\LegalLinks')
 
 @php
     $guest = $guest || auth()->guest();
     $register = $guest ? $accountLinks->register() : null;
+
+    // Note legali: link quando la pagina esiste, altrimenti etichetta «In arrivo» (nessun
+    // link rotto). Vedi App\Support\Site\LegalLinks.
+    $legal = [
+        ['url' => $legalLinks->privacyPolicy(), 'label' => __('public.footer.privacy')],
+        ['url' => $legalLinks->termsOfService(), 'label' => __('public.footer.terms')],
+    ];
 @endphp
 
 <footer class="mt-section" data-site-footer>
@@ -76,10 +84,16 @@
         <div class="flex flex-col gap-6 py-8 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex flex-col gap-3 text-small text-fg-muted">
                 <p>{{ __('public.footer.copyright', ['year' => now()->year]) }} {{ __('public.footer.rights') }}</p>
-                {{-- TODO(pagine legali): sostituire con link alle route privacy e termini quando esistono. --}}
                 <ul aria-label="{{ __('public.footer.legal') }}" class="flex flex-wrap items-center gap-x-6 gap-y-2" data-legal-links>
-                    <li class="flex items-center gap-2">{{ __('public.footer.privacy') }} <x-ui.badge>{{ __('public.footer.coming_soon') }}</x-ui.badge></li>
-                    <li class="flex items-center gap-2">{{ __('public.footer.terms') }} <x-ui.badge>{{ __('public.footer.coming_soon') }}</x-ui.badge></li>
+                    @foreach ($legal as $item)
+                        <li class="flex items-center gap-2">
+                            @if ($item['url'] !== null)
+                                <x-ui.link :href="$item['url']" wire:navigate.hover>{{ $item['label'] }}</x-ui.link>
+                            @else
+                                {{ $item['label'] }} <x-ui.badge>{{ __('public.footer.coming_soon') }}</x-ui.badge>
+                            @endif
+                        </li>
+                    @endforeach
                 </ul>
             </div>
 

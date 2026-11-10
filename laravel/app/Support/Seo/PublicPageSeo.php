@@ -179,6 +179,24 @@ final readonly class PublicPageSeo
     }
 
     /**
+     * Pagine legali pubbliche (/privacy, /termini): indicizzabili, con breadcrumb dalla home.
+     * Il canonical arriva dalla route; il titolo e la descrizione dai file lang della pagina.
+     *
+     * @param  string  $titleKey  chiave del titolo completo (es. `legal_privacy.meta.title`)
+     * @param  string  $descriptionKey  chiave della meta description
+     * @param  string  $breadcrumbKey  chiave dell'etichetta breve per il breadcrumb
+     */
+    public function legal(string $titleKey, string $descriptionKey, string $breadcrumbKey, string $canonical): SeoData
+    {
+        return $this->make(
+            title: __($titleKey),
+            description: __($descriptionKey),
+            canonical: $canonical,
+            breadcrumbs: [$this->homeCrumb(), new Breadcrumb(__($breadcrumbKey), $canonical)],
+        );
+    }
+
+    /**
      * Pagine di autenticazione del sito pubblico (/accedi, /registrati, …): fuori
      * dall'indice, senza breadcrumb. Il canonical è sempre un URL della route senza dati
      * personali o segreti (la pagina di reimpostazione, che ha il token nell'URL, passa

@@ -59,7 +59,7 @@ it('shows the newsletter as a disabled placeholder that says it is coming soon',
         ->not->toMatch('/<form[^>]*action=/');
 });
 
-it('lists the legal pages as text until they exist, without broken links', function (): void {
+it('links the legal pages now that they exist', function (): void {
     $footer = siteFooterOf(test()->get(route('home')));
 
     $legal = substr($footer, (int) strpos($footer, 'data-legal-links'));
@@ -68,8 +68,10 @@ it('lists the legal pages as text until they exist, without broken links', funct
     expect($legal)
         ->toContain('Informativa privacy')
         ->toContain('Termini di servizio')
-        ->not->toContain('<a ')
-        ->not->toContain('href="#"');
+        ->toContain('href="'.route('legal.privacy').'"')
+        ->toContain('href="'.route('legal.terms').'"')
+        ->not->toContain('href="#"')
+        ->not->toContain('In arrivo');
 });
 
 it('shows the language switcher and the copyright', function (): void {
