@@ -1,7 +1,7 @@
 {{--
  | Impaginazione comune delle pagine legali (resources/views/livewire/legal): avviso di
  | bozza in cima, intestazione con un solo h1 e i dati di versione, indice (TOC) ancorato
- | alle sezioni e la colonna di lettura (max-w-prose). Solo token semantici: segue il tema.
+ | alle sezioni e la colonna di lettura (misura ~70-75 caratteri/riga). Solo token semantici: segue il tema.
  |
  | Gerarchia: h1 della pagina → h2 di ogni sezione → h3 per i sotto-punti. Le sezioni
  | arrivano dallo slot; ognuna deve avere un id corrispondente a una voce di `toc` e un h2.
@@ -39,7 +39,7 @@
         </div>
     </aside>
 
-    <header class="flex max-w-prose flex-col gap-4" data-legal-header>
+    <header class="flex max-w-[42rem] flex-col gap-4" data-legal-header>
         @if (filled($eyebrow))
             <p><x-ui.badge variant="highlight" icon="scale" class="-rotate-2">{{ $eyebrow }}</x-ui.badge></p>
         @endif
@@ -75,7 +75,7 @@
             </nav>
         @endif
 
-        <div class="flex max-w-prose flex-col gap-10 text-body text-fg [overflow-wrap:anywhere]" data-legal-body>
+        <div class="flex max-w-[42rem] flex-col gap-10 text-body text-fg [overflow-wrap:anywhere]" data-legal-body>
             {{ $slot }}
         </div>
     </div>
