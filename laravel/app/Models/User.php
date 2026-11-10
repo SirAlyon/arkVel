@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Actions\Account\AnonymizeUserAccount;
 use App\Enums\OrganizationStatus;
 use App\Enums\RoleName;
 use App\Notifications\Auth\ResetPasswordLink;
@@ -16,6 +17,8 @@ use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -45,8 +48,32 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
     {
         return [
             'email_verified_at' => 'datetime',
+            'anonymized_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * L'account è stato anonimizzato (diritto all'oblio, GDPR art. 17): la PII è
+     * stata rimossa/oscurata e il login è impossibile. Predicato di sola lettura
+     * sul marcatore `anonymized_at`: nessuna business logic, solo appartenenza di
+     * stato. La mutazione passa dall'Action {@see AnonymizeUserAccount}.
+     */
+    public function isAnonymized(): bool
+    {
+        return $this->anonymized_at !== null;
+    }
+
+    /**
+     * Account anonimizzati (diritto all'oblio esercitato). Utile per escluderli da
+     * elenchi/estrazioni.
+     *
+     * @param  Builder<User>  $query
+     */
+    #[Scope]
+    protected function anonymized(Builder $query): void
+    {
+        $query->whereNotNull('anonymized_at');
     }
 
     /**
