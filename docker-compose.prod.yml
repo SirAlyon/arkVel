@@ -1,0 +1,165 @@
+# ArkVel — stack di PRODUZIONE (Docker). Riusa gli stessi servizi dello sviluppo ma:
+#  - niente servizi dev (mailpit, radicale, browser-tests);
+#  - Postgres/Redis/Meilisearch NON esposti all'host (solo rete interna): la superficie
+#    pubblica è solo Caddy (80/443);
+#  - Caddy come reverse-proxy con TLS automatico (Let's Encrypt) davanti a nginx e a Reverb;
+#  - segreti e dominio da variabili (file .env NELLA ROOT del repo — distinto da laravel/.env);
+#  - restart: unless-stopped ovunque.
+#
+# Uso:  docker compose -f docker-compose.prod.yml up -d
+# Prima volta e deploy: vedi docs/DEPLOY.md.
+#
+# Il codice dell'app è bind-mountato da ./laravel (deploy = git pull + composer/npm +
+# migrate + restart). Vendor/asset vivono sull'host: vanno generati prima dell'`up`
+# (docs/DEPLOY.md §4). In un hardening futuro si può passare a immagini immutabili (COPY).
+
+name: arkvel
+
+networks:
+  arkvel:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  meilisearch-data:
+  caddy-data:
+  caddy-config:
+
+# Definizione comune dei servizi basati sull'immagine PHP (un solo build, riusato).
+x-php: &php
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: arkvel-php:prod
+  restart: unless-stopped
+  volumes:
+    - ./laravel/:/var/www/html/arkvel
+  working_dir: /var/www/html/arkvel
+  networks:
+    - arkvel
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
+services:
+  # PHP-FPM: serve l'app (nginx → php:9000). Il CMD di default dell'immagine è `php-fpm`.
+  php:
+    <<: *php
+    container_name: arkvel-php
+    expose:
+      - "9000"
+
+  # Coda di DEFAULT (notifiche, email, sync calendari, broadcast): job brevi.
+  queue:
+    <<: *php
+    container_name: arkvel-queue
+    command: ["php", "artisan", "queue:work", "--queue=default", "--tries=3", "--sleep=1", "--max-time=3600"]
+
+  # Coda MEDIA dedicata: conversioni immagini (AVIF, job lunghi e pesanti). Timeout e
+  # memoria più alti (vedi docs/RILASCIO-UI.md §4). Richiede MEDIA_QUEUE=media in laravel/.env.
+  queue-media:
+    <<: *php
+    container_name: arkvel-queue-media
+    command: ["php", "artisan", "queue:work", "--queue=media", "--tries=2", "--timeout=300", "--memory=512", "--max-time=3600"]
+
+  # Scheduler: reminder sanitari/appuntamenti + arkvel:sync-calendars.
+  scheduler:
+    <<: *php
+    container_name: arkvel-scheduler
+    command: ["php", "artisan", "schedule:work"]
+
+  # Reverb (websocket): ascolta su 0.0.0.0:8080 nella rete interna. NON esposto all'host:
+  # Caddy inoltra il traffico wss pubblico (/app/*) qui. Il backend pubblica gli eventi
+  # internamente verso reverb:8080 (vedi laravel/.env: REVERB_HOST=reverb).
+  reverb:
+    <<: *php
+    container_name: arkvel-reverb
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    expose:
+      - "8080"
+
+  # nginx: serve public/ e passa il PHP a php:9000. NON esposto all'host: dietro Caddy.
+  nginx:
+    build:
+      context: ./nginx/
+      dockerfile: Dockerfile
+    image: arkvel-nginx:prod
+    container_name: arkvel-nginx
+    restart: unless-stopped
+    expose:
+      - "80"
+    volumes:
+      - ./laravel/:/var/www/html/arkvel
+      - ./nginx/conf/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/logs:/var/log/nginx
+    networks:
+      - arkvel
+    depends_on:
+      - php
+
+  # Caddy: UNICA superficie pubblica (80/443). TLS automatico via Let's Encrypt per
+  # ${APP_DOMAIN}. Instrada /app/* (websocket del client Reverb) a reverb:8080 e tutto il
+  # resto a nginx. Config in docker/caddy/Caddyfile.
+  caddy:
+    image: caddy:2-alpine
+    container_name: arkvel-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - arkvel
+    depends_on:
+      - nginx
+      - reverb
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: arkvel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-arkvel}
+      POSTGRES_USER: ${POSTGRES_USER:-arkvel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?serve POSTGRES_PASSWORD nel file .env di root}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-arkvel} -d ${POSTGRES_DB:-arkvel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - arkvel
+
+  redis:
+    image: redis:7-alpine
+    container_name: arkvel-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - arkvel
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: arkvel-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?serve MEILI_MASTER_KEY nel file .env di root}
+      MEILI_ENV: production
+    volumes:
+      - meilisearch-data:/meili_data
+    networks:
+      - arkvel

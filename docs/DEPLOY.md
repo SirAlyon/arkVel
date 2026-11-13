@@ -1,198 +1,208 @@
-# ArkVel — Deploy in produzione (pilota)
+# ArkVel — Deploy in produzione con Docker
 
-> Runbook infrastrutturale per il go-live. I passi **applicativi** (build, migrate, scout,
-> media, cache) e i **bloccanti/variabili** sono in [RILASCIO-UI.md](RILASCIO-UI.md): questo
-> documento copre il livello **infra** (server, Forge, DNS, Reverb/Meilisearch, TLS, backup).
-> Stack da far girare: php-fpm, nginx, **PostgreSQL**, **Redis**, **Meilisearch**, worker di
-> **coda**, **scheduler**, **Reverb** (websocket). Niente Vercel (serverless: non adatto).
-
----
-
-## 0. Scelta: Laravel Forge + VPS
-
-**Forge** gestisce un VPS con php-fpm, nginx, TLS, daemon (Reverb), worker di coda e
-scheduler cron: è il percorso più rapido e affidabile per questo stack.
-
-- **Provider consigliato**: Hetzner o DigitalOcean, server ~**4 vCPU / 8 GB** (abbondante per
-  un pilota 3-5 enti). In alternativa **AWS EC2** collegato a Forge (identico a livello app).
-- Forge installa **PHP 8.4, nginx, PostgreSQL, Redis**. **Meilisearch** e **Reverb** li
-  aggiungiamo a parte (§4, §5).
+> Deploy del sito su un **VPS unico** riusando lo stack Docker del progetto
+> (`docker-compose.prod.yml`): php-fpm, nginx, PostgreSQL, Redis, Meilisearch, Reverb,
+> code e scheduler, con **Caddy** davanti per il TLS automatico. I passi **applicativi** di
+> contorno (scout, media, verifiche post-deploy) e le **variabili** sono in
+> [RILASCIO-UI.md](RILASCIO-UI.md). Taglia consigliata: **VPS 4 GB / 2 vCPU** (il tier 1 GB
+> va in OOM: Meilisearch + worker immagini da 512 MB + build). Migrazione futura su AWS:
+> stesso stack Docker su un'istanza EC2.
 
 ---
 
-## 1. DNS (Porkbun)
+## 1. Server e DNS
 
-Nel pannello Porkbun del dominio:
-
-- record **A** `@` → IP del server; **A** `www` → stesso IP (o CNAME a `@`).
-- se usi IPv6, aggiungi gli **AAAA** corrispondenti.
-- TTL basso (es. 600s) durante il go-live, poi rialzalo.
-- la mail transazionale richiede record a parte (§7): **SPF, DKIM, DMARC**.
-
-In Forge imposta il **dominio** del sito su quello definitivo (non l'IP): è la fonte di
-`APP_URL`, canonical, sitemap e Open Graph.
+1. VPS **Ubuntu 4 GB** (Hetzner/DO/EC2…). Installa **Docker Engine + plugin Compose**
+   (`docker compose version` deve rispondere). Apri le porte **80** e **443**.
+2. **DNS (Porkbun)**: record **A** `@` → IP del server; **A** `www` → stesso IP. TTL basso
+   (600s) durante il go-live. Aspetta che il dominio risolva prima dell'`up` (Caddy deve
+   poter emettere il certificato via HTTP-01).
+3. Posta transazionale: su Porkbun aggiungi **SPF, DKIM, DMARC** del provider SMTP scelto (§6).
 
 ---
 
-## 2. Sito su Forge
+## 2. Codice e file d'ambiente
 
-1. **Create Site** → root del progetto Laravel = `laravel/` (il repo ha l'app in `laravel/`,
-   l'infra Docker in root: su Forge serve la cartella `laravel/`). PHP **8.4**.
-2. Collega il **repository** Git (`SirAlyon/arkVel`), branch `main`, deploy automatico off
-   finché non hai validato il primo deploy a mano.
-3. **Database**: crea un DB PostgreSQL + utente dedicato (Forge lo fa dalla tab Database).
-4. **TLS**: Forge → SSL → Let's Encrypt sul dominio (e `www`). Redirect HTTP→HTTPS.
-
----
-
-## 3. Variabili d'ambiente (server)
-
-Dalla tab **Environment** di Forge. Partendo da [laravel/.env.example](../laravel/.env.example),
-i valori che CAMBIANO in produzione:
-
+```sh
+git clone https://github.com/SirAlyon/arkVel.git && cd arkVel
+git checkout main
 ```
+
+Servono **DUE** file d'ambiente distinti:
+
+**a) `.env` nella ROOT** (variabili del compose) — da `.env.prod.example`:
+
+```sh
+cp .env.prod.example .env
+```
+Compila: `APP_DOMAIN` (es. `arkvel.eu`), `ACME_EMAIL`, `POSTGRES_PASSWORD` (robusta),
+`MEILI_MASTER_KEY` (robusta, non `masterKey`).
+
+**b) `laravel/.env`** (env dell'app) — da `laravel/.env.example`, con i valori di produzione:
+
+```ini
 APP_ENV=production
 APP_DEBUG=false
+APP_KEY=                      # generata al §3
 APP_URL=https://<dominio>
-APP_TRUSTED_HOSTS=<dominio>,www.<dominio>   # fuori da local un Host diverso → 400
-TRUSTED_PROXIES=*                           # dietro il proxy/LB: IP reali per i rate limit
+APP_TRUSTED_HOSTS=<dominio>,www.<dominio>
+TRUSTED_PROXIES=*             # dietro Caddy: IP reale + schema https
 
-DB_CONNECTION=pgsql / DB_HOST=127.0.0.1 / DB_DATABASE/DB_USERNAME/DB_PASSWORD  # dal passo 2.3
-REDIS_HOST=127.0.0.1
-QUEUE_CONNECTION=redis
+DB_CONNECTION=pgsql
+DB_HOST=postgres              # nome del servizio nella rete Docker
+DB_PORT=5432
+DB_DATABASE=arkvel
+DB_USERNAME=arkvel
+DB_PASSWORD=<= POSTGRES_PASSWORD del .env di root>
+
+REDIS_HOST=redis
 CACHE_STORE=redis
-SESSION_DRIVER=database   # o redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=database
 SESSION_SECURE_COOKIE=true
 
 SCOUT_DRIVER=meilisearch
-MEILISEARCH_HOST=http://127.0.0.1:7700
-MEILISEARCH_KEY=<chiave-robusta-generata>   # NON 'masterKey'
+MEILISEARCH_HOST=http://meilisearch:7700
+MEILISEARCH_KEY=<= MEILI_MASTER_KEY del .env di root>
 
-# Reverb (RIGENERA credenziali uniche, non quelle di sviluppo):
-REVERB_APP_ID=<random> / REVERB_APP_KEY=<random> / REVERB_APP_SECRET=<random>
-REVERB_HOST=<dominio> / REVERB_SCHEME=https / REVERB_PORT=443   # il browser si connette via wss sul 443
-# lato server il daemon Reverb ascolta su 127.0.0.1:8080 (proxy in §5)
-
-# Stripe LIVE (o test finché non vai live) + webhook verso https://<dominio>/stripe/webhook
-STRIPE_KEY=... / STRIPE_SECRET=... / STRIPE_WEBHOOK_SECRET=...
-
-# Mail reale (§7)
-MAIL_MAILER=smtp / MAIL_HOST=... / MAIL_PORT=... / MAIL_USERNAME=... / MAIL_PASSWORD=...
+MAIL_MAILER=smtp              # provider reale (§6)
+MAIL_HOST=... / MAIL_PORT=... / MAIL_USERNAME=... / MAIL_PASSWORD=...
 MAIL_FROM_ADDRESS="no-reply@<dominio>"
 
+MEDIA_QUEUE=media             # coda dedicata conversioni immagini
 PRIVACY_POLICY_VERSION=2026-11
-MEDIA_QUEUE=media   # coda dedicata conversioni immagini (§6)
+
+# Stripe (donazioni) — LIVE o test; webhook → https://<dominio>/stripe/webhook
+STRIPE_KEY= / STRIPE_SECRET= / STRIPE_WEBHOOK_SECRET=
+
+# --- Reverb (websocket) dietro Caddy: server e client DISACCOPPIATI ---
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=<random>        # RIGENERA, non i valori di sviluppo
+REVERB_APP_KEY=<random>
+REVERB_APP_SECRET=<random>
+# Il BACKEND pubblica gli eventi verso Reverb INTERNAMENTE (niente hairpin via dominio):
+REVERB_HOST=reverb
+REVERB_PORT=8080
+REVERB_SCHEME=http
+# Il BROWSER si connette in wss sul 443 attraverso Caddy (valori ESPLICITI, non ${REVERB_HOST}):
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST=<dominio>
+VITE_REVERB_PORT=443
+VITE_REVERB_SCHEME=https
 ```
 
-Dopo ogni modifica dell'env: `php artisan config:cache`.
-
-> Le chiavi Google Calendar e Stripe possono anche essere inserite **da UI admin** (pagine
-> Super-Admin), che sovrascrivono l'.env a runtime — comodo per non mettere i segreti nel file.
+> I `VITE_REVERB_*` sono **compilati negli asset** da `npm run build` (§4): vanno impostati
+> **prima** della build, o il browser tenterà di connettersi all'host sbagliato.
 
 ---
 
-## 4. Meilisearch
-
-Non è gestito da Forge: installalo sul server (binario ufficiale o pacchetto), come servizio
-systemd, in ascolto su `127.0.0.1:7700`, con una **master key robusta** (= `MEILISEARCH_KEY`).
-
-Al primo deploy (e dopo un indice vuoto):
-
-```
-php artisan scout:sync-index-settings
-php artisan scout:import "App\Models\Animal"
-```
-
-`scout:sync-index-settings` va rieseguito a ogni modifica di `config/scout.php`.
-
----
-
-## 5. Reverb (websocket) dietro TLS
-
-- **Daemon Forge**: comando `php artisan reverb:start --host=127.0.0.1 --port=8080`
-  (directory del sito). Forge lo tiene vivo e lo riavvia.
-- **Nginx**: aggiungi un location per l'upgrade WebSocket che fa da proxy al daemon, es.:
-
-  ```nginx
-  location /app {                     # path del client Reverb/Echo
-      proxy_pass http://127.0.0.1:8080;
-      proxy_http_version 1.1;
-      proxy_set_header Upgrade $http_upgrade;
-      proxy_set_header Connection "upgrade";
-      proxy_set_header Host $host;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      proxy_set_header X-Forwarded-Proto $scheme;
-  }
-  ```
-
-  Così il browser si connette in **wss://<dominio>** sul 443 e nginx inoltra al daemon locale.
-  Verifica il path atteso dal client (config Reverb/Echo) e allinealo al `location`.
-
----
-
-## 6. Worker di coda e scheduler
-
-- **Scheduler** (Forge → Scheduler): `php artisan schedule:run` ogni minuto. Copre i reminder
-  sanitari/appuntamenti e `arkvel:sync-calendars`.
-- **Queue – default** (Forge → Daemons/Queue): `php artisan queue:work redis --tries=3`.
-- **Queue – media** (conversioni immagini, job lunghi): worker dedicato
-  `php artisan queue:work redis --queue=media --timeout=300 --tries=2 --memory=512`, con
-  `retry_after` > timeout. Richiede `MEDIA_QUEUE=media` (vedi RILASCIO-UI.md §4).
-
----
-
-## 7. Email (deliverability)
-
-Transazionali critiche (verifica indirizzo, reset password, notifiche, contratti). Usa un
-provider SMTP reale (Postmark/SES/Mailgun/…). Sul dominio Porkbun configura **SPF**, **DKIM**,
-**DMARC** del provider scelto, o le mail finiscono in spam. `MAIL_FROM_ADDRESS` sul dominio.
-
----
-
-## 8. Primo deploy
-
-Deploy script di Forge (adatta i path; i comandi app sono in RILASCIO-UI.md §3):
+## 3. Immagini e dipendenze (prima volta)
 
 ```sh
-cd $FORGE_SITE_PATH            # la cartella laravel/
-git pull origin main
-composer install --no-dev --optimize-autoloader
-npm ci && npm run build
-php artisan migrate --force
-php artisan scout:sync-index-settings
-php artisan arkvel:media:regenerate --only-missing
-php artisan config:cache && php artisan route:cache && php artisan view:cache
-# riavvio daemon: Forge riavvia queue/reverb a fine deploy (o: php artisan queue:restart)
-```
+# Costruisci le immagini (php/nginx):
+docker compose -f docker-compose.prod.yml build
 
-Primo popolamento indice: `php artisan scout:import "App\Models\Animal"` (una tantum).
-**Non** seminare i dati demo in produzione (`DemoDataSeeder` è bloccato se `APP_ENV=production`).
+# Dipendenze PHP di produzione + APP_KEY (il codice è bind-montato: vendor vive sull'host):
+docker compose -f docker-compose.prod.yml run --rm php composer install --no-dev --optimize-autoloader
+docker compose -f docker-compose.prod.yml run --rm php php artisan key:generate
+```
 
 ---
 
-## 9. Backup
+## 4. Asset, database, indice (prima volta)
 
-- **DB**: backup giornaliero di PostgreSQL (Forge Backups verso S3, oppure `pg_dump` in cron)
-  + **test di restore** su staging prima del go-live.
-- **Media**: `storage/app` (foto animali, contratti PDF) su S3 o snapshot del volume.
+```sh
+# Asset Vite (CSS, ui.js, chunk mappa/galleria) — DOPO aver impostato i VITE_REVERB_* (§2):
+docker compose -f docker-compose.prod.yml run --rm php sh -lc "npm ci && npm run build"
+
+# Schema + indice + media + link storage:
+docker compose -f docker-compose.prod.yml run --rm php php artisan migrate --force
+docker compose -f docker-compose.prod.yml run --rm php php artisan storage:link
+docker compose -f docker-compose.prod.yml run --rm php php artisan scout:sync-index-settings
+docker compose -f docker-compose.prod.yml run --rm php php artisan scout:import "App\\Models\\Animal"
+docker compose -f docker-compose.prod.yml run --rm php php artisan arkvel:media:regenerate --only-missing
+
+# Cache di produzione:
+docker compose -f docker-compose.prod.yml run --rm php sh -lc "php artisan config:cache && php artisan route:cache && php artisan view:cache"
+```
+
+> `DemoDataSeeder` è **bloccato in produzione** (nessun dato demo/PII). Il **primo super
+> admin** si crea a mano:
+> ```sh
+> docker compose -f docker-compose.prod.yml run --rm php php artisan tinker
+> >>> $u = App\Models\User::create(['name'=>'Admin','email'=>'tu@dominio','password'=>Hash::make('...')]);
+> >>> $u->email_verified_at = now(); $u->save();
+> >>> app(Spatie\Permission\PermissionRegistrar::class)->setPermissionsTeamId(0);
+> >>> $u->assignRole(App\Enums\RoleName::SuperAdmin->value);
+> ```
+> Da lì gli enti si registrano self-service su `/manage/new` e il super admin li verifica in `/admin`.
+
+---
+
+## 5. Avvio
+
+```sh
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml ps        # tutti up; postgres healthy
+docker compose -f docker-compose.prod.yml logs -f caddy   # certificato TLS emesso
+```
+
+Caddy ottiene il certificato per `<dominio>` e `www` al primo colpo (serve il DNS già
+propagato e le porte 80/443 aperte). Da qui il sito è su **https://<dominio>**.
+
+---
+
+## 6. Posta (deliverability)
+
+Transazionali critiche (verifica email, reset password, notifiche, contratti). Usa un SMTP
+reale (Postmark/SES/Mailgun). Configura **SPF/DKIM/DMARC** sul dominio o le mail vanno in
+spam. `MAIL_FROM_ADDRESS` sul dominio.
+
+---
+
+## 7. Deploy successivi (aggiornamenti)
+
+```sh
+cd arkVel && git pull origin main
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml run --rm php composer install --no-dev --optimize-autoloader
+docker compose -f docker-compose.prod.yml run --rm php sh -lc "npm ci && npm run build"
+docker compose -f docker-compose.prod.yml run --rm php php artisan migrate --force
+docker compose -f docker-compose.prod.yml run --rm php php artisan scout:sync-index-settings
+docker compose -f docker-compose.prod.yml run --rm php sh -lc "php artisan config:cache && php artisan route:cache && php artisan view:cache"
+docker compose -f docker-compose.prod.yml up -d        # ricrea i container cambiati
+docker compose -f docker-compose.prod.yml restart queue queue-media scheduler reverb
+```
+
+---
+
+## 8. Backup
+
+- **DB**: `docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U arkvel arkvel | gzip > backup-$(date +%F).sql.gz`, in cron giornaliero verso storage esterno (S3/offsite). **Prova il restore** su staging prima del go-live.
+- **Media/contratti**: il volume con `storage/app` (foto, PDF) → snapshot/offsite.
 - **Snapshot** del server dal provider prima del cutover DNS.
 
 ---
 
-## 10. Go-live e verifiche
+## 9. Verifiche post-deploy
 
-1. Deploy su un sottodominio di **staging** e passa le verifiche di [RILASCIO-UI.md §6]
-   (sitemap/robots, Content-Language, auth, catalogo+ricerca+mappa, donazioni Stripe
-   end-to-end col webhook ora raggiungibile, realtime Reverb, email reali, CWV).
-2. **Bloccanti legali** (RILASCIO-UI.md §1): informativa privacy/termini pubblicate con i
-   contenuti validati dal titolare (le pagine esistono già: `/privacy`, `/termini`).
-3. Cutover DNS su Porkbun → dominio definitivo. Rialza i TTL. Monitora log ed errori.
+Esegui le verifiche di [RILASCIO-UI.md §6](RILASCIO-UI.md): `/sitemap.xml` e `/robots.txt`,
+`Content-Language`/`Vary`, `/accedi`-`/registrati`-reset-verifica, catalogo+ricerca+mappa,
+**pagine legali `/privacy` e `/termini`**, **donazione Stripe end-to-end** col webhook (ora
+raggiungibile), **realtime** (apri due sessioni: un messaggio compare live → Reverb ok),
+reminder schedulati, Core Web Vitals. Poi **cutover DNS** definitivo su Porkbun e monitora i log.
 
 ---
 
-## Variante AWS
+## Note
 
-Se scegli AWS invece di Hetzner/DO: in Forge collega il tuo account AWS e provisiona
-un'istanza **EC2** (es. t3.large). Da lì in poi tutto è identico (§2–§10). Postgres/Redis
-restano sull'istanza (o, se vuoi gestiti, RDS/ElastiCache: più robusto ma più setup — non
-necessario per il pilota).
+- **Sicurezza**: in questo compose Postgres/Redis/Meilisearch NON sono esposti all'host (solo
+  rete interna); l'unica superficie pubblica è Caddy (80/443). Tieni così.
+- **Reverb**: il client usa `wss://<dominio>/app/...` (instradato da Caddy a reverb:8080); il
+  backend pubblica su `reverb:8080` internamente. Se il realtime non parte, verifica i
+  `VITE_REVERB_*` (devono essere il dominio pubblico, 443, https) e che gli asset siano stati
+  ricompilati dopo averli impostati.
+- **Hardening futuro**: immagini immutabili (COPY del codice invece del bind-mount),
+  `REVERB_ALLOWED_ORIGINS=<dominio>`, worker gestiti con limiti di risorse, log centralizzati.
+- **AWS**: stesso `docker-compose.prod.yml` su un'istanza EC2 (o, più avanti, servizi gestiti
+  RDS/ElastiCache separando DB/cache dal box).

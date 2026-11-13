@@ -1,0 +1,33 @@
+# Caddy — reverse-proxy e TLS automatico (Let's Encrypt) di ArkVel in produzione.
+# APP_DOMAIN e ACME_EMAIL arrivano dall'ambiente (docker-compose.prod.yml ← .env di root).
+#
+# Instradamento:
+#  - /app/*  → Reverb (connessione websocket del client; protocollo Pusher). Caddy gestisce
+#              automaticamente l'upgrade WebSocket in reverse_proxy.
+#  - tutto il resto → nginx (l'app Laravel). nginx a sua volta passa il PHP a php-fpm.
+# Il BACKEND pubblica gli eventi verso Reverb internamente (reverb:8080), NON attraverso
+# Caddy: per questo qui basta instradare /app/* (il canale del browser). Vedi docs/DEPLOY.md.
+#
+# Caddy imposta X-Forwarded-For / X-Forwarded-Proto: con TRUSTED_PROXIES=* Laravel vede l'IP
+# reale e lo schema https (URL assoluti, rate limit di login/registrazione corretti).
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	handle /app/* {
+		reverse_proxy reverb:8080
+	}
+
+	handle {
+		reverse_proxy nginx:80
+	}
+}
+
+# Redirect www → dominio canonico (coerente con APP_URL / canonical / sitemap).
+www.{$APP_DOMAIN} {
+	redir https://{$APP_DOMAIN}{uri} permanent
+}
