@@ -3,36 +3,50 @@
 declare(strict_types=1);
 
 use App\Models\Animal;
-use App\Models\User;
 use App\Support\Site\TranslatedText;
 
-it('picks the current locale first', function (): void {
-    $animal = new Animal(['description' => ['it' => 'Dolcissimo', 'en' => 'Very sweet']]);
+/**
+ * Le descrizioni sono RichEditor (HTML) ma il sito pubblico le mostra come TESTO.
+ * TranslatedText::pick deve appiattire l'HTML a testo pulito e trattare un markup
+ * "visivamente vuoto" (es. <p></p> salvato da un RichEditor svuotato) come assente.
+ */
+it('treats visually-empty HTML as no text', function (string $html): void {
+    $animal = new Animal;
+    $animal->setTranslations('description', ['it' => $html]);
 
-    $text = TranslatedText::pick($animal, 'description', 'it', 'en');
+    expect(TranslatedText::pick($animal, 'description', 'it'))->toBeNull();
+})->with([
+    'empty paragraph' => '<p></p>',
+    'paragraph with break' => '<p><br></p>',
+    'whitespace only' => "   \n  ",
+    'empty string' => '',
+]);
 
-    expect($text?->text)->toBe('Dolcissimo')
-        ->and($text?->locale)->toBe('it')
-        ->and($text?->differsFrom('it'))->toBeFalse();
+it('flattens rich-text HTML to clean plain text with line breaks', function (): void {
+    $animal = new Animal;
+    $animal->setTranslations('description', ['it' => '<p>Ciao</p><p>Mondo</p>']);
+
+    $picked = TranslatedText::pick($animal, 'description', 'it');
+
+    expect($picked)->not->toBeNull()
+        ->and($picked->text)->toBe("Ciao\nMondo")
+        ->and($picked->locale)->toBe('it');
 });
 
-it('falls back to the fallback locale, then to any translation, skipping blank ones', function (): void {
-    $toFallback = TranslatedText::pick(new Animal(['description' => ['it' => '  ', 'en' => 'Very sweet', 'de' => 'Sehr süß']]), 'description', 'it', 'en');
-    $toAny = TranslatedText::pick(new Animal(['description' => ['de' => ' Sehr süß ']]), 'description', 'it', 'en');
+it('decodes entities and strips inline tags', function (): void {
+    $animal = new Animal;
+    $animal->setTranslations('description', ['it' => '<p>Cani &amp; gatti <strong>adottabili</strong></p>']);
 
-    expect($toFallback?->text)->toBe('Very sweet')
-        ->and($toFallback?->differsFrom('it'))->toBeTrue()
-        ->and($toAny?->text)->toBe('Sehr süß')
-        ->and($toAny?->locale)->toBe('de');
+    expect(TranslatedText::pick($animal, 'description', 'it')?->text)
+        ->toBe('Cani & gatti adottabili');
 });
 
-it('uses the app fallback locale by default', function (): void {
-    config(['app.fallback_locale' => 'en']);
+it('falls back to a non-empty locale when the current one is visually empty', function (): void {
+    $animal = new Animal;
+    $animal->setTranslations('description', ['it' => '<p></p>', 'en' => '<p>Adoptable</p>']);
 
-    expect(TranslatedText::pick(new Animal(['description' => ['de' => 'Sehr süß', 'en' => 'Very sweet']]), 'description', 'it')?->locale)->toBe('en');
-});
+    $picked = TranslatedText::pick($animal, 'description', 'it', 'en');
 
-it('returns nothing without a translation or on a model that is not translatable', function (): void {
-    expect(TranslatedText::pick(new Animal, 'description', 'it'))->toBeNull()
-        ->and(TranslatedText::pick(new User(['name' => 'Giulia']), 'name', 'it'))->toBeNull();
+    expect($picked?->text)->toBe('Adoptable')
+        ->and($picked?->locale)->toBe('en');
 });

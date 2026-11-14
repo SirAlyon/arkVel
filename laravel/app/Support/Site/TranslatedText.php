@@ -39,12 +39,47 @@ final readonly class TranslatedText
         foreach ($candidates as $candidate) {
             $text = $translations[$candidate] ?? null;
 
-            if (is_string($text) && trim($text) !== '') {
-                return new self(trim($text), $candidate);
+            if (! is_string($text)) {
+                continue;
+            }
+
+            // I campi descrizione sono RichEditor (HTML). Il sito pubblico li mostra come
+            // TESTO (escaped, whitespace-pre-line): appiattiamo l'HTML a testo pulito, così
+            // una descrizione formattata non espone i tag e una "visivamente vuota" come
+            // `<p></p>` diventa stringa vuota (nessun tag mostrato).
+            $plain = self::toPlainText($text);
+
+            if ($plain !== '') {
+                return new self($plain, $candidate);
             }
         }
 
         return null;
+    }
+
+    /**
+     * Appiattisce un valore eventualmente HTML (es. dai RichEditor di Filament) a testo
+     * semplice: i tag di blocco e gli a-capo diventano newline, gli altri tag sono rimossi,
+     * le entità decodificate e gli spazi normalizzati. Un markup senza testo visibile
+     * (`<p></p>`, `<p><br></p>`) diventa stringa vuota.
+     */
+    private static function toPlainText(string $value): string
+    {
+        $withBreaks = preg_replace(
+            '/<\s*(br|\/p|\/div|\/li|\/h[1-6])\s*\/?\s*>/i',
+            "\n",
+            $value,
+        ) ?? $value;
+
+        $stripped = html_entity_decode(strip_tags($withBreaks), ENT_QUOTES | ENT_HTML5);
+
+        /** @var list<string> $lines */
+        $lines = preg_split('/\n/', $stripped) ?: [];
+        $lines = array_map('trim', $lines);
+
+        $joined = implode("\n", $lines);
+
+        return trim(preg_replace("/\n{3,}/", "\n\n", $joined) ?? $joined);
     }
 
     /** Il testo è in una lingua diversa da quella della pagina. */
