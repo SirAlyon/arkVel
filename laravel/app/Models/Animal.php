@@ -310,10 +310,17 @@ class Animal extends Model implements CleansImageMetadata, HasMedia
 
     public function registerMediaCollections(): void
     {
+        // Disco PUBBLICO esplicito: le foto dell'animale sono mostrate sul sito pubblico
+        // (URL /storage/...). Senza `useDisk('public')`, medialibrary eredita il filesystem
+        // di DEFAULT (FILESYSTEM_DISK, 'local' = storage/app/private, NON servito dal web):
+        // le foto caricate da Filament finirebbero sul disco privato → 404 in pubblico.
+        // NB: gli allegati sanitari (MedicalRecord) restano invece sul disco privato, giusto.
         $this->addMediaCollection('photos')
+            ->useDisk('public')
             ->acceptsMimeTypes(self::ACCEPTED_IMAGE_MIME_TYPES);
 
         $this->addMediaCollection('avatar')
+            ->useDisk('public')
             ->acceptsMimeTypes(self::ACCEPTED_IMAGE_MIME_TYPES)
             ->singleFile();
     }
