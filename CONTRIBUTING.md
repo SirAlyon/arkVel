@@ -1,92 +1,76 @@
 # Contributing to ArkVel
 
-Thank you for your interest in contributing to **ArkVel**! 🚀 This open-source project aims to facilitate animal adoption in Europe through a modern and intuitive platform.
+Thank you for your interest in contributing to **ArkVel** — an open-source
+adoption & management platform for animal shelters, rescues and associations. 🐾
 
-Follow these guidelines to contribute effectively and help the community grow! 🐾
+Whether it's a bug report, a feature idea, documentation, or code, contributions
+are welcome. Please also read our [Code of Conduct](CODE_OF_CONDUCT.md).
 
----
-
-## 🛠️ Getting Started
-
-### 1️⃣ Fork & Clone the Repository
-
-1. **Fork** the repository on GitHub
-2. Clone the repository to your local environment:
-   ```sh
-   git clone https://github.com/your-username/arkvel.git
-   cd arkvel
-   ```
-
-### 2️⃣ Set Up the Development Environment
-
-1. Ensure you have **Docker** installed
-2. Start the development containers:
-   ```sh
-   docker-compose up -d
-   ```
-3. Install dependencies:
-   ```sh
-   composer install
-   npm install && npm run dev
-   ```
-4. Generate the `.env` file and configure the database:
-   ```sh
-   cp .env.example .env
-   php artisan key:generate
-   ```
+> 🔒 Found a security issue? **Do not open a public issue** — see [SECURITY.md](SECURITY.md).
 
 ---
 
-## 🎯 How to Contribute
+## Ways to contribute
 
-### ✅ Follow the Git Workflow
+- **Report a bug** or **request a feature** via the issue templates.
+- **Improve the docs** in [`docs/`](docs/) or the README.
+- **Submit code** via a pull request (see the workflow below).
 
-1. **Create a new branch** for each feature or fix:
-   ```sh
-   git checkout -b feature/your-feature-name
-   ```
-2. **Make clear and descriptive commits**:
-   ```sh
-   git commit -m "Added feature X for managing adoptions"
-   ```
-3. **Push your changes** to your fork:
-   ```sh
-   git push origin feature/your-feature-name
-   ```
-4. **Open a Pull Request (PR)** on GitHub
+## Development setup
 
-### 📌 Coding Guidelines
+Everything runs in Docker (PHP 8.4, Composer and Node live in the containers — no
+local PHP/Node required).
 
-- Follow **Laravel** and **PSR-12** standards for PHP code
-- Keep your code **readable** and **well-documented**
-- Avoid unnecessary changes to configuration files
-- Use **Tailwind CSS** for UI styling
+```bash
+git clone https://github.com/SirAlyon/arkVel.git && cd arkVel
+docker compose up -d
 
----
+docker compose exec php composer install
+docker compose exec php cp .env.example .env
+docker compose exec php php artisan key:generate
+docker compose exec php php artisan migrate --seed          # demo data (dev only)
+docker compose exec php sh -lc "npm ci && npm run build"
+```
 
-## 🧪 Testing
+App: http://localhost:8090 · Mailpit: http://localhost:8025 · Meilisearch: http://localhost:7700
 
-Before submitting a PR, ensure your code is tested:
+## Project standards
 
-1. Run tests with PHPUnit:
-   ```sh
-   php artisan test
-   ```
-2. If you’ve modified the frontend, verify the UI behavior
+ArkVel aims for a clean, well-tested codebase. In short:
 
----
+- **SOLID & modern OOP**: `declare(strict_types=1)` everywhere, full typing, no
+  business logic in models. A use case = one invokable **Action**; controllers,
+  Filament pages and Livewire components stay thin.
+- **State machines** for lifecycles (adoption, fostering); **policies** for
+  authorization; **multi-tenancy** — never leak data across organisations.
+- **GDPR by design**, accessibility (WCAG 2.2 AA), and i18n (Italian base, English
+  fallback) — no hard-coded user-facing strings.
+- The detailed conventions live in [`CLAUDE.md`](CLAUDE.md) and
+  [`laravel/CLAUDE.md`](laravel/CLAUDE.md).
 
-## 📌 Tasks and Progress Tracking
+## Tests & quality gate
 
-Throughout development, an **updated list of tasks** will be maintained with their progress status. You can find this list in the **GitHub Projects section** or in the `TASKS.md` file, which will be updated periodically.
+Every change ships with its tests. Before opening a PR, all three must be green
+(run inside the container):
 
-If you’d like to contribute to an open task, feel free to assign yourself or reach out for more details!
+```bash
+docker compose exec php ./vendor/bin/pint            # code style (PSR-12)
+docker compose exec php ./vendor/bin/phpstan analyse # static analysis (level 6)
+docker compose exec php ./vendor/bin/pest            # tests (unit + feature + browser)
+```
 
----
+CI runs the same checks on every pull request.
 
-## 💬 Support and Discussions
+## Pull request workflow
 
-- Open an **issue** if you find bugs or want to suggest improvements
-- Follow the repository to stay updated on new developments
+1. **Never commit to `main`.** Create a branch: `feat/…`, `fix/…`, `docs/…`, `refactor/…`.
+2. Use **[Conventional Commits](https://www.conventionalcommits.org/)**
+   (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
+3. Keep each PR focused; include tests and update docs where relevant.
+4. Make sure the **quality gate is green**, then open the PR and fill in the template.
+5. A maintainer will review it. Thanks for helping animals find homes! 🐶🐱
 
-Thank you for your contribution! 🚀🐾
+## License
+
+By contributing, you agree that your contributions are licensed under the
+[AGPL-3.0](LICENSE), the same license that covers the project.

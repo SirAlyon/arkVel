@@ -1,0 +1,37 @@
+name: "✨ Feature request"
+description: Suggest an idea or improvement for ArkVel
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do? What's painful today? (e.g. "As a shelter, I need to…")
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like to see? How should it behave?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Public site (catalogue, animal pages, map)
+        - Adopter portal (/account)
+        - Organisation management (/manage)
+        - Admin / platform (/admin)
+        - Integrations (Stripe, Google/CalDAV)
+        - Other
+    validations:
+      required: false
