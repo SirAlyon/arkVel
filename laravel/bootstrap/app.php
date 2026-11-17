@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\OrganizationIsDemo;
 use App\Http\Middleware\ContentLanguage;
 use App\Http\Middleware\SetLocale;
 use App\Support\Auth\PostLoginDestination;
@@ -8,6 +9,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -54,5 +56,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+        );
+
+        // Ente dimostrativo: un'interazione rifiutata dal dominio e non intercettata dalla
+        // UI diventa un 403 con il messaggio localizzato (mai un 500, mai riportata).
+        $exceptions->map(
+            OrganizationIsDemo::class,
+            static fn (OrganizationIsDemo $e): AccessDeniedHttpException => new AccessDeniedHttpException($e->getMessage(), $e),
         );
     })->create();

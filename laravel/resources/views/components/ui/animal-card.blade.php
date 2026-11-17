@@ -20,6 +20,8 @@
  |   mostrati come badge. `size` diventa «Taglia <size>», perché da sola sarebbe ambigua;
  | - `location`: città o «città, regione», con icona e un prefisso per gli screen reader;
  | - `featured`: bollino «In evidenza» con stella (il significato è nel testo, non nel colore);
+ | - `demo`: l'animale è di un ente dimostrativo: primo badge «Esempio» (spiegazione nel
+ |   `title` e in un testo per gli screen reader);
  | - `heading-level` (default 3): livello del titolo (h2…h6) secondo la pagina, per non
  |   saltare livelli (es. 2 se la griglia segue direttamente l'h1);
  | - slot `favorite`: il bottone preferiti, in alto a destra sopra la foto, fuori dal link
@@ -85,6 +87,7 @@
     'size' => null,
     'location' => null,
     'featured' => false,
+    'demo' => false,
     'headingLevel' => 3,
     'reveal' => true,
     'transitionName' => null,
@@ -177,8 +180,11 @@
             >{{ $name }}</a>
         </h{{ $level }}>
 
-        @if ($badges !== [])
+        @if ($badges !== [] || $demo)
             <ul role="list" class="flex flex-wrap gap-1.5">
+                @if ($demo)
+                    <li><x-ui.badge variant="info" icon="flask-conical" :title="__('demo.badge_hint')" data-animal-card-demo>{{ __('demo.badge') }}<span class="sr-only">: {{ __('demo.badge_hint') }}</span></x-ui.badge></li>
+                @endif
                 @foreach ($badges as $badge)
                     <li><x-ui.badge class="bg-canvas">{{ $badge }}</x-ui.badge></li>
                 @endforeach

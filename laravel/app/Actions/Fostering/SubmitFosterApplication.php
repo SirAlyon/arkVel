@@ -6,11 +6,13 @@ namespace App\Actions\Fostering;
 
 use App\Exceptions\DuplicateFosterApplication;
 use App\Exceptions\IncompleteAdopterProfile;
+use App\Exceptions\OrganizationIsDemo;
 use App\Models\Animal;
 use App\Models\FosterApplication;
 use App\Models\User;
 use App\Notifications\NewFosterApplicationReceived;
 use App\States\Foster\Submitted;
+use App\Support\Organizations\DemoOrganizationGuard;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -41,14 +43,22 @@ use Illuminate\Support\Facades\Notification;
  */
 final class SubmitFosterApplication
 {
+    public function __construct(
+        private readonly DemoOrganizationGuard $demoGuard,
+    ) {}
+
     /**
      * @throws IncompleteAdopterProfile quando il profilo affidatario è incompleto
      *                                  o manca il consenso GDPR
      * @throws DuplicateFosterApplication quando esiste già una richiesta
      *                                    dell'affidatario per lo stesso animale
+     * @throws OrganizationIsDemo quando l'ente dell'animale è dimostrativo
      */
     public function handle(User $carer, Animal $animal): FosterApplication
     {
+        // Ente dimostrativo: nessun dato personale gli viene inviato.
+        $this->demoGuard->ensureAcceptsSubmissions($animal->organization);
+
         // Guardia GDPR/questionario: nessuna riga viene creata se il profilo di
         // screening non è completo (consenso incluso). Riuso della guardia
         // dell'adozione (vedi docblock).

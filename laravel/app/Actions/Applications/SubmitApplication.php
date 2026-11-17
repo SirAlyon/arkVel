@@ -6,11 +6,13 @@ namespace App\Actions\Applications;
 
 use App\Exceptions\DuplicateApplication;
 use App\Exceptions\IncompleteAdopterProfile;
+use App\Exceptions\OrganizationIsDemo;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\User;
 use App\Notifications\NewApplicationReceived;
 use App\States\Application\Submitted;
+use App\Support\Organizations\DemoOrganizationGuard;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -36,14 +38,22 @@ use Illuminate\Support\Facades\Notification;
  */
 final class SubmitApplication
 {
+    public function __construct(
+        private readonly DemoOrganizationGuard $demoGuard,
+    ) {}
+
     /**
      * @throws IncompleteAdopterProfile quando il profilo adottante è incompleto
      *                                  o manca il consenso GDPR
      * @throws DuplicateApplication quando esiste già una candidatura
      *                              dell'adottante per lo stesso animale
+     * @throws OrganizationIsDemo quando l'ente dell'animale è dimostrativo
      */
     public function handle(User $adopter, Animal $animal): AdoptionApplication
     {
+        // Ente dimostrativo: nessun dato personale gli viene inviato.
+        $this->demoGuard->ensureAcceptsSubmissions($animal->organization);
+
         // Guardia GDPR/questionario: nessuna riga viene creata se il profilo non
         // è completo (consenso incluso).
         if (! $adopter->hasCompleteAdopterProfile()) {

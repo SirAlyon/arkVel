@@ -10,6 +10,7 @@ use App\Actions\Donations\StartRecurringDonationCheckout;
 use App\Actions\Organizations\SummarizeOrganizationAnimals;
 use App\Enums\OrganizationStatus;
 use App\Exceptions\DonationsNotConfigured;
+use App\Exceptions\OrganizationIsDemo;
 use App\Models\Animal;
 use App\Models\Organization;
 use App\Models\User;
@@ -175,6 +176,11 @@ class OrganizationPage extends Component
             $this->donationError = __('donations.public.not_configured');
 
             return null;
+        } catch (OrganizationIsDemo $exception) {
+            // Ente dimostrativo: la UI non mostra il widget, ma il rifiuto è dell'Action.
+            $this->donationError = $exception->getMessage();
+
+            return null;
         }
 
         // Redirect ESTERNO alla pagina ospitata di Stripe Checkout.
@@ -191,6 +197,11 @@ class OrganizationPage extends Component
             ->latest()
             ->paginate(12);
 
+        // Le card leggono l'ente (badge «Esempio»): è questo, senza una query per card.
+        foreach ($animals->items() as $animal) {
+            $animal->setRelation('organization', $this->organization);
+        }
+
         $locale = app()->getLocale();
 
         $view = ViewFacade::make('livewire.organization-page', [
@@ -202,7 +213,9 @@ class OrganizationPage extends Component
             'mapArea' => ApproximateLocation::of($this->organization),
             'website' => WebUrl::safe($this->organization->getAttribute('website')),
             'summary' => app(SummarizeOrganizationAnimals::class)->handle($this->organization),
-            'donationsEnabled' => app(StripeConfig::class)->configured(),
+            // Ente dimostrativo: al posto del widget di donazione, un avviso.
+            'donationsEnabled' => ! $this->organization->is_demo && app(StripeConfig::class)->configured(),
+            'isDemo' => $this->organization->is_demo,
             'donationPresets' => [5, 10, 25, 50],
             'isGuestDonor' => ! Auth::user() instanceof User,
             // La donazione mensile è disponibile solo agli utenti autenticati: serve un

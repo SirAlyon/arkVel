@@ -8,11 +8,13 @@ use App\Enums\AppointmentStatus;
 use App\Enums\AppointmentType;
 use App\Exceptions\AppointmentSlotUnavailable;
 use App\Exceptions\InvalidAppointmentSlot;
+use App\Exceptions\OrganizationIsDemo;
 use App\Models\Animal;
 use App\Models\Appointment;
 use App\Models\User;
 use App\Notifications\NewAppointmentRequested;
 use App\Support\Appointments\AppointmentOverlapGuard;
+use App\Support\Organizations\DemoOrganizationGuard;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -41,12 +43,14 @@ final class RequestAppointment
 {
     public function __construct(
         private readonly AppointmentOverlapGuard $overlapGuard,
+        private readonly DemoOrganizationGuard $demoGuard,
     ) {}
 
     /**
      * @throws InvalidAppointmentSlot quando lo slot non è nel futuro
      * @throws AppointmentSlotUnavailable quando lo slot si sovrappone a un altro
      *                                    appuntamento attivo (animale o richiedente)
+     * @throws OrganizationIsDemo quando l'ente è dimostrativo
      */
     public function handle(
         User $requester,
@@ -55,6 +59,9 @@ final class RequestAppointment
         CarbonInterface $scheduledAt,
         ?string $notes = null,
     ): Appointment {
+        // Ente dimostrativo: nessun dato personale gli viene inviato.
+        $this->demoGuard->ensureAcceptsSubmissions($animal->organization);
+
         // Guardia temporale: nessuna riga se lo slot non è strettamente futuro.
         if ($scheduledAt->lessThanOrEqualTo(now())) {
             throw InvalidAppointmentSlot::inThePast($scheduledAt);

@@ -80,6 +80,9 @@
 
     <x-ui.toaster />
 
+    {{-- Avviso pre-beta: alla prima visita, ricordato in localStorage (vedi il componente). --}}
+    <x-site.prebeta-notice />
+
     @livewireScripts
 </body>
 </html>
