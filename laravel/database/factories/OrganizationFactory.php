@@ -59,6 +59,7 @@ class OrganizationFactory extends Factory
             'phone' => $faker->phoneNumber(),
             'website' => $faker->url(),
             'status' => OrganizationStatus::Pending,
+            'is_demo' => false,
             'verified_at' => null,
         ];
     }
@@ -83,6 +84,17 @@ class OrganizationFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => OrganizationStatus::Suspended,
+        ]);
+    }
+
+    /**
+     * Ente dimostrativo: visibile come gli altri (se verificato) ma marcato come esempio,
+     * senza candidature, affidi, visite, messaggi né donazioni.
+     */
+    public function demo(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_demo' => true,
         ]);
     }
 }

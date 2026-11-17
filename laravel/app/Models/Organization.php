@@ -33,6 +33,7 @@ use Spatie\Translatable\HasTranslations;
  * @property string|null $city
  * @property OrganizationType $type
  * @property OrganizationStatus $status
+ * @property bool $is_demo
  * @property string|null $calendar_feed_token
  * @property-read Collection<int, Animal> $animals
  */
@@ -69,6 +70,7 @@ class Organization extends Model
         'website',
         'calendar_feed_token',
         'status',
+        'is_demo',
         'verified_at',
     ];
 
@@ -86,6 +88,7 @@ class Organization extends Model
             'type' => OrganizationType::class,
             'status' => OrganizationStatus::class,
             'verified_at' => 'datetime',
+            'is_demo' => 'boolean',
             'latitude' => 'float',
             'longitude' => 'float',
         ];
