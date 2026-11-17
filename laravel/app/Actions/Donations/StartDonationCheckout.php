@@ -9,11 +9,13 @@ use App\Enums\DonationType;
 use App\Exceptions\DonationsNotConfigured;
 use App\Exceptions\InvalidDonationAmount;
 use App\Exceptions\MissingDonorIdentity;
+use App\Exceptions\OrganizationIsDemo;
 use App\Models\Donation;
 use App\Models\Organization;
 use App\Models\User;
 use App\Support\Billing\CreatesDonationCheckout;
 use App\Support\Billing\StripeConfig;
+use App\Support\Organizations\DemoOrganizationGuard;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -45,6 +47,7 @@ final class StartDonationCheckout
     public function __construct(
         private readonly StripeConfig $stripeConfig,
         private readonly CreatesDonationCheckout $checkout,
+        private readonly DemoOrganizationGuard $demoGuard,
     ) {}
 
     /**
@@ -53,6 +56,7 @@ final class StartDonationCheckout
      * @param  string|null  $donorEmail  email d'ospite (obbligatoria senza utente)
      * @return string URL ospitato della sessione di Checkout su cui redirigere
      *
+     * @throws OrganizationIsDemo quando l'ente è dimostrativo
      * @throws DonationsNotConfigured quando Stripe non è configurato
      * @throws InvalidDonationAmount quando l'importo è fuori dai limiti
      * @throws MissingDonorIdentity quando manca sia l'utente sia l'email d'ospite
@@ -66,6 +70,9 @@ final class StartDonationCheckout
         ?string $donorEmail = null,
         ?string $message = null,
     ): string {
+        // Ente dimostrativo: nessuna donazione, nessuna sessione Stripe.
+        $this->demoGuard->ensureAcceptsSubmissions($organization);
+
         if (! $this->stripeConfig->configured()) {
             throw DonationsNotConfigured::make();
         }

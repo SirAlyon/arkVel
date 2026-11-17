@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Messaging;
 
 use App\Events\MessageSent;
+use App\Exceptions\OrganizationIsDemo;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\Message;
@@ -12,6 +13,7 @@ use App\Models\MessageThread;
 use App\Models\Organization;
 use App\Models\User;
 use App\Notifications\NewMessageReceived;
+use App\Support\Organizations\DemoOrganizationGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use InvalidArgumentException;
@@ -32,8 +34,13 @@ use InvalidArgumentException;
  */
 final class StartMessageThread
 {
+    public function __construct(
+        private readonly DemoOrganizationGuard $demoGuard,
+    ) {}
+
     /**
      * @throws InvalidArgumentException quando il corpo del messaggio è vuoto
+     * @throws OrganizationIsDemo quando un adottante scrive a un ente dimostrativo
      */
     public function handle(
         User $author,
@@ -44,6 +51,12 @@ final class StartMessageThread
         ?Animal $animal = null,
         ?AdoptionApplication $application = null,
     ): MessageThread {
+        // Un adottante non scrive a un ente dimostrativo. Lo staff dell'ente (autore
+        // diverso dall'adottante) non invia dati personali all'ente: nessuna guardia.
+        if ($author->is($adopter)) {
+            $this->demoGuard->ensureAcceptsSubmissions($organization);
+        }
+
         $body = trim($body);
 
         if ($body === '') {

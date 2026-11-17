@@ -8,11 +8,13 @@ use App\Enums\RecurringDonationStatus;
 use App\Exceptions\DonationsNotConfigured;
 use App\Exceptions\InvalidDonationAmount;
 use App\Exceptions\MissingDonorIdentity;
+use App\Exceptions\OrganizationIsDemo;
 use App\Models\Organization;
 use App\Models\RecurringDonation;
 use App\Models\User;
 use App\Support\Billing\ManagesRecurringDonation;
 use App\Support\Billing\StripeConfig;
+use App\Support\Organizations\DemoOrganizationGuard;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -42,12 +44,14 @@ final class StartRecurringDonationCheckout
     public function __construct(
         private readonly StripeConfig $stripeConfig,
         private readonly ManagesRecurringDonation $checkout,
+        private readonly DemoOrganizationGuard $demoGuard,
     ) {}
 
     /**
      * @param  User|null  $donor  donatore autenticato (OBBLIGATORIO per le ricorrenti)
      * @return string URL ospitato della sessione di Checkout su cui redirigere
      *
+     * @throws OrganizationIsDemo quando l'ente è dimostrativo
      * @throws DonationsNotConfigured quando Stripe non è configurato
      * @throws InvalidDonationAmount quando l'importo è fuori dai limiti
      * @throws MissingDonorIdentity quando manca il donatore autenticato
@@ -58,6 +62,9 @@ final class StartRecurringDonationCheckout
         string $currency,
         ?User $donor = null,
     ): string {
+        // Ente dimostrativo: nessuna donazione, nessuna sessione Stripe.
+        $this->demoGuard->ensureAcceptsSubmissions($organization);
+
         if (! $this->stripeConfig->configured()) {
             throw DonationsNotConfigured::make();
         }

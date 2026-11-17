@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Actions\Messaging;
 
 use App\Data\Messaging\AnimalContactResult;
+use App\Exceptions\OrganizationIsDemo;
 use App\Models\Animal;
 use App\Models\MessageThread;
 use App\Models\User;
+use App\Support\Organizations\DemoOrganizationGuard;
 use InvalidArgumentException;
 
 /**
@@ -28,13 +30,19 @@ final class ContactOrganizationAboutAnimal
     public function __construct(
         private readonly StartMessageThread $startMessageThread,
         private readonly PostMessage $postMessage,
+        private readonly DemoOrganizationGuard $demoGuard,
     ) {}
 
     /**
      * @throws InvalidArgumentException quando il corpo del messaggio è vuoto
+     * @throws OrganizationIsDemo quando l'ente è dimostrativo
      */
     public function handle(User $adopter, Animal $animal, string $body): AnimalContactResult
     {
+        // Prima di tutto, anche del riuso di un thread esistente: un ente dimostrativo
+        // non riceve messaggi.
+        $this->demoGuard->ensureAcceptsSubmissions($animal->organization);
+
         $existing = MessageThread::query()
             ->where('user_id', $adopter->getKey())
             ->where('organization_id', $animal->organization_id)
