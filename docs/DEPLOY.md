@@ -174,6 +174,12 @@ docker compose -f docker-compose.prod.yml up -d        # ricrea i container camb
 docker compose -f docker-compose.prod.yml restart queue queue-media scheduler reverb
 ```
 
+**Ente dimostrativo (beta, 22 novembre).** Il deploy che introduce `organizations.is_demo`
+richiede il `migrate --force` qui sopra. Poi, da Super Admin, apri **/admin → Enti → Kiba →
+Modifica**, attiva **«Ente dimostrativo»** e salva: sul sito Kiba e i suoi animali mostrano il
+badge «Esempio», e candidature, affidi, visite, messaggi e donazioni verso Kiba sono rifiutati
+(anche lato server). L'ente resta visibile finché è verificato.
+
 ---
 
 ## 8. Backup

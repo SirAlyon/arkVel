@@ -5,7 +5,8 @@
  |   (x-ui.stat: animali in adozione, adozioni concluse se ce ne sono);
  | - «Chi siamo» (descrizione nella lingua corrente, altrimenti in quella in cui è scritta,
  |   con `lang`) e il widget di donazione, se Stripe è configurato
- |   (x-site.organization.donation-widget);
+ |   (x-site.organization.donation-widget); per un ente dimostrativo (`is_demo`) il badge
+ |   «Esempio» nell'intestazione e l'avviso x-site.demo-notice al posto del widget;
  | - animali dell'ente: griglia di x-site.animal-card (solo publiclyVisible, media in eager
  |   loading, preferiti in una query), x-ui.pagination, stato vuoto; «Sfoglia il catalogo»
  |   apre il catalogo filtrato su questo ente;
@@ -30,6 +31,9 @@
                 <ul role="list" class="flex flex-wrap gap-2">
                     <li><x-ui.badge class="bg-canvas text-fg">{{ $organization->type->getLabel() }}</x-ui.badge></li>
                     <li><x-ui.badge variant="success" icon="badge-check" data-organization-verified>{{ __('page_organizations.show.verified') }}</x-ui.badge></li>
+                    @if ($isDemo)
+                        <li><x-site.demo-badge /></li>
+                    @endif
                 </ul>
             </div>
 
@@ -99,11 +103,11 @@
         </section>
     </div>
 
-    {{-- Chi siamo + donazione --}}
-    @if ($hasAbout || $donationsEnabled)
+    {{-- Chi siamo + donazione (ente dimostrativo: l'avviso al posto del widget) --}}
+    @if ($hasAbout || $donationsEnabled || $isDemo)
         <div @class([
             'grid gap-6',
-            'lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-start' => $hasAbout && $donationsEnabled,
+            'lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-start' => $hasAbout && ($donationsEnabled || $isDemo),
         ])>
             @if ($hasAbout)
                 <section aria-labelledby="organization-about-title" class="flex min-w-0 flex-col gap-4 lg:pt-panel" data-organization-about>
@@ -123,6 +127,8 @@
                     :amount="$donationAmount"
                     @class(['lg:max-w-3xl' => ! $hasAbout])
                 />
+            @elseif ($isDemo)
+                <x-site.demo-notice @class(['lg:max-w-3xl' => ! $hasAbout]) />
             @endif
         </div>
     @endif

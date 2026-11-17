@@ -7,6 +7,10 @@
  | intestazione, schede; il pannello vive in un bottom sheet (x-ui.drawer side=bottom)
  | aperto dalla barra fissa in fondo.
  |
+ | Ente dimostrativo (`organizations.is_demo`): badge «Esempio» nell'intestazione e, al
+ | posto delle CTA, l'avviso x-site.demo-notice; i drawer di prenotazione e contatto non ci
+ | sono. Il rifiuto vero è nelle Action (App\Support\Organizations\DemoOrganizationGuard).
+ |
  | Il pannello (candidatura e affido, due componenti Livewire figli) esiste una volta sola:
  | Alpine lo sposta nel DOM tra la colonna desktop e il bottom sheet al cambio di
  | breakpoint, così i figli non sono mai duplicati e tengono il loro stato. La pagina non ha
@@ -29,6 +33,7 @@
 @php
     $name = $animal->name;
     $organization = $animal->organization;
+    $isDemo = $organization->is_demo;
     $location = collect([$organization->city, $organization->region])->filter(filled(...))->implode(', ');
 
     $traits = array_values(array_filter([
@@ -107,8 +112,15 @@
             {{-- Intestazione e pannello azioni (sticky su desktop) --}}
             <div class="flex min-w-0 flex-col gap-8 lg:col-span-5 lg:row-span-2">
                 <header class="flex flex-col gap-5" data-animal-header>
-                    @if ($animal->featured)
-                        <p><x-ui.badge variant="stamp" icon="star" class="-rotate-2">{{ __('public.animal.featured') }}</x-ui.badge></p>
+                    @if ($animal->featured || $isDemo)
+                        <p class="flex flex-wrap items-center gap-2">
+                            @if ($animal->featured)
+                                <x-ui.badge variant="stamp" icon="star" class="-rotate-2">{{ __('public.animal.featured') }}</x-ui.badge>
+                            @endif
+                            @if ($isDemo)
+                                <x-site.demo-badge />
+                            @endif
+                        </p>
                     @endif
 
                     <div class="flex items-start justify-between gap-4">
@@ -151,23 +163,30 @@
                         {{-- Nel bottom sheet titolo e presentazione sono quelli del drawer. --}}
                         <div class="flex flex-col gap-2 [dialog_&]:hidden">
                             <h2 id="animal-actions-title" class="text-h4">{{ __('public.detail.cta_title', ['name' => $name]) }}</h2>
-                            <p class="text-fg-muted">{{ __('public.detail.cta_body') }}</p>
+                            @unless ($isDemo)
+                                <p class="text-fg-muted">{{ __('public.detail.cta_body') }}</p>
+                            @endunless
                         </div>
 
-                        <livewire:animal-detail.adoption-application-form :animal="$animal" :key="'apply-'.$animal->id" />
+                        @if ($isDemo)
+                            {{-- Ente dimostrativo: nessuna CTA, solo l'avviso (il rifiuto vero è nelle Action). --}}
+                            <x-site.demo-notice heading-level="3" />
+                        @else
+                            <livewire:animal-detail.adoption-application-form :animal="$animal" :key="'apply-'.$animal->id" />
 
-                        <livewire:animal-detail.foster-request-form :animal="$animal" :key="'foster-'.$animal->id" />
+                            <livewire:animal-detail.foster-request-form :animal="$animal" :key="'foster-'.$animal->id" />
 
-                        <div class="flex flex-col gap-3 border-t-2 border-line pt-6">
-                            <h3 class="text-h5">{{ __('page_animal.actions.meet_title') }}</h3>
-                            <p class="text-small text-fg-muted">{{ __('page_animal.actions.meet_body', ['name' => $name]) }}</p>
-                            <x-ui.button variant="secondary" icon="calendar-days" class="w-full" aria-haspopup="dialog" x-on:click="$dispatch('open-drawer', 'animal-booking')" data-animal-open="booking">
-                                {{ __('page_animal.actions.book') }}
-                            </x-ui.button>
-                            <x-ui.button variant="secondary" icon="message-circle" class="w-full" aria-haspopup="dialog" x-on:click="$dispatch('open-drawer', 'animal-contact')" data-animal-open="contact">
-                                {{ __('page_animal.actions.contact') }}
-                            </x-ui.button>
-                        </div>
+                            <div class="flex flex-col gap-3 border-t-2 border-line pt-6">
+                                <h3 class="text-h5">{{ __('page_animal.actions.meet_title') }}</h3>
+                                <p class="text-small text-fg-muted">{{ __('page_animal.actions.meet_body', ['name' => $name]) }}</p>
+                                <x-ui.button variant="secondary" icon="calendar-days" class="w-full" aria-haspopup="dialog" x-on:click="$dispatch('open-drawer', 'animal-booking')" data-animal-open="booking">
+                                    {{ __('page_animal.actions.book') }}
+                                </x-ui.button>
+                                <x-ui.button variant="secondary" icon="message-circle" class="w-full" aria-haspopup="dialog" x-on:click="$dispatch('open-drawer', 'animal-contact')" data-animal-open="contact">
+                                    {{ __('page_animal.actions.contact') }}
+                                </x-ui.button>
+                            </div>
+                        @endif
                     </div>
                 </aside>
             </div>
@@ -274,26 +293,29 @@
         @endif
     </div>
 
-    {{-- Prenotazione e contatto: drawer laterali su desktop, bottom sheet sotto i 640 px. --}}
-    <x-ui.drawer
-        name="animal-booking"
-        sheet
-        icon="calendar-days"
-        :title="__('appointments.booking.cta_title')"
-        :description="__('appointments.booking.cta_body', ['name' => $name])"
-    >
-        <livewire:animal-detail.appointment-booking :animal="$animal" :key="'booking-'.$animal->id" />
-    </x-ui.drawer>
+    {{-- Prenotazione e contatto: drawer laterali su desktop, bottom sheet sotto i 640 px.
+         Assenti per un ente dimostrativo. --}}
+    @unless ($isDemo)
+        <x-ui.drawer
+            name="animal-booking"
+            sheet
+            icon="calendar-days"
+            :title="__('appointments.booking.cta_title')"
+            :description="__('appointments.booking.cta_body', ['name' => $name])"
+        >
+            <livewire:animal-detail.appointment-booking :animal="$animal" :key="'booking-'.$animal->id" />
+        </x-ui.drawer>
 
-    <x-ui.drawer
-        name="animal-contact"
-        sheet
-        icon="message-circle"
-        :title="__('messaging.contact.cta_title')"
-        :description="__('messaging.contact.cta_body', ['name' => $name])"
-    >
-        <livewire:animal-detail.contact-organization-form :animal="$animal" :key="'contact-'.$animal->id" />
-    </x-ui.drawer>
+        <x-ui.drawer
+            name="animal-contact"
+            sheet
+            icon="message-circle"
+            :title="__('messaging.contact.cta_title')"
+            :description="__('messaging.contact.cta_body', ['name' => $name])"
+        >
+            <livewire:animal-detail.contact-organization-form :animal="$animal" :key="'contact-'.$animal->id" />
+        </x-ui.drawer>
+    @endunless
 
     {{-- Mobile: il pannello azioni in un bottom sheet, aperto dalla barra in fondo. --}}
     <x-ui.drawer

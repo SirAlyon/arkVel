@@ -4,7 +4,8 @@
  | (animali simili) mostrano la stessa card con gli stessi dati.
  |
  | - foto: la prima della galleria (`photos`), altrimenti l'avatar (medialibrary, UI-4);
- | - badge: specie, sesso, età (App\Support\Site\AnimalAge) e taglia, tradotti;
+ | - badge: specie, sesso, età (App\Support\Site\AnimalAge) e taglia, tradotti; «Esempio»
+ |   se l'ente è dimostrativo (`is_demo`);
  | - località: quella pubblica dell'ente (App\Support\Site\PublicLocation, «città, regione»);
  | - link alla scheda (`animals.show`) e bottone preferiti (<livewire:favorite-button>).
  |
@@ -62,6 +63,7 @@
     :size="$animal->size?->getLabel()"
     :location="$withLocation ? \App\Support\Site\PublicLocation::of($animal->organization) : null"
     :featured="$animal->featured"
+    :demo="$animal->organization->is_demo"
     :heading-level="$headingLevel"
     :reveal="$reveal"
     :transition-name="$photoTransition ? \App\Support\Site\AnimalPhotoTransition::name($animal) : null"
