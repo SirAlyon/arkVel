@@ -64,7 +64,26 @@ It's not just a listings site: it's an end-to-end system covering the **public a
 
 ## Screenshots
 
-> _Coming soon._ Add images under `docs/screenshots/` and reference them here.
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshots/public-home.jpg" alt="Public home page: search box, featured animal and live counts of animals and verified organisations"></td>
+    <td width="50%"><img src="docs/assets/screenshots/public-catalog-map.jpg" alt="Adoption catalogue in map view: filters with counts, organisations clustered on a map of Italy and an accessible list next to it"></td>
+  </tr>
+  <tr>
+    <td><b>Public site</b> — home with search and live counts</td>
+    <td><b>Catalogue</b> — filters with counts and a map of organisations (approximate locations)</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshots/public-mobile.jpg" alt="Two phone screens: the home page and an animal card in the catalogue"></td>
+    <td width="50%"><img src="docs/assets/screenshots/shelter-animals.jpg" alt="Organisation panel: list of animals with species, sex, lifecycle state and actions"></td>
+  </tr>
+  <tr>
+    <td><b>Mobile</b> — the public site is designed mobile-first</td>
+    <td><b>Organisation management</b> (<code>/manage</code>, Italian UI) — animals and their lifecycle state</td>
+  </tr>
+</table>
+
+<sub>Demo data from the seeder.</sub>
 
 ---
 
