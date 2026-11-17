@@ -840,7 +840,7 @@ Original list for the phase:
 >   form DTOs and by `User`'s mutator (also covers the Filament panels without touching them); a
 >   migration for the existing emails that skips and logs the conflicting accounts.
 > - **Documents:** [WCAG-CHECKLIST.md](WCAG-CHECKLIST.md) (WCAG 2.2 AA criteria, how they're
->   met and where they're tested) and [RILASCIO-UI.md](RILASCIO-UI.md) (blockers, variables,
+>   met and where they're tested) and [UI-RELEASE.md](UI-RELEASE.md) (blockers, variables,
 >   deploy steps, workers, nginx, checks).
 >
 > **Final Core Web Vitals** (375 px, CPU 4×, network ~1.6 Mbps / 150 ms, compressed assets):
@@ -858,7 +858,7 @@ Original list for the phase:
 > INP measured in phases UI-6/UI-7 on the main interactions: ≤ 72 ms. The §4 budget is met
 > everywhere.
 >
-> **Still open:** see the "Remaining open items" section of [RILASCIO-UI.md](RILASCIO-UI.md).
+> **Still open:** see the "Remaining open items" section of [UI-RELEASE.md](UI-RELEASE.md).
 > A production blocker: the privacy policy page.
 - A browser suite over all the public pages and the auth flows: mobile/desktop viewports,
   light/dark, comparison screenshots, accessibility assertions.
@@ -888,7 +888,7 @@ Each prompt should be pasted into a new chat. The common context is referenced a
 ### Common context (prefix of every prompt)
 
 ```
-ArkVel project (current repo). Read CLAUDE.md, laravel/CLAUDE.md and docs/PIANO-UI-FRONTEND.md
+ArkVel project (current repo). Read CLAUDE.md, laravel/CLAUDE.md and docs/FRONTEND-PLAN.md
 (in particular §2 stack, §4 cross-cutting rules, §6 checklist). We are rebuilding the UI of the
 public Livewire site; the Filament panels are NOT to be touched (the only documented exception is
 in UI-5). Only the open-source/free libraries listed in §2. Commands always via Docker
@@ -899,7 +899,7 @@ agents (ui-builder, test-author, design-reviewer, standards-reviewer) where it m
 
 ### UI-0
 ```
-[Common context] Run phase UI-0 of docs/PIANO-UI-FRONTEND.md §5:
+[Common context] Run phase UI-0 of docs/FRONTEND-PLAN.md §5:
 install and configure Laravel Boost (via Docker, .mcp.json with boost:mcp in the container),
 document the installation of Playwright MCP, Chrome DevTools MCP and the frontend-design plugin
 (commands I have to run myself, if they require interaction); create .claude/agents/ui-builder.md,

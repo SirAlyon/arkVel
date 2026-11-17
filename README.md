@@ -105,14 +105,14 @@ docker compose exec php sh -lc "npm ci && npm run build"
 
 ## Deployment
 
-Production runs the same Docker stack with Caddy for automatic TLS. See **[docs/DEPLOY.md](docs/DEPLOY.md)** for the full runbook (server, DNS, env, Reverb behind TLS, Meilisearch, queues, backups) and **[docs/RILASCIO-UI.md](docs/RILASCIO-UI.md)** for the release checklist.
+Production runs the same Docker stack with Caddy for automatic TLS. See **[docs/DEPLOY.md](docs/DEPLOY.md)** for the full runbook (server, DNS, env, Reverb behind TLS, Meilisearch, queues, backups) and **[docs/UI-RELEASE.md](docs/UI-RELEASE.md)** for the release checklist.
 
 ## Documentation
 
-- [docs/PIANO-DI-SVILUPPO.md](docs/PIANO-DI-SVILUPPO.md) — roadmap & architecture
-- [docs/CALENDARIO.md](docs/CALENDARIO.md) — calendar & external sync
-- [docs/COMUNICAZIONE.md](docs/COMUNICAZIONE.md) — messaging, realtime & notifications
-- [docs/DONAZIONI.md](docs/DONAZIONI.md) — donations (Stripe)
+- [docs/DEVELOPMENT-PLAN.md](docs/DEVELOPMENT-PLAN.md) — roadmap & architecture
+- [docs/CALENDAR.md](docs/CALENDAR.md) — calendar & external sync
+- [docs/COMMUNICATION.md](docs/COMMUNICATION.md) — messaging, realtime & notifications
+- [docs/DONATIONS.md](docs/DONATIONS.md) — donations (Stripe)
 - [docs/WCAG-CHECKLIST.md](docs/WCAG-CHECKLIST.md) — accessibility
 
 ---

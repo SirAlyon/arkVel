@@ -31,7 +31,7 @@ connects to `localhost:8080`. No external account; development credentials in `.
   and `message-thread.{thread}`. **Note**: these routes live **outside** the Filament
   panels → the `spatie/permission` team **is not set**. Before `can('view')`
   we call `setPermissionsTeamId($thread->organization_id)`, otherwise verified staff
-  would be rejected (same pattern as the .ics feed, see [CALENDARIO.md](CALENDARIO.md)).
+  would be rejected (same pattern as the .ics feed, see [CALENDAR.md](CALENDAR.md)).
 - `MessageSent` is `ShouldBroadcast` with a payload **without PII** (only id + `sender_side`):
   the client receives the event and reloads the authorized thread, not the content from the channel.
 - Broadcast database notifications update the **bell** in real time

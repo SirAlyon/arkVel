@@ -104,7 +104,7 @@ Route::post('/lingua/{locale}', LocaleController::class)->name('locale.update');
 
 /*
  | Styleguide del design system (token e componenti x-ui): solo in `local`,
- | altrove 404 (EnsureLocalEnvironment). Vedi docs/PIANO-UI-FRONTEND.md §5 UI-1.
+ | altrove 404 (EnsureLocalEnvironment). Vedi docs/FRONTEND-PLAN.md §5 UI-1.
  */
 Route::middleware(EnsureLocalEnvironment::class)->group(function (): void {
     Route::view('/_styleguide', 'styleguide')->name('styleguide');

@@ -12,7 +12,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
  * solo punto.
  *
  * Accesso e registrazione dell'adottante sono le pagine pubbliche Livewire `login` (/accedi)
- * e `register` (/registrati) dalla fase UI-5 (docs/PIANO-UI-FRONTEND.md §5 UI-5): il pannello
+ * e `register` (/registrati) dalla fase UI-5 (docs/FRONTEND-PLAN.md §5 UI-5): il pannello
  * Filament /account non ha più pagine di autenticazione proprie. Anche l'uscita è una route
  * pubblica (`logout`, POST /esci).
  */

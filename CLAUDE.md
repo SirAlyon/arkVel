@@ -3,7 +3,7 @@
 Open-source platform for animal adoption and management (municipal pounds, shelters,
 associations, nonprofits) across Europe. Stack: **Laravel 13 + Filament 5 + PHP 8.4 + PostgreSQL 16**.
 
-- **Plan & roadmap:** [docs/PIANO-DI-SVILUPPO.md](docs/PIANO-DI-SVILUPPO.md) — read it before working on a phase.
+- **Plan & roadmap:** [docs/DEVELOPMENT-PLAN.md](docs/DEVELOPMENT-PLAN.md) — read it before working on a phase.
 - **Application code:** lives in [laravel/](laravel/). The Docker infrastructure is in the repo root.
 - Laravel/Filament-specific rules: [laravel/CLAUDE.md](laravel/CLAUDE.md).
 
@@ -146,7 +146,7 @@ The specialized sub-agents handle the recurring kinds of work and apply the stan
 - **test-author** — writes/extends Pest tests and runs the suite.
 - **standards-reviewer** — read-only review of the diff against the project's SOLID/OOP standards.
 - **ui-builder** — builds the public Livewire UI (`x-ui.*` components, pages) per
-  [docs/PIANO-UI-FRONTEND.md](docs/PIANO-UI-FRONTEND.md). Doesn't touch Filament.
+  [docs/FRONTEND-PLAN.md](docs/FRONTEND-PLAN.md). Doesn't touch Filament.
 - **design-reviewer** — read-only visual and accessibility review (multi-viewport screenshots, WCAG 2.2 AA).
 
 Supporting workflows:

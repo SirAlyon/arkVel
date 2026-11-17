@@ -37,7 +37,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
  *    (middleware `verified` di Laravel nell'authMiddleware).
  * Non è il pannello di default (resta l'admin).
  *
- * Autenticazione (dalla fase UI-5, docs/PIANO-UI-FRONTEND.md §5): accesso,
+ * Autenticazione (dalla fase UI-5, docs/FRONTEND-PLAN.md §5): accesso,
  * registrazione, reset password e verifica email sono pagine PUBBLICHE Livewire
  * (route login, register, password.*, verification.*; Action in app/Actions/Auth).
  * Il pannello non abilita più login(), registration(), passwordReset() né

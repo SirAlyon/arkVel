@@ -9,7 +9,7 @@
 /*
  | Dark mode a classe: `.dark` su <html>, impostata dallo script in
  | resources/views/partials/theme-script.blade.php (scelta salvata o
- | prefers-color-scheme). Vedi docs/PIANO-UI-FRONTEND.md §1-bis.
+ | prefers-color-scheme). Vedi docs/FRONTEND-PLAN.md §1-bis.
  */
 @custom-variant dark (&:where(.dark, .dark *));
 

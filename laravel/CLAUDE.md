@@ -46,8 +46,9 @@ app/
 
 ## Laravel Boost
 
-Installed (dev). Per-version guidelines in the block below, skills in `laravel/.claude/skills/`,
-MCP server configured in the **root** `.mcp.json` (runs in the container:
+Installed (dev). Per-version guidelines in the block below; the Boost skills live in
+`laravel/.claude/` as local-only tooling (not checked into the repo). The MCP server is
+configured in the **root** `.mcp.json` (runs in the container:
 `docker compose exec -T php php artisan boost:mcp`).
 To update: `docker compose exec -T php php artisan boost:update`.
 If you re-run `boost:install --mcp`, delete the `laravel/.mcp.json` it regenerates: use the host `php` (8.2).

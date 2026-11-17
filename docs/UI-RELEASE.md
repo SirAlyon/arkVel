@@ -1,7 +1,7 @@
 # ArkVel — Releasing the new public UI
 
 > Steps to put into production the public site rebuilt in phases UI-0…UI-8
-> (docs/PIANO-UI-FRONTEND.md). The Filament panels don't change, except for the adopter
+> (docs/FRONTEND-PLAN.md). The Filament panels don't change, except for the adopter
 > panel's authentication (UI-5).
 
 ---

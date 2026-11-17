@@ -8,7 +8,7 @@
 > `laravel/tests/Unit/DesignTokens/ColorContrastTest.php` (pairs in
 > `App\Support\DesignTokens\ContrastPairs`); **targets** via `BrowserScripts::undersizedTargets`.
 > axe doesn't cover everything: the criteria marked "manual" were verified in the `/ui-review` runs of
-> phases UI-2…UI-7 (docs/PIANO-UI-FRONTEND.md).
+> phases UI-2…UI-7 (docs/FRONTEND-PLAN.md).
 
 | Criterion | How it's met | Where it's tested |
 |---|---|---|

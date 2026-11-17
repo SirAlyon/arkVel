@@ -13,7 +13,7 @@ use Filament\Support\Contracts\HasLabel;
  * Analogo alla candidatura di adozione (ApplicationStatus): il grafo delle
  * transizioni consentite è implementato nella macchina a stati
  * (spatie/laravel-model-states) in App\States\Foster — vedi
- * docs/PIANO-DI-SVILUPPO.md §Fase 3.
+ * docs/DEVELOPMENT-PLAN.md §Fase 3.
  */
 enum FosterApplicationStatus: string implements HasColor, HasLabel
 {

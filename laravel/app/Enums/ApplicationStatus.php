@@ -12,7 +12,7 @@ use Filament\Support\Contracts\HasLabel;
  *
  * Il grafo delle transizioni consentite è implementato nella macchina a stati
  * (spatie/laravel-model-states) in App\States\Application — vedi
- * docs/PIANO-DI-SVILUPPO.md §5.
+ * docs/DEVELOPMENT-PLAN.md §5.
  */
 enum ApplicationStatus: string implements HasColor, HasLabel
 {

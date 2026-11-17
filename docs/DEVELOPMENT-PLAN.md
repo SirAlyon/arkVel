@@ -10,7 +10,7 @@ Living document. Version 1 — 2026-09-26.
 > **Status note (2026-11).** This is the original roadmap. The platform has since reached a
 > **feature-complete beta**: Phases 0–4 (foundations, core domain, public catalog + adopter
 > portal + applications, fostering/appointments/advanced medical, communication/notifications/
-> donations) plus the public UI rebuild (UI-0…UI-8, see [PIANO-UI-FRONTEND.md](PIANO-UI-FRONTEND.md))
+> donations) plus the public UI rebuild (UI-0…UI-8, see [FRONTEND-PLAN.md](FRONTEND-PLAN.md))
 > are shipped. The roadmap below is preserved as originally written; later phases (5–8) may be
 > partially delivered ahead of this document.
 
