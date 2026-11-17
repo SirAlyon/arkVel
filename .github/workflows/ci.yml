@@ -83,11 +83,12 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      # Node 22: stessa major di Dockerfile.browser (NODE_MAJOR).
+      # Node 24: come l'immagine php del progetto (Alpine nodejs) e Dockerfile.browser; il
+      # package-lock.json è generato con npm 11 (node 24), quindi `npm ci` qui lo accetta.
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
           cache-dependency-path: laravel/package-lock.json
 

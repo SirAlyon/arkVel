@@ -9,7 +9,7 @@ FROM php:8.4-cli-bookworm
 # Versione di Playwright: DEVE coincidere con `playwright` in laravel/package.json,
 # altrimenti i browser installati qui non corrispondono al client usato dai test.
 ARG PLAYWRIGHT_VERSION=1.64.1
-ARG NODE_MAJOR=22
+ARG NODE_MAJOR=24
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
