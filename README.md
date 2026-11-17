@@ -1,9 +1,9 @@
-<p align="center">
-  <!-- Logo: sostituisci con un asset committato (es. docs/assets/logo.png) per non dipendere da host esterni. -->
-  <img src="https://imgur.com/BopSOwn.png" alt="ArkVel" width="260">
-</p>
-
-<h1 align="center">ArkVel</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img src="docs/assets/logo.svg" alt="ArkVel" width="320">
+  </picture>
+</h1>
 
 <p align="center">
   <strong>Open-source adoption & management platform for animal shelters, rescues and associations in Europe.</strong><br>
