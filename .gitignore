@@ -4,3 +4,6 @@ seed.sh
 
 # Output del Playwright MCP
 /.playwright-mcp/
+
+# Claude Code local tooling (agents, skills, settings)
+.claude/
