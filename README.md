@@ -1,121 +1,130 @@
 <p align="center">
-  <img src="https://imgur.com/BopSOwn.png" alt="ArkVel" width="300" height="270">
+  <!-- Logo: sostituisci con un asset committato (es. docs/assets/logo.png) per non dipendere da host esterni. -->
+  <img src="https://imgur.com/BopSOwn.png" alt="ArkVel" width="260">
 </p>
 
-# ArkVel
+<h1 align="center">ArkVel</h1>
 
-**ArkVel is an open-source platform designed to enhance the animal adoption process in Europe, leveraging modern technologies to better connect shelters, volunteers, and adopters.**
+<p align="center">
+  <strong>Open-source adoption & management platform for animal shelters, rescues and associations in Europe.</strong><br>
+  A real tool for the whole journey — adoptions, fostering, appointments, medical care, messaging and donations — GDPR-first and self-hostable.
+</p>
 
----
-
-## 📌 Project Overview
-
-ArkVel is a personal initiative aimed at bridging the gap between animal shelters and individuals looking to adopt, by providing a modern and user-friendly digital solution. This project draws inspiration from [Baja Pet Rescue Dog Adoption Application](https://github.com/kasugaijin/baja-pet-rescue/tree/main), adapting it to meet European needs.
-
----
-
-## 🛠️ Requirements to Run the Project
-
-To run ArkVel, ensure you have the following tools installed:
-
-- **Docker** and **Docker Compose**: For managing the development environment
-- **PHP 8.2** or higher: To run Laravel locally (optional if using Docker)
-- **Composer**: To manage PHP dependencies (optional if using Docker)
-- **Node.js** (version 16 or higher) and **npm**: For managing frontend packages
-- **Git**: To clone the repository
+<p align="center">
+  <img alt="Status" src="https://img.shields.io/badge/status-beta-blueviolet">
+  <img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-blue">
+  <img alt="Laravel" src="https://img.shields.io/badge/Laravel-13-FF2D20">
+  <img alt="Filament" src="https://img.shields.io/badge/Filament-5-FDAE4B">
+  <img alt="PHP" src="https://img.shields.io/badge/PHP-8.4-777BB4">
+</p>
 
 ---
 
-### 🚀 Technology Stack
+## What is ArkVel?
 
-- **Laravel 13** - A robust and flexible PHP framework (PHP 8.4)
-- **Filament 5** - Multi-panel, multi-tenant admin/app framework
-- **PostgreSQL 16** + **Redis** + **Meilisearch** (search) + **Mailpit** (mail)
-- **Spatie ecosystem** - permissions, media library, translatable, activity log, model states, data
-- **Docker** - Simplifies development environment management
-- **Tailwind CSS** - Ensures a modern and responsive design
+Shelters, rescues and animal welfare associations too often run on spreadsheets, email threads and WhatsApp groups. **ArkVel** gives them a serious, modern platform instead — and keeps it **open source**, so the organisations that care for animals don't pay enterprise licence fees or hand their data to a closed vendor.
 
-> 📋 Full architecture & roadmap: [docs/PIANO-DI-SVILUPPO.md](docs/PIANO-DI-SVILUPPO.md)
+It's not just a listings site: it's an end-to-end system covering the **public adoption experience** and the **day-to-day operations** of an organisation, built as a multi-tenant platform where each organisation's data is isolated.
 
-#### Local development
+> **Status:** Beta. The public beta opens **22 November 2026** with the first pilot organisations. Built for an Italy-first pilot on a multi-country, multilingual architecture.
 
-```sh
-docker compose up -d --build
-# App:        http://localhost:8090
-# Admin:      http://localhost:8090/admin
-# Mailpit:    http://localhost:8025
-# Meilisearch http://localhost:7700
+---
+
+## Features
+
+**Public site**
+- Adoption catalogue with full-text search (Meilisearch), filters and a map of organisations
+- Rich animal pages with image gallery; verified-organisation gating (no leaks of drafts)
+- Organisation directory and public profiles; public adopter login & registration (Livewire)
+- Privacy & terms pages, i18n (Italian base, English), accessibility to **WCAG 2.2 AA**
+
+**Adopter portal** (`/account`)
+- GDPR profile & questionnaire with recorded consents, favourites
+- Adoption and fostering applications (with withdrawal), appointments, real-time messages
+- Donations (one-off & recurring) with history, notification centre
+- **Self-service account deletion** with anonymisation (GDPR right to erasure)
+
+**Organisation management** (`/manage`, multi-tenant)
+- Animals & medical records; adoption workflow as an explicit **state machine**, with PDF contract generation
+- **Fostering** workflow and placements
+- Appointments with a full in-app **calendar** (FullCalendar), drag-and-drop, and **bidirectional sync** with Google Calendar / CalDAV, plus a universal iCal feed
+- Medical scheduling with automated reminders (scheduler + queue)
+- Conversations with adopters, read-only donations ledger
+
+**Platform admin** (`/admin`)
+- Super-admin settings for Google Calendar and Stripe credentials — stored **encrypted** in the database, overriding `.env` at runtime
+
+**Cross-cutting**
+- Multi-tenant isolation, team-scoped roles & permissions
+- **Real-time** messaging & notifications (self-hosted WebSockets, Laravel Reverb)
+- Branded transactional emails, activity log, config-gated external integrations (Stripe, Google) — inert until configured
+- **Dockerised** and **self-hostable** end to end
+
+---
+
+## Screenshots
+
+> _Coming soon._ Add images under `docs/screenshots/` and reference them here.
+
+---
+
+## Tech stack
+
+- **Laravel 13** · **PHP 8.4** · **Filament 5** (three panels: public adopter, shelter, admin)
+- **PostgreSQL 16** · **Redis** · **Meilisearch** (search) · **Laravel Reverb** (WebSockets)
+- **Tailwind CSS 4** · Livewire for the public site · **Docker** / Docker Compose
+- **Spatie ecosystem**: permissions (teams), media library, translatable, activity log, model states, laravel-data
+- **Laravel Cashier** (Stripe) for donations
+
+Design: a **modular monolith** (`Enums`, `Models`, `States`, `Actions`, `Policies`, `Data`, `Support`, `Filament`, `Livewire`), SOLID, strict types, domain logic in invokable Actions, lifecycle via state machines, GDPR-by-design, tests in Pest (unit + feature + browser).
+
+---
+
+## Getting started (local)
+
+Requirements: **Docker** and **Docker Compose**. Everything else runs in the containers (PHP 8.4, Composer, Node).
+
+```bash
+git clone https://github.com/SirAlyon/arkVel.git && cd arkVel
+
+# Start the stack (php, nginx, postgres, redis, meilisearch, reverb, queue, scheduler, mailpit…)
+docker compose up -d
+
+# App setup (inside the php container)
+docker compose exec php composer install
+docker compose exec php cp .env.example .env
+docker compose exec php php artisan key:generate
+docker compose exec php php artisan migrate --seed   # demo data (never seeded in production)
+
+# Front-end assets
+docker compose exec php sh -lc "npm ci && npm run build"
 ```
 
-## 🎯 Key Objectives
+- App: http://localhost:8090 · Mailpit: http://localhost:8025 · Meilisearch: http://localhost:7700
+- Quality gate (must stay green): `docker compose exec php ./vendor/bin/pint` · `./vendor/bin/phpstan analyse` · `./vendor/bin/pest`
 
-- Develop an effective tool to manage animal adoptions
-- Facilitate communication between shelters and adopters
-- Automate administrative processes for shelters
-- Create a scalable platform adaptable to the needs of European countries
+## Deployment
 
----
+Production runs the same Docker stack with Caddy for automatic TLS. See **[docs/DEPLOY.md](docs/DEPLOY.md)** for the full runbook (server, DNS, env, Reverb behind TLS, Meilisearch, queues, backups) and **[docs/RILASCIO-UI.md](docs/RILASCIO-UI.md)** for the release checklist.
 
-## 🏗️ Current Status and Next Steps
+## Documentation
 
-💡 **Currently in the early development phase**
-
-### 🔜 Next Steps
-
-1. **Initial Setup**
-   - Configure the project with Laravel 11 and Docker
-   - Integrate Filament 3 for administrative management
-
-2. **Database Modeling**
-   - Create tables and relationships for animals, shelters, and users
-   - Structure the system for user and shelter profiles
-
-3. **Core Feature Development**
-   - Manage animals available for adoption
-   - User registration and login
-   - Admin dashboard for management
-
-4. **UI/UX and Design**
-   - Design the main user interface
-   - Optimize the design for compatibility across devices
-
-5. **Testing and Optimization**
-   - Implement unit and functional tests
-   - Debug and optimize performance
-
-6. **Project Launch**
-   - Set up a staging environment
-   - Deploy the platform
-
-If you’d like to provide feedback or contribute, I’d love to hear from you! 🚀
+- [docs/PIANO-DI-SVILUPPO.md](docs/PIANO-DI-SVILUPPO.md) — roadmap & architecture
+- [docs/CALENDARIO.md](docs/CALENDARIO.md) — calendar & external sync
+- [docs/COMUNICAZIONE.md](docs/COMUNICAZIONE.md) — messaging, realtime & notifications
+- [docs/DONAZIONI.md](docs/DONAZIONI.md) — donations (Stripe)
+- [docs/WCAG-CHECKLIST.md](docs/WCAG-CHECKLIST.md) — accessibility
 
 ---
 
-## 🛠️ How to Contribute
+## Contributing
 
-Although I am currently working on this project alone, any suggestions or support are welcome. Here’s how you can contribute:
+Contributions are welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)**. Every change ships with tests and a green quality gate (Pint + PHPStan level 6 + Pest).
 
-1. **Fork the repository**:
-   ```sh
-   git clone https://github.com/your-username/arkvel.git
-   cd arkvel
-   ```
+## License
 
-2. **Set up the development environment** using Docker:
-   ```sh
-   docker-compose up -d
-   ```
+Released under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see [LICENSE](LICENSE). In short: free to use, study, modify and self-host; if you run a modified version as a network service, you must make your source available under the same terms.
 
-3. **Submit suggestions or pull requests** with new features or improvements.
+## Credits
 
----
-
-## 📬 Contact
-
-Feel free to reach out via GitHub for any questions or feedback.
-
----
-
-## 📜 License
-
-This project will be distributed under an open-source license. More details will be provided in the future.
+Created and maintained by **Alessio Sada** — [kiba.studio](https://kiba.studio). Inspired by [Baja Pet Rescue](https://github.com/kasugaijin/baja-pet-rescue), adapted to the European context (fostering, EU legal fields, microchip, EUR).
