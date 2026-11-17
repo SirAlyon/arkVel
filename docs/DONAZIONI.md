@@ -1,124 +1,124 @@
-# ArkVel — Donazioni (Stripe)
+# ArkVel — Donations (Stripe)
 
-> Fase 4. Donazioni **una tantum** e **ricorrenti mensili** verso un ente, tramite
-> Stripe Checkout. Un solo account Stripe di **piattaforma**; le donazioni sono
-> registrate **per-ente**. I payout per-ente (Stripe Connect) sono **fuori scope**.
-
----
-
-## 1. Config-gating: niente chiavi, niente donazioni
-
-Tutto il flusso è inerte finché Stripe non è configurato. Il predicato unico è
-`App\Support\Billing\StripeConfig::configured()` (true quando ci sono **publishable
-key** + **secret key**). Finché è false:
-
-- la sezione donazioni **non compare** sul profilo pubblico dell'ente;
-- le Action lanciano `DonationsNotConfigured` (backstop anche nell'impl Stripe);
-- nessun endpoint Checkout/webhook ha effetto.
-
-I test girano sempre con Stripe **non configurato** (chiavi vuote pinnate in
-`phpunit.xml`) e usano un seam fake: **nessun test tocca la rete**.
+> Phase 4. **One-off** and **recurring monthly** donations to an organization, via
+> Stripe Checkout. A single **platform** Stripe account; donations are
+> recorded **per organization**. Per-organization payouts (Stripe Connect) are **out of scope**.
 
 ---
 
-## 2. Configurare Stripe
+## 1. Config-gating: no keys, no donations
 
-Le credenziali si risolvono **DB-over-env**: il valore salvato da UI vince sull'`.env`.
+The entire flow is inert until Stripe is configured. The single predicate is
+`App\Support\Billing\StripeConfig::configured()` (true when there is both a **publishable
+key** and a **secret key**). While it's false:
 
-**Via UI (consigliato).** Pannello **Admin → Impostazioni → Integrazione pagamenti**
-(`App\Filament\Pages\StripeIntegrationSettings`, solo Super Admin): publishable key,
-secret key, webhook signing secret. I segreti sono **cifrati at-rest** (tabella
-`platform_settings`, cast `encrypted`) e **non vengono mai ripresentati** al browser;
-un submit col campo vuoto **non** sovrascrive il segreto già salvato.
+- the donations section **does not appear** on the organization's public profile;
+- the Actions throw `DonationsNotConfigured` (a backstop also in the Stripe implementation);
+- no Checkout/webhook endpoint has any effect.
+
+The tests always run with Stripe **unconfigured** (empty keys pinned in
+`phpunit.xml`) and use a fake seam: **no test touches the network**.
+
+---
+
+## 2. Configuring Stripe
+
+Credentials resolve **DB-over-env**: the value saved from the UI wins over `.env`.
+
+**Via the UI (recommended).** **Admin → Settings → Payment integration** panel
+(`App\Filament\Pages\StripeIntegrationSettings`, Super Admin only): publishable key,
+secret key, webhook signing secret. The secrets are **encrypted at rest** (`platform_settings`
+table, `encrypted` cast) and are **never shown again** to the browser;
+a submit with an empty field does **not** overwrite the already-saved secret.
 
 **Via `.env`** (fallback): `STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`,
-`CASHIER_CURRENCY=eur`. Applicate a runtime su `cashier.*` da `BillingServiceProvider`.
+`CASHIER_CURRENCY=eur`. Applied at runtime to `cashier.*` by `BillingServiceProvider`.
 
-Il banner di stato della pagina indica l'origine effettiva: `db` / `env` / non configurato.
+The page's status banner shows the effective source: `db` / `env` / not configured.
 
 ---
 
 ## 3. Webhook
 
-Endpoint unico: **`POST /stripe/webhook`** (`StripeWebhookController`), escluso dalla
-CSRF (nessuna sessione: lo chiama Stripe).
+A single endpoint: **`POST /stripe/webhook`** (`StripeWebhookController`), excluded from
+CSRF (no session: Stripe calls it).
 
-- La firma `Stripe-Signature` è **verificata** contro `StripeConfig::webhookSecret()`
-  quando impostato → firma errata/assente = **400**. Se il secret è vuoto
-  (dev/test) la verifica è **saltata**: in produzione impostalo sempre.
-- Controller **sottile**: verifica firma, instrada per tipo/`mode`, delega alle Action
-  di riconciliazione. Idempotente (grafo di stato + unicità `provider_ref`). Eventi
-  non pertinenti → **200** no-op (niente ritentativi inutili di Stripe).
+- The `Stripe-Signature` signature is **verified** against `StripeConfig::webhookSecret()`
+  when set → a wrong/missing signature = **400**. If the secret is empty
+  (dev/test) verification is **skipped**: in production always set it.
+- A **thin** controller: verifies the signature, routes by type/`mode`, delegates to the
+  reconciliation Actions. Idempotent (state graph + `provider_ref` uniqueness). Irrelevant
+  events → **200** no-op (no pointless Stripe retries).
 
-Eventi da abilitare sull'endpoint Stripe:
+Events to enable on the Stripe endpoint:
 
-| Evento | Effetto |
+| Event | Effect |
 |---|---|
-| `checkout.session.completed` (mode `payment`) | una tantum → **Completed** + `paid_at` |
-| `checkout.session.async_payment_succeeded` | una tantum SEPA assestata → **Completed** |
-| `checkout.session.expired` / `async_payment_failed` | una tantum → **Failed** |
-| `checkout.session.completed` (mode `subscription`) | ricorrente → **Active** + salva `sub_...` |
-| `invoice.paid` / `invoice.payment_succeeded` | addebito ricorrente → riga `Donation` nel registro |
-| `invoice.payment_failed` | ricorrente → **PastDue** |
-| `customer.subscription.deleted` | ricorrente → **Canceled** |
+| `checkout.session.completed` (mode `payment`) | one-off → **Completed** + `paid_at` |
+| `checkout.session.async_payment_succeeded` | one-off SEPA settled → **Completed** |
+| `checkout.session.expired` / `async_payment_failed` | one-off → **Failed** |
+| `checkout.session.completed` (mode `subscription`) | recurring → **Active** + saves `sub_...` |
+| `invoice.paid` / `invoice.payment_succeeded` | recurring charge → `Donation` row in the ledger |
+| `invoice.payment_failed` | recurring → **PastDue** |
+| `customer.subscription.deleted` | recurring → **Canceled** |
 
-In locale: `stripe listen --forward-to localhost:8090/stripe/webhook`.
-
----
-
-## 4. Donazione una tantum (P4-6)
-
-Sul profilo pubblico dell'ente (`/enti/{slug}`), sezione **Sostieni l'ente**: importi
-preset o libero, messaggio, e — per gli **ospiti** — nome + email (il donatore loggato
-porta i propri dati). Flusso:
-
-1. `App\Actions\Donations\StartDonationCheckout` — guardie **prima** di scrivere
-   (config, importo **1€–10.000€**, identità donatore o email ospite), crea la riga
-   `Donation` **Pending** in transazione, `provider_ref` = id sessione Checkout,
-   redirige all'URL ospitato.
-2. Ritorno su `/enti/{slug}/grazie` (o `/annulla`). La conferma reale arriva dal
-   **webhook** (`ReconcileDonationFromStripe`), non dalla landing.
-
-Il seam fakeable è `CreatesDonationCheckout` (impl `StripeDonationCheckout`).
+Locally: `stripe listen --forward-to localhost:8090/stripe/webhook`.
 
 ---
 
-## 5. Donazione ricorrente mensile (P4-7)
+## 4. One-off donation (P4-6)
 
-Stessa sezione pubblica, scelta frequenza **Mensile** — disponibile **solo per utenti
-autenticati** (serve un account per gestirla/disdirla; agli ospiti è mostrato un hint).
+On the organization's public profile (`/enti/{slug}`), the **Support the organization**
+section: preset or custom amounts, a message, and — for **guests** — name + email (a logged-in
+donor brings their own data). Flow:
 
-- Il model **`RecurringDonation`** (tabella `recurring_donations`) è l'abbonamento di
-  un utente verso un ente; stato `pending → active → past_due → canceled`
-  (`RecurringDonationStatus`). `stripe_subscription_id` è valorizzato dal webhook.
-- Ogni **invoice pagata** crea una riga `Donation` (`type = recurring`, Completed)
-  collegata via `donations.recurring_donation_id`: il **registro d'ente** mostra così
-  uniformemente una tantum e addebiti ricorrenti.
-- Checkout `mode=subscription` con `price_data` ricorrente inline (nessun catalogo
-  prezzi); `metadata.recurring_donation_id` propagato su session **e** subscription per
-  la riconciliazione di tutti gli eventi. Seam fakeable `ManagesRecurringDonation`
-  (impl `StripeRecurringDonationCheckout`), che gestisce anche la disdetta.
+1. `App\Actions\Donations\StartDonationCheckout` — guards **before** writing
+   (config, amount **€1–€10,000**, donor identity or guest email), creates the
+   **Pending** `Donation` row in a transaction, `provider_ref` = Checkout session id,
+   redirects to the hosted URL.
+2. Return to `/enti/{slug}/grazie` (or `/annulla`). The real confirmation comes from the
+   **webhook** (`ReconcileDonationFromStripe`), not from the landing page.
 
-Action: `StartRecurringDonationCheckout`, `ReconcileSubscriptionFromStripe`,
-`CancelRecurringDonation` (idempotente, disdice su Stripe + stato Canceled).
+The fakeable seam is `CreatesDonationCheckout` (impl `StripeDonationCheckout`).
 
 ---
 
-## 6. Dove si vedono le donazioni
+## 5. Recurring monthly donation (P4-7)
 
-- **Ente** (`/manage → Donazioni`): lista **read-only** tenant-scoped, tab per esito,
-  una tantum + addebiti ricorrenti. Permesso `donation.view`.
-- **Adottante** (`/account → Le mie donazioni`): le proprie ricorrenti + storico
-  addebiti, con azione **Disdici** sulle attive (`RecurringDonationPolicy`, ownership).
+Same public section, choosing the **Monthly** frequency — available **only for authenticated
+users** (an account is needed to manage/cancel it; guests are shown a hint).
+
+- The **`RecurringDonation`** model (`recurring_donations` table) is a user's subscription
+  to an organization; status `pending → active → past_due → canceled`
+  (`RecurringDonationStatus`). `stripe_subscription_id` is set by the webhook.
+- Every **paid invoice** creates a `Donation` row (`type = recurring`, Completed)
+  linked via `donations.recurring_donation_id`: so the **organization ledger** shows
+  one-off donations and recurring charges uniformly.
+- Checkout `mode=subscription` with inline recurring `price_data` (no price
+  catalog); `metadata.recurring_donation_id` propagated to the session **and** the subscription for
+  reconciliation of all events. Fakeable seam `ManagesRecurringDonation`
+  (impl `StripeRecurringDonationCheckout`), which also handles cancellation.
+
+Actions: `StartRecurringDonationCheckout`, `ReconcileSubscriptionFromStripe`,
+`CancelRecurringDonation` (idempotent, cancels on Stripe + Canceled state).
 
 ---
 
-## 7. File principali
+## 6. Where donations show up
 
-- `app/Support/Billing/` — `StripeConfig` (DB-over-env), seam `CreatesDonationCheckout`
-  / `ManagesRecurringDonation` + impl Stripe, DTO `DonationCheckoutSession`.
-- `app/Actions/Donations/` — Start/Reconcile/Cancel (one-off + ricorrenti).
-- `app/Http/Controllers/StripeWebhookController.php` — endpoint unico, firma + routing.
+- **Organization** (`/manage → Donations`): a **read-only** tenant-scoped list, tabs by outcome,
+  one-off + recurring charges. `donation.view` permission.
+- **Adopter** (`/account → My donations`): their own recurring donations + charge
+  history, with a **Cancel** action on the active ones (`RecurringDonationPolicy`, ownership).
+
+---
+
+## 7. Key files
+
+- `app/Support/Billing/` — `StripeConfig` (DB-over-env), seams `CreatesDonationCheckout`
+  / `ManagesRecurringDonation` + the Stripe implementations, the `DonationCheckoutSession` DTO.
+- `app/Actions/Donations/` — Start/Reconcile/Cancel (one-off + recurring).
+- `app/Http/Controllers/StripeWebhookController.php` — single endpoint, signature + routing.
 - `app/Models/{Donation,RecurringDonation}.php` + `app/Enums/{DonationType,DonationStatus,RecurringDonationStatus}.php`.
-- `app/Filament/Shelter/Resources/Donations/` (ente) · `app/Filament/Adopter/Pages/MyDonations.php` (adottante) · `app/Filament/Pages/StripeIntegrationSettings.php` (admin).
-- `app/Providers/BillingServiceProvider.php` — binding dei seam + applicazione chiavi DB su `cashier.*`.
+- `app/Filament/Shelter/Resources/Donations/` (organization) · `app/Filament/Adopter/Pages/MyDonations.php` (adopter) · `app/Filament/Pages/StripeIntegrationSettings.php` (admin).
+- `app/Providers/BillingServiceProvider.php` — seam bindings + applying the DB keys to `cashier.*`.

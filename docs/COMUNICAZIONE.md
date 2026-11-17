@@ -1,67 +1,67 @@
-# ArkVel — Comunicazione & notifiche
+# ArkVel — Communication & notifications
 
-> Fase 4. Messaggistica **ente ↔ adottante** a thread, aggiornamenti **in tempo reale**
-> (Reverb), **centro notifiche** in-app ed email transazionali **brandizzate**.
+> Phase 4. Threaded **organization ↔ adopter** messaging, **real-time** updates
+> (Reverb), an in-app **notification center**, and **branded** transactional email.
 
 ---
 
-## 1. Messaggistica a thread (ente ↔ adottante)
+## 1. Threaded messaging (organization ↔ adopter)
 
-Un `MessageThread` lega un **adottante** a un **ente** (opzionalmente attorno a un
-animale); i `Message` sono i singoli messaggi, con tracciamento del **non letto** per
-lato (`adopter_last_read_at` / `org_last_read_at`).
+A `MessageThread` links an **adopter** to an **organization** (optionally around an
+animal); the `Message` records are the individual messages, with **unread** tracking per
+side (`adopter_last_read_at` / `org_last_read_at`).
 
-- Dominio in `app/Actions/Messaging/` — `StartMessageThread`, `PostMessage`,
-  `MarkThreadRead` (mutazioni in transazione, guardie, notifiche). Nessuna logica nei
-  model; autorizzazione via `MessageThreadPolicy`.
-- UI: **adottante** `/account → Messaggi` (`MyMessages`), **ente** `/manage →
-  Conversazioni` (`Conversations`, tenant-scoped), più **"Contatta l'ente"** dalla
-  scheda animale pubblica (`AnimalDetail`).
-- Il conteggio non letti per l'ente è calcolato lato DB (`unreadForOrg`).
+- Domain in `app/Actions/Messaging/` — `StartMessageThread`, `PostMessage`,
+  `MarkThreadRead` (mutations in a transaction, guards, notifications). No logic in the
+  models; authorization via `MessageThreadPolicy`.
+- UI: **adopter** `/account → Messages` (`MyMessages`), **organization** `/manage →
+  Conversations` (`Conversations`, tenant-scoped), plus **"Contact the organization"** from the
+  public animal page (`AnimalDetail`).
+- The unread count for the organization is computed at the DB level (`unreadForOrg`).
 
 ---
 
 ## 2. Realtime (Reverb)
 
-Websocket self-hosted **Reverb** + **Laravel Echo** (bundlato via npm, build con
-`npm run build`). In Docker gira il servizio `reverb` (`0.0.0.0:8080`); il browser si
-connette a `localhost:8080`. Nessun account esterno; credenziali di sviluppo nell'`.env`.
+Self-hosted **Reverb** websocket + **Laravel Echo** (bundled via npm, built with
+`npm run build`). In Docker the `reverb` service runs (`0.0.0.0:8080`); the browser
+connects to `localhost:8080`. No external account; development credentials in `.env`.
 
-- Canali privati in `routes/channels.php`: `App.Models.User.{id}` (notifiche personali)
-  e `message-thread.{thread}`. **Attenzione**: queste rotte vivono **fuori** dai pannelli
-  Filament → il team di `spatie/permission` **non è impostato**. Prima di `can('view')`
-  si fa `setPermissionsTeamId($thread->organization_id)`, altrimenti lo staff verificato
-  verrebbe respinto (stesso pattern del feed .ics, vedi [CALENDARIO.md](CALENDARIO.md)).
-- `MessageSent` è `ShouldBroadcast` con payload **senza PII** (solo id + `sender_side`):
-  il client riceve l'evento e ricarica il thread autorizzato, non il contenuto dal canale.
-- Le notifiche database broadcastate aggiornano la **campanella** in tempo reale
+- Private channels in `routes/channels.php`: `App.Models.User.{id}` (personal notifications)
+  and `message-thread.{thread}`. **Note**: these routes live **outside** the Filament
+  panels → the `spatie/permission` team **is not set**. Before `can('view')`
+  we call `setPermissionsTeamId($thread->organization_id)`, otherwise verified staff
+  would be rejected (same pattern as the .ics feed, see [CALENDARIO.md](CALENDARIO.md)).
+- `MessageSent` is `ShouldBroadcast` with a payload **without PII** (only id + `sender_side`):
+  the client receives the event and reloads the authorized thread, not the content from the channel.
+- Broadcast database notifications update the **bell** in real time
   (`BroadcastDatabaseNotificationSent`).
 
-In test il broadcast è `null` (`phpunit.xml`): nessuna connessione reale.
+In tests broadcasting is `null` (`phpunit.xml`): no real connection.
 
 ---
 
-## 3. Centro notifiche in-app
+## 3. In-app notification center
 
-Campanella Filament (`->databaseNotifications()`) sui pannelli **adottante** e **ente**,
-con pagine dedicate `Notifications` (`InteractsWithNotificationCenter`). Le notifiche
-sono `ShouldQueue`, `via = ['mail','database']`, inviate `afterCommit`, i18n.
+Filament bell (`->databaseNotifications()`) on the **adopter** and **organization** panels,
+with dedicated `Notifications` pages (`InteractsWithNotificationCenter`). The notifications
+are `ShouldQueue`, `via = ['mail','database']`, sent `afterCommit`, i18n.
 
-> La colonna `notifications.data` **deve** essere `json` (non `text`), o Postgres rompe
-> la query della campanella (`data->>'format'`).
-
----
-
-## 4. Email transazionali brandizzate
-
-Tema markdown **`arkvel`** (`config/mail.php` → `markdown.theme`), foglio di stile
-`resources/views/vendor/mail/html/themes/arkvel.css` con i colori del brand
-(terracotta `#c5522a`, teal `#148361`). Tutte le mail di notifica usano questo tema;
-in sviluppo le intercetta **Mailpit** (`http://localhost:8025`).
+> The `notifications.data` column **must** be `json` (not `text`), or Postgres breaks
+> the bell query (`data->>'format'`).
 
 ---
 
-## 5. File principali
+## 4. Branded transactional email
+
+The **`arkvel`** markdown theme (`config/mail.php` → `markdown.theme`), stylesheet
+`resources/views/vendor/mail/html/themes/arkvel.css` with the brand colors
+(terracotta `#c5522a`, teal `#148361`). All notification emails use this theme;
+in development **Mailpit** intercepts them (`http://localhost:8025`).
+
+---
+
+## 5. Key files
 
 - `app/Models/{MessageThread,Message}.php` · `app/Policies/MessageThreadPolicy.php` ·
   `app/Actions/Messaging/*`.
@@ -69,5 +69,5 @@ in sviluppo le intercetta **Mailpit** (`http://localhost:8025`).
   `routes/channels.php`.
 - `app/Filament/{Adopter,Shelter}/Pages/{MyMessages,Conversations,Notifications}.php` ·
   `app/Filament/Notifications/Support/InteractsWithNotificationCenter.php`.
-- `app/Notifications/NewMessageReceived.php` · tema mail in
+- `app/Notifications/NewMessageReceived.php` · mail theme in
   `resources/views/vendor/mail/html/themes/arkvel.css`.

@@ -1,18 +1,18 @@
-# ArkVel — Guida per agenti e standard di sviluppo
+# ArkVel — Agent guide and development standards
 
-Piattaforma open-source per adozione e gestione animali (canili, rifugi, associazioni,
-società) in Europa. Stack: **Laravel 13 + Filament 5 + PHP 8.4 + PostgreSQL 16**.
+Open-source platform for animal adoption and management (municipal pounds, shelters,
+associations, nonprofits) across Europe. Stack: **Laravel 13 + Filament 5 + PHP 8.4 + PostgreSQL 16**.
 
-- **Piano & roadmap:** [docs/PIANO-DI-SVILUPPO.md](docs/PIANO-DI-SVILUPPO.md) — leggilo prima di lavorare su una fase.
-- **Codice applicativo:** vive in [laravel/](laravel/). L'infrastruttura Docker è nella root.
-- Regole Laravel/Filament specifiche: [laravel/CLAUDE.md](laravel/CLAUDE.md).
+- **Plan & roadmap:** [docs/PIANO-DI-SVILUPPO.md](docs/PIANO-DI-SVILUPPO.md) — read it before working on a phase.
+- **Application code:** lives in [laravel/](laravel/). The Docker infrastructure is in the repo root.
+- Laravel/Filament-specific rules: [laravel/CLAUDE.md](laravel/CLAUDE.md).
 
 ---
 
-## 1. Come si eseguono i comandi (SEMPRE via Docker)
+## 1. How to run commands (ALWAYS via Docker)
 
-Il PHP locale è 8.2 (troppo vecchio). **Ogni** comando PHP/artisan/composer/tool va
-eseguito nel container `php` (PHP 8.4):
+The host PHP is 8.2 (too old). **Every** PHP/artisan/composer/tool command must be
+run inside the `php` container (PHP 8.4):
 
 ```sh
 docker compose exec -T php php artisan <cmd>
@@ -20,137 +20,143 @@ docker compose exec -T php composer <cmd>
 docker compose exec -T php ./vendor/bin/pint
 docker compose exec -T php ./vendor/bin/phpstan analyse --no-progress
 docker compose exec -T php ./vendor/bin/pest
-docker compose --profile testing run --rm browser-tests   # test browser (Pest 4 + Playwright)
+docker compose --profile testing run --rm browser-tests   # browser tests (Pest 4 + Playwright)
 ```
 
-I test browser (`laravel/tests/Browser`) girano solo nel servizio `browser-tests` (immagine
-Debian: Playwright non supporta l'Alpine del container `php`) e sono esclusi dalla run standard.
+Browser tests (`laravel/tests/Browser`) run only in the `browser-tests` service (Debian image:
+Playwright doesn't support the Alpine of the `php` container) and are excluded from the standard run.
 
-Se lo stack non è attivo: `docker compose up -d`. App su http://localhost:8090,
-Mailpit http://localhost:8025, Meilisearch http://localhost:7700.
+If the stack isn't up: `docker compose up -d`. App at http://localhost:8090,
+Mailpit at http://localhost:8025, Meilisearch at http://localhost:7700.
 
 ---
 
-## 2. Quality gate — NON negoziabile
+## 2. Quality gate — NON-negotiable
 
-Prima di considerare **conclusa** qualunque modifica al codice, devono passare tutti e tre:
+Before considering any code change **done**, all three must pass:
 
 ```sh
-docker compose exec -T php ./vendor/bin/pint            # stile (PSR-12, preset Laravel)
-docker compose exec -T php ./vendor/bin/phpstan analyse # analisi statica (Larastan livello 6+)
-docker compose exec -T php ./vendor/bin/pest            # test
+docker compose exec -T php ./vendor/bin/pint            # style (PSR-12, Laravel preset)
+docker compose exec -T php ./vendor/bin/phpstan analyse # static analysis (Larastan level 6+)
+docker compose exec -T php ./vendor/bin/pest            # tests
 ```
 
-Scorciatoia: usa la skill `/quality-gate`. La CI ([.github/workflows/ci.yml](.github/workflows/ci.yml))
-esegue gli stessi controlli: se falliscono in locale, falliranno in CI.
+Shortcut: use the `/quality-gate` skill. CI ([.github/workflows/ci.yml](.github/workflows/ci.yml))
+runs the same checks: if they fail locally, they'll fail in CI.
 
 ---
 
-## 3. Politica di test — test dopo OGNI funzionalità
+## 3. Testing policy — tests after EVERY feature
 
-**Ogni funzionalità nuova o modificata deve arrivare con i suoi test, nello stesso cambiamento.**
-Codice senza test non è considerato completo.
+**Every new or changed feature must ship with its tests, in the same change.**
+Code without tests is not considered complete.
 
-- **Framework:** Pest 4. File in `laravel/tests/{Unit,Feature}`.
-- **Copertura attesa:** dominio (`app/Actions`, `app/States`, `app/Enums`) → **100%**.
-  Flussi critici (adozione, affido, permessi, tenancy) → coperti da feature test.
-- **Unit** per Actions/States/DTO/Enum (logica pura, senza DB dove possibile).
-- **Feature** per flussi HTTP/Filament: usa `RefreshDatabase`, le **factory** dei modelli
-  e gli helper di testing di Filament/Livewire.
-- Un bug corretto = un test di regressione che lo riproduce.
-- Scrivi prima l'aspettativa (o almeno contestualmente), non "dopo, se avanza tempo".
+- **Framework:** Pest 4. Files in `laravel/tests/{Unit,Feature}`.
+- **Expected coverage:** domain (`app/Actions`, `app/States`, `app/Enums`) → **100%**.
+  Critical flows (adoption, fostering, permissions, tenancy) → covered by feature tests.
+- **Unit** tests for Actions/States/DTO/Enum (pure logic, without the DB where possible).
+- **Feature** tests for HTTP/Filament flows: use `RefreshDatabase`, the model **factories**
+  and the Filament/Livewire testing helpers.
+- A fixed bug = a regression test that reproduces it.
+- Write the expectation first (or at least alongside), not "later, if there's time left".
 
 ---
 
-## 4. Principi di progettazione (SOLID + OOP moderno)
+## 4. Design principles (SOLID + modern OOP)
 
-Applichiamo SOLID in modo pragmatico, con OOP idiomatico Laravel/PHP 8.4.
+We apply SOLID pragmatically, with idiomatic Laravel/PHP 8.4 OOP.
 
-- **S — Single Responsibility.** Un caso d'uso = una classe **Action** invokable
-  (`app/Actions/...`, un solo `__invoke()`/`handle()`). Controller, Pages e Resource
-  Filament restano *sottili*: validano/autorizzano e delegano all'Action.
-- **O — Open/Closed.** Estendi aggiungendo nuove Action/State/Policy, non gonfiando
-  classi esistenti. Gli stati del ciclo di vita si aggiungono come nuove classi di stato.
-- **L — Liskov.** Le implementazioni di un contratto sono intercambiabili; niente
-  override che rompono le aspettative del tipo base.
-- **I — Interface Segregation.** Contratti piccoli e mirati (es. `GeneratesContract`,
-  `SendsNotification`), non interfacce "tuttofare".
-- **D — Dependency Inversion.** Dipendi da interfacce per i servizi con più
-  implementazioni (pagamenti, notifiche, geocoding, storage); fai il binding nei
-  Service Provider. Inietta via costruttore, **niente `new` di dipendenze** né stato globale.
+- **S — Single Responsibility.** One use case = one invokable **Action** class
+  (`app/Actions/...`, a single `__invoke()`/`handle()`). Filament Controllers, Pages and Resources
+  stay *thin*: they validate/authorize and delegate to the Action.
+- **O — Open/Closed.** Extend by adding new Actions/States/Policies, not by bloating
+  existing classes. Lifecycle states are added as new state classes.
+- **L — Liskov.** Implementations of a contract are interchangeable; no
+  overrides that break the base type's expectations.
+- **I — Interface Segregation.** Small, focused contracts (e.g. `GeneratesContract`,
+  `SendsNotification`), not catch-all interfaces.
+- **D — Dependency Inversion.** Depend on interfaces for services with multiple
+  implementations (payments, notifications, geocoding, storage); do the binding in the
+  Service Providers. Inject via the constructor, **no `new`ing of dependencies** and no global state.
 
 ### OOP / PHP 8.4
-- `declare(strict_types=1);` in **tutti** i file PHP.
-- Tipizza **tutto**: proprietà, parametri, ritorni. Niente `mixed` se evitabile.
-- `readonly` per value object/DTO; costruttori promossi; `enum` per ogni insieme
-  di valori fissi (implementa `HasLabel`/`HasColor` per l'uso in Filament).
-- Preferisci l'immutabilità; evita setter che mutano stato condiviso.
-- Niente logica di business nei Model: i Model contengono relazioni, cast, scope,
-  accessor/mutator. La logica sta in Action/Service. I Model restano "magri".
-- DTO tipizzati con `spatie/laravel-data` per passare dati alle Action.
-- Ciclo di vita (adozione/affido) via `spatie/laravel-model-states`: **mai** mutare
-  a mano una colonna di stato saltando la macchina a stati.
+- `declare(strict_types=1);` in **all** PHP files.
+- Type **everything**: properties, parameters, return types. No `mixed` if avoidable.
+- `readonly` for value objects/DTOs; promoted constructors; `enum` for every fixed
+  set of values (implement `HasLabel`/`HasColor` for use in Filament).
+- Prefer immutability; avoid setters that mutate shared state.
+- No business logic in Models: Models hold relationships, casts, scopes,
+  accessors/mutators. Logic lives in Actions/Services. Models stay "thin".
+- Typed DTOs with `spatie/laravel-data` to pass data to Actions.
+- Lifecycle (adoption/fostering) via `spatie/laravel-model-states`: **never** mutate
+  a state column by hand, bypassing the state machine.
 
 ---
 
-## 5. Regole trasversali del dominio
+## 5. Cross-cutting domain rules
 
-- **Autorizzazione:** ogni Model ha una **Policy**. I permessi passano da
-  `spatie/laravel-permission` in modalità *teams* (team = organizzazione/tenant).
-- **Multi-tenancy:** i dati degli enti sono isolati per tenant (Filament tenancy).
-  Ogni query su risorse d'ente deve essere tenant-scoped: mai fughe cross-tenant.
-- **Privacy/GDPR by design:** minimizza i dati personali, registra i consensi,
-  rispetta retention e diritto all'oblio (vedi piano §5/§Fase 5). L'audit passa da
+- **Authorization:** every Model has a **Policy**. Permissions go through
+  `spatie/laravel-permission` in *teams* mode (team = organization/tenant).
+- **Multi-tenancy:** organization data is isolated per tenant (Filament tenancy).
+  Every query over organization resources must be tenant-scoped: never leak cross-tenant.
+- **Privacy/GDPR by design:** minimize personal data, record consents,
+  honor retention and the right to be forgotten (see plan §5/§Phase 5). Auditing goes through
   `spatie/laravel-activitylog`.
-- **i18n:** stringhe UI tradotte (base IT, fallback EN); contenuti multilingua via
-  `spatie/laravel-translatable`. Niente stringhe hard-coded destinate all'utente.
-- **Validazione:** valida sempre l'input (schema Filament / Form Request / regole
-  `laravel-data`). Non fidarti mai dei dati in ingresso.
+- **i18n:** translated UI strings (IT base, EN fallback); multilingual content via
+  `spatie/laravel-translatable`. No hard-coded user-facing strings.
+- **Validation:** always validate input (Filament schema / Form Request / `laravel-data`
+  rules). Never trust incoming data.
 
 ---
 
-## 6. Convenzioni Filament 5
+## 6. Filament 5 conventions
 
-- Una **Resource** per Model; usa i componenti nativi (form/table/infolist/schemas v5).
-- Riusa componenti di form estraendoli; non duplicare schemi tra create/edit.
-- Usa **RelationManager** per le relazioni, **Widgets** per KPI/dashboard.
-- Azioni di dominio nelle Resource → delegano alle classi **Action**, non contengono logica.
-- Rispetta le Policy: le Resource devono onorare l'autorizzazione e il tenant scoping.
-- In dubbio sull'API v5, **consulta la doc** (`https://filamentphp.com/docs/5.x/...`)
-  o Laravel Boost se installato — non improvvisare firme di metodo.
+- One **Resource** per Model; use the native components (form/table/infolist/schemas v5).
+- Reuse form components by extracting them; don't duplicate schemas between create/edit.
+- Use **RelationManagers** for relationships, **Widgets** for KPIs/dashboards.
+- Domain actions in Resources → delegate to the **Action** classes, they contain no logic.
+- Respect Policies: Resources must honor authorization and tenant scoping.
+- When unsure about the v5 API, **check the docs** (`https://filamentphp.com/docs/5.x/...`)
+  or Laravel Boost if installed — don't improvise method signatures.
 
 ---
 
 ## 7. Git & workflow
 
-- **Mai committare su `main`.** Un branch per fase/feature (`rebuild/...`, `feat/...`, `fix/...`).
+- **Never commit to `main`.** One branch per phase/feature (`rebuild/...`, `feat/...`, `fix/...`).
 - **Conventional Commits** (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`).
-- Un commit = un cambiamento coerente, con i suoi test, quality gate verde.
-- Non committare `.env`, `vendor/`, asset generati, log.
+- One commit = one coherent change, with its tests, quality gate green.
+- Don't commit `.env`, `vendor/`, generated assets, or logs.
 
 ---
 
-## 8. Struttura AI del progetto (agenti & skill)
+## 8. AI workflow (agents & skills)
 
-L'orchestrazione la fa **questa sessione principale**: analizza, pianifica e delega ai
-sotto-agenti specializzati. Non esiste (né serve) un "agente orchestratore" separato.
+Orchestration is done by **this main session**: it analyzes, plans and delegates to
+specialized sub-agents. There is no (nor any need for) a separate "orchestrator agent".
 
-**Agenti** (in `.claude/agents/`) — delega con lo strumento Agent:
-- `feature-builder` — implementa una feature verticale end-to-end secondo questi standard (con test + quality gate).
-- `filament-builder` — costruisce Resource/Page/Widget Filament 5 idiomatici.
-- `test-author` — scrive/estende test Pest ed esegue la suite.
-- `standards-reviewer` — revisione read-only del diff contro SOLID/OOP/standard di progetto.
-- `ui-builder` — costruisce la UI pubblica Livewire (componenti `x-ui.*`, pagine) secondo
-  [docs/PIANO-UI-FRONTEND.md](docs/PIANO-UI-FRONTEND.md). Non tocca Filament.
-- `design-reviewer` — revisione visiva e di accessibilità read-only (Playwright MCP, screenshot multi-viewport, WCAG 2.2 AA).
+> The AI tooling (specialized sub-agent definitions and project skills such as `/new-feature`
+> and `/quality-gate`) lives **outside the repository** as local-only tooling — it is not checked
+> in. The workflow it supports is described below so the standards stay reproducible without it.
 
-**Skill** (in `.claude/skills/`) — invoca con `/<nome>`:
-- `/new-feature` — workflow completo: capire → progettare → implementare → testare → revisionare → quality gate.
-- `/quality-gate` — esegue pint + phpstan + pest e riporta l'esito.
-- `/ui-review` — revisione visiva/accessibilità delle pagine pubbliche toccate (via `design-reviewer`).
+The specialized sub-agents handle the recurring kinds of work and apply the standards in this file:
 
-**MCP** (`.mcp.json` in root): `laravel-boost` (doc per-versione, schema DB, log browser),
-`playwright` (navigazione e screenshot), `chrome-devtools` (performance, console, rete).
+- **feature-builder** — implements a vertical feature end-to-end to these standards (with tests + quality gate).
+- **filament-builder** — builds idiomatic Filament 5 Resources/Pages/Widgets.
+- **test-author** — writes/extends Pest tests and runs the suite.
+- **standards-reviewer** — read-only review of the diff against the project's SOLID/OOP standards.
+- **ui-builder** — builds the public Livewire UI (`x-ui.*` components, pages) per
+  [docs/PIANO-UI-FRONTEND.md](docs/PIANO-UI-FRONTEND.md). Doesn't touch Filament.
+- **design-reviewer** — read-only visual and accessibility review (multi-viewport screenshots, WCAG 2.2 AA).
 
-Per lavori ampi e parallelizzabili si può usare l'orchestrazione a workflow (fan-out
-di più agenti); farlo solo su richiesta esplicita.
+Supporting workflows:
+
+- **new-feature** — full workflow: understand → design → implement → test → review → quality gate.
+- **quality-gate** — runs pint + phpstan + pest and reports the outcome.
+- **ui-review** — visual/accessibility review of the public pages touched (via `design-reviewer`).
+
+**MCP** (`.mcp.json` in the repo root): `laravel-boost` (per-version docs, DB schema, browser logs),
+`playwright` (navigation and screenshots), `chrome-devtools` (performance, console, network).
+
+For large, parallelizable work you can use workflow orchestration (fanning out
+multiple agents); do this only on explicit request.

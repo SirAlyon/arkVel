@@ -1,37 +1,37 @@
-# ArkVel — Rilascio della nuova UI pubblica
+# ArkVel — Releasing the new public UI
 
-> Passi per mettere in produzione il sito pubblico rifatto nelle fasi UI-0…UI-8
-> (docs/PIANO-UI-FRONTEND.md). I pannelli Filament non cambiano, salvo l'autenticazione del
-> pannello adottante (UI-5).
-
----
-
-## 1. Bloccanti prima del rilascio
-
-| Punto | Perché | Dove |
-|---|---|---|
-| **Pagina dell'informativa privacy (e dei termini)** | La registrazione registra la presa visione dell'informativa con la sua versione (`PRIVACY_POLICY_VERSION`), ma il link compare solo quando esiste la route `legal.privacy` (`App\Support\Site\LegalLinks`). Il footer mostra «In arrivo» | testi legali a cura del titolare del trattamento |
-| **Informativa: tile della mappa** | Quando una mappa entra in vista, il browser del visitatore contatta `tiles.openfreemap.org` (vede IP e area consultata; niente cookie né tracker). Va citato nell'informativa, oppure si passa a tile self-hosted (`MAP_STYLE_LIGHT` / `MAP_STYLE_DARK`) | UI-7 |
-| **Host fidati** | Fuori da local e test, una richiesta con un header `Host` diverso dall'host di `APP_URL` riceve 400. Health check del bilanciatore che chiamano per IP: aggiungere l'host in `APP_TRUSTED_HOSTS` | UI-3 |
+> Steps to put into production the public site rebuilt in phases UI-0…UI-8
+> (docs/PIANO-UI-FRONTEND.md). The Filament panels don't change, except for the adopter
+> panel's authentication (UI-5).
 
 ---
 
-## 2. Variabili d'ambiente
+## 1. Blockers before release
 
-Nuove o rilevanti per la UI pubblica (valori di esempio in `laravel/.env.example`):
-
-| Variabile | Default | A cosa serve |
+| Item | Why | Where |
 |---|---|---|
-| `APP_URL` | — | Unica fonte degli URL assoluti di canonical, Open Graph, sitemap e robots |
-| `APP_TRUSTED_HOSTS` | vuoto | Host extra accettati oltre a quello di `APP_URL`, separati da virgola |
-| `TRUSTED_PROXIES` | vuoto | Proxy fidati (es. `*` dietro un bilanciatore): servono gli IP reali per i rate limit di login e registrazione |
-| `PRIVACY_POLICY_VERSION` | `2026-11` | Versione dell'informativa registrata alla registrazione: aggiornarla a ogni nuova versione |
-| `SCOUT_DRIVER`, `MEILISEARCH_HOST`, `MEILISEARCH_KEY` | `meilisearch` | Ricerca e faccette del catalogo |
-| `MEDIA_QUEUE` | vuoto (coda di default) | Coda dedicata alle conversioni delle immagini (vedi §4) |
-| `MAP_STYLE_LIGHT`, `MAP_STYLE_DARK` | stili OpenFreeMap `positron` / `fiord` | Stili della mappa; cambiarli per tile self-hosted |
-| `MAP_GRID_DEGREES` | `0.02` (~2 km) | Griglia di approssimazione della posizione degli enti (privacy) |
-| `UI_REVEAL` | `true` | Animazioni di comparsa allo scroll (spente comunque con reduced-motion) |
-| `STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET` | vuoti | Donazioni: senza, il widget di donazione non compare |
+| **Privacy policy page (and terms)** | Registration records acknowledgment of the privacy policy with its version (`PRIVACY_POLICY_VERSION`), but the link only appears once the `legal.privacy` route exists (`App\Support\Site\LegalLinks`). The footer shows "Coming soon" | legal texts, the responsibility of the data controller |
+| **Privacy policy: map tiles** | When a map enters the viewport, the visitor's browser contacts `tiles.openfreemap.org` (which sees the IP and the area browsed; no cookies or trackers). This must be mentioned in the privacy policy, or switch to self-hosted tiles (`MAP_STYLE_LIGHT` / `MAP_STYLE_DARK`) | UI-7 |
+| **Trusted hosts** | Outside local and test, a request with a `Host` header different from the `APP_URL` host gets a 400. Load-balancer health checks that call by IP: add the host to `APP_TRUSTED_HOSTS` | UI-3 |
+
+---
+
+## 2. Environment variables
+
+New or relevant to the public UI (example values in `laravel/.env.example`):
+
+| Variable | Default | What it's for |
+|---|---|---|
+| `APP_URL` | — | The single source of the absolute URLs for canonical, Open Graph, sitemap and robots |
+| `APP_TRUSTED_HOSTS` | empty | Extra hosts accepted besides the `APP_URL` one, comma-separated |
+| `TRUSTED_PROXIES` | empty | Trusted proxies (e.g. `*` behind a load balancer): real IPs are needed for the login and registration rate limits |
+| `PRIVACY_POLICY_VERSION` | `2026-11` | The privacy policy version recorded at registration: update it with each new version |
+| `SCOUT_DRIVER`, `MEILISEARCH_HOST`, `MEILISEARCH_KEY` | `meilisearch` | Catalog search and facets |
+| `MEDIA_QUEUE` | empty (default queue) | Dedicated queue for image conversions (see §4) |
+| `MAP_STYLE_LIGHT`, `MAP_STYLE_DARK` | OpenFreeMap `positron` / `fiord` styles | Map styles; change them for self-hosted tiles |
+| `MAP_GRID_DEGREES` | `0.02` (~2 km) | Grid used to approximate organizations' locations (privacy) |
+| `UI_REVEAL` | `true` | Reveal-on-scroll animations (disabled anyway with reduced-motion) |
+| `STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET` | empty | Donations: without them, the donation widget doesn't appear |
 
 ---
 
@@ -40,73 +40,73 @@ Nuove o rilevanti per la UI pubblica (valori di esempio in `laravel/.env.example
 ```sh
 cd laravel
 composer install --no-dev --optimize-autoloader
-npm ci && npm run build                     # asset Vite (CSS, ui.js, chunk di mappa e galleria)
-php artisan migrate --force                 # include la normalizzazione delle email (UI-8)
-php artisan scout:sync-index-settings       # ordinamento e faccette del catalogo (UI-6)
-php artisan scout:import "App\Models\Animal" # solo al primo rilascio o dopo un indice vuoto
-php artisan arkvel:media:regenerate --only-missing   # conversioni card/hero/og/zoom (UI-4)
+npm ci && npm run build                     # Vite assets (CSS, ui.js, map and gallery chunks)
+php artisan migrate --force                 # includes email normalization (UI-8)
+php artisan scout:sync-index-settings       # catalog sorting and facets (UI-6)
+php artisan scout:import "App\Models\Animal" # only on the first release or after an empty index
+php artisan arkvel:media:regenerate --only-missing   # card/hero/og/zoom conversions (UI-4)
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 ```
 
-- `scout:sync-index-settings` va rieseguito a ogni modifica di `config/scout.php`. Senza, il
-  catalogo degrada (ordinamento senza `featured`) e scrive un warning nel log.
-- La migrazione delle email non fonde account che differiscono solo per maiuscole: li salta e
-  scrive un warning con gli id, da risolvere a mano.
-- `arkvel:media:regenerate` va rilanciato dopo un cambio di driver immagini, librerie (WebP,
-  AVIF) o conversioni, a coda vuota.
+- `scout:sync-index-settings` must be re-run on every change to `config/scout.php`. Without it, the
+  catalog degrades (sorting without `featured`) and writes a warning to the log.
+- The email migration does not merge accounts that differ only in case: it skips them and
+  writes a warning with the ids, to be resolved by hand.
+- `arkvel:media:regenerate` must be re-run after a change of image driver, libraries (WebP,
+  AVIF) or conversions, with an empty queue.
 
 ---
 
-## 4. Worker delle code
+## 4. Queue workers
 
-Le conversioni delle immagini girano in coda: su una foto da 12 MP un job dura 6–12 s (AVIF).
-Il worker di `docker-compose.yml` usa il timeout di default (60 s).
+Image conversions run on the queue: on a 12 MP photo a job takes 6–12 s (AVIF).
+The `docker-compose.yml` worker uses the default timeout (60 s).
 
-- Consigliato: coda dedicata `MEDIA_QUEUE=media` con un worker apposito, per esempio
-  `php artisan queue:work --queue=media --timeout=300 --tries=2 --memory=512`, e
-  `retry_after` della connessione maggiore del timeout (es. 360).
-- Minimo con un solo worker: `--timeout=120`.
+- Recommended: a dedicated `MEDIA_QUEUE=media` queue with its own worker, for example
+  `php artisan queue:work --queue=media --timeout=300 --tries=2 --memory=512`, and the
+  connection's `retry_after` greater than the timeout (e.g. 360).
+- Minimum with a single worker: `--timeout=120`.
 
 ---
 
 ## 5. Nginx
 
-Riferimento: `nginx/conf/default.conf`.
+Reference: `nginx/conf/default.conf`.
 
-- gzip per CSS, JS, JSON, SVG e XML (l'immagine `nginx:alpine` non ha brotli);
-- `/build/*` (asset con hash): `Cache-Control: public, max-age=31536000, immutable`;
+- gzip for CSS, JS, JSON, SVG and XML (the `nginx:alpine` image has no brotli);
+- `/build/*` (hashed assets): `Cache-Control: public, max-age=31536000, immutable`;
   `/build/manifest.json`: `no-cache`;
-- `/images/*`: una settimana;
-- `/robots.txt` passa a Laravel (è dinamico, con la riga `Sitemap` assoluta);
-- l'HTML porta gli header di Laravel: `no-cache`, `Content-Language` e `Vary: Accept-Language`
-  (la stessa URL serve italiano o inglese).
+- `/images/*`: one week;
+- `/robots.txt` passes through to Laravel (it's dynamic, with an absolute `Sitemap` line);
+- the HTML carries Laravel's headers: `no-cache`, `Content-Language` and `Vary: Accept-Language`
+  (the same URL serves Italian or English).
 
 ---
 
-## 6. Verifiche dopo il deploy
+## 6. Post-deploy checks
 
-- `/sitemap.xml` risponde `application/xml` con URL assoluti dell'host di produzione;
-  `/robots.txt` contiene la riga `Sitemap`.
-- Una pagina pubblica ha `Content-Language` e `Vary: Accept-Language`; gli asset in `/build`
-  sono compressi e con cache lunga.
-- `/accedi`, `/registrati`, reset password e verifica email funzionano; `/account` da ospite
-  porta a `/accedi`; `/manage` e `/admin` mantengono il loro login.
-- Catalogo con ricerca e faccette, vista mappa con le tile, pagina ente con la mappa e il widget
-  donazione (se Stripe è configurato).
-- Core Web Vitals su home, catalogo e scheda animale (375 px): LCP ≤ 2,5 s, CLS ≤ 0,1,
-  INP ≤ 200 ms. Le misure vanno prese con le animazioni di comparsa attive.
+- `/sitemap.xml` responds with `application/xml` and absolute URLs on the production host;
+  `/robots.txt` contains the `Sitemap` line.
+- A public page has `Content-Language` and `Vary: Accept-Language`; the assets in `/build`
+  are compressed and long-cached.
+- `/accedi`, `/registrati`, password reset and email verification work; `/account` as a guest
+  leads to `/accedi`; `/manage` and `/admin` keep their own login.
+- The catalog with search and facets, the map view with tiles, the organization page with the map and the donation
+  widget (if Stripe is configured).
+- Core Web Vitals on home, catalog and animal page (375 px): LCP ≤ 2.5 s, CLS ≤ 0.1,
+  INP ≤ 200 ms. Measurements should be taken with the reveal animations enabled.
 
 ---
 
-## 7. Punti aperti residui
+## 7. Remaining open items
 
-Dalle tabelle «Aperti» del piano UI, nessuno bloccante salvo §1:
+From the "Open" tables of the UI plan, none blocking except §1:
 
-| Gravità | Punto |
+| Severity | Item |
 |---|---|
-| Minor | Ricerca lato server del combobox: id delle opzioni per indice (oggi il combobox non è usato nelle pagine) |
-| Minor | Foto piccole ingrandite dai ritagli `card` / `hero` / `og`: valutare una risoluzione minima all'upload (pannello Filament) |
-| Minor | Allegati delle schede mediche non ripuliti dai metadati |
-| Nit | Bianco su `block-leaf` in dark a 4,64:1 (AA, poco margine) |
-| Nit | Con una Content Security Policy, gli script inline (tema, styleguide) richiederanno un nonce |
-| Nit | Stile mappa `fiord` (dark): etichette maiuscole e un triangolo più chiaro a zoom basso (upstream) |
+| Minor | Server-side search in the combobox: option ids by index (the combobox isn't used in the pages today) |
+| Minor | Small photos enlarged by the `card` / `hero` / `og` crops: consider a minimum resolution at upload (Filament panel) |
+| Minor | Medical record attachments not cleaned of metadata |
+| Nit | White on `block-leaf` in dark at 4.64:1 (AA, little margin) |
+| Nit | With a Content Security Policy, the inline scripts (theme, styleguide) will need a nonce |
+| Nit | `fiord` map style (dark): uppercase labels and a lighter triangle at low zoom (upstream) |

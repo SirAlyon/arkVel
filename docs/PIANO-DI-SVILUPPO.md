@@ -1,93 +1,100 @@
-# ArkVel — Piano di sviluppo
+# ArkVel — Development plan
 
-> Piattaforma open-source per l'adozione e la gestione di animali, pensata per il
-> contesto **europeo** (canili comunali/privati, rifugi, associazioni, società).
-> Ispirata a [Baja Pet Rescue](https://github.com/kasugaijin/baja-pet-rescue) (Ruby on Rails),
-> reingegnerizzata su stack Laravel + Filament.
+> Open-source platform for animal adoption and management, designed for the
+> **European** context (municipal/private pounds, shelters, associations, nonprofits).
+> Inspired by [Baja Pet Rescue](https://github.com/kasugaijin/baja-pet-rescue) (Ruby on Rails),
+> re-engineered on a Laravel + Filament stack.
 
-Documento vivo. Versione 1 — 2026-09-26.
+Living document. Version 1 — 2026-09-26.
 
----
-
-## 1. Obiettivo e principi
-
-**Missione.** Portare ArkVel da scaffold a **piattaforma production-ready** per la gestione
-del ciclo di vita completo dell'animale in canile/rifugio e del processo di adozione/affido,
-utilizzabile da più enti (multi-tenant) in più paesi europei.
-
-**Principi guida.**
-1. **Stack ufficiale.** Laravel 13 + Filament 5 + ecosistema Spatie/ufficiale. Niente
-   pacchetti non mantenuti; preferenza per soluzioni di prima parte.
-2. **Multi-tenant nativo.** Ogni ente (canile/associazione/società) è un tenant isolato.
-3. **Privacy by design (GDPR).** Il dato personale dell'adottante è cittadino di prima classe:
-   consenso, minimizzazione, retention, diritto all'oblio.
-4. **Multilingua.** IT/EN come base, architettura pronta per ES/FR/DE.
-5. **Dominio esplicito.** Macchine a stati per il workflow di adozione, enum tipizzati,
-   azioni (Actions) come unità di business logic testabili.
-6. **Test-first sul dominio.** Pest per unit/feature; il workflow di adozione è coperto al 100%.
+> **Status note (2026-11).** This is the original roadmap. The platform has since reached a
+> **feature-complete beta**: Phases 0–4 (foundations, core domain, public catalog + adopter
+> portal + applications, fostering/appointments/advanced medical, communication/notifications/
+> donations) plus the public UI rebuild (UI-0…UI-8, see [PIANO-UI-FRONTEND.md](PIANO-UI-FRONTEND.md))
+> are shipped. The roadmap below is preserved as originally written; later phases (5–8) may be
+> partially delivered ahead of this document.
 
 ---
 
-## 2. Stack tecnologico
+## 1. Goal and principles
+
+**Mission.** Take ArkVel from a scaffold to a **production-ready platform** for managing
+the complete lifecycle of an animal in a pound/shelter and the adoption/fostering process,
+usable by multiple organizations (multi-tenant) across several European countries.
+
+**Guiding principles.**
+1. **Official stack.** Laravel 13 + Filament 5 + the Spatie/official ecosystem. No
+   unmaintained packages; a preference for first-party solutions.
+2. **Native multi-tenancy.** Each organization (pound/association/nonprofit) is an isolated tenant.
+3. **Privacy by design (GDPR).** The adopter's personal data is a first-class citizen:
+   consent, minimization, retention, the right to be forgotten.
+4. **Multilingual.** IT/EN as the base, an architecture ready for ES/FR/DE.
+5. **Explicit domain.** State machines for the adoption workflow, typed enums,
+   Actions as testable units of business logic.
+6. **Test-first on the domain.** Pest for unit/feature; the adoption workflow is 100% covered.
+
+---
+
+## 2. Technology stack
 
 ### Core
-| Componente | Scelta | Note |
+| Component | Choice | Notes |
 |---|---|---|
-| Framework | **Laravel 13.x** | Ultima major |
-| Admin/UI | **Filament 5.x** | Pannelli multipli + multi-tenancy |
+| Framework | **Laravel 13.x** | Latest major |
+| Admin/UI | **Filament 5.x** | Multiple panels + multi-tenancy |
 | PHP | **8.4** (min 8.3) | |
-| Database | **PostgreSQL 16** | JSONB, full-text, geospaziale (PostGIS opzionale) |
+| Database | **PostgreSQL 16** | JSONB, full-text, geospatial (PostGIS optional) |
 | Cache/Queue | **Redis** | + Laravel Horizon |
-| Ricerca | **Meilisearch** (via Laravel Scout) | Catalogo animali con filtri/facet |
-| Realtime | **Laravel Reverb** | Notifiche live in dashboard |
-| Storage media | **S3-compatibile europeo** (Scaleway/OVH/Hetzner) | Data residency UE |
-| Frontend pubblico | **Livewire 3 + Blade + Tailwind** | Catalogo e portale adottanti |
+| Search | **Meilisearch** (via Laravel Scout) | Animal catalog with filters/facets |
+| Realtime | **Laravel Reverb** | Live notifications in the dashboard |
+| Media storage | **European S3-compatible** (Scaleway/OVH/Hetzner) | EU data residency |
+| Public frontend | **Livewire 3 + Blade + Tailwind** | Catalog and adopter portal |
 
-### Pacchetti ufficiali / ecosistema
-- `spatie/laravel-permission` — ruoli e permessi (team-scoped per tenant)
-- `spatie/laravel-medialibrary` (+ plugin Filament) — foto/documenti animali
-- `spatie/laravel-translatable` (+ plugin Filament) — contenuti multilingua
+### Official / ecosystem packages
+- `spatie/laravel-permission` — roles and permissions (team-scoped per tenant)
+- `spatie/laravel-medialibrary` (+ Filament plugin) — animal photos/documents
+- `spatie/laravel-translatable` (+ Filament plugin) — multilingual content
 - `spatie/laravel-activitylog` — audit trail
-- `spatie/laravel-model-states` — macchina a stati adozione/affido
-- `spatie/laravel-data` — DTO per Actions e API
-- `spatie/laravel-backup` + `spatie/laravel-health` — operatività produzione
-- `laravel/scout` + Meilisearch — ricerca
-- `laravel/cashier-stripe` — donazioni/quote (SEPA, SCA/PSD2)
-- `laravel/sanctum` — API token per app/integrazioni future
-- `laravel/socialite` — login social (opzionale)
+- `spatie/laravel-model-states` — adoption/fostering state machine
+- `spatie/laravel-data` — DTOs for Actions and APIs
+- `spatie/laravel-backup` + `spatie/laravel-health` — production operability
+- `laravel/scout` + Meilisearch — search
+- `laravel/cashier-stripe` — donations/fees (SEPA, SCA/PSD2)
+- `laravel/sanctum` — API tokens for future apps/integrations
+- `laravel/socialite` — social login (optional)
 - `laravel/horizon`, `laravel/reverb`, `laravel/pulse`, `laravel/telescope` (dev)
 - Dev: `pestphp/pest`, `larastan/larastan`, `laravel/pint`, `rector/rector`
 
 ---
 
-## 3. Architettura software
+## 3. Software architecture
 
-### 3.1 Pannelli Filament (3 pannelli + sito pubblico)
+### 3.1 Filament panels (3 panels + public site)
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Sito pubblico (Livewire)      → catalogo animali, pagine ente │
-│    /                              ricerca, dettaglio animale    │
+│  Public site (Livewire)        → animal catalog, org pages     │
+│    /                              search, animal detail         │
 ├──────────────────────────────────────────────────────────────┤
-│  Pannello Adottante  /account  → profilo, candidature, favoriti│
-│                                   appuntamenti, messaggi        │
+│  Adopter panel       /account  → profile, applications, favs    │
+│                                   appointments, messages        │
 ├──────────────────────────────────────────────────────────────┤
-│  Pannello Ente       /manage   → MULTI-TENANT (per organizz.)  │
-│                                   animali, candidature, affidi, │
-│                                   medico, staff, contenuti      │
+│  Organization panel  /manage   → MULTI-TENANT (per org)         │
+│                                   animals, applications, fosters,│
+│                                   medical, staff, content        │
 ├──────────────────────────────────────────────────────────────┤
-│  Pannello Admin      /admin    → super-admin di piattaforma:   │
-│                                   verifica enti, utenti globali,│
-│                                   moderazione, impostazioni     │
+│  Admin panel         /admin    → platform super-admin:          │
+│                                   org verification, global users,│
+│                                   moderation, settings           │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**Tenancy.** Il pannello Ente usa la multi-tenancy nativa di Filament, con
-`Organization` come tenant. Un utente staff può appartenere a più enti (pivot
-`organization_user`) con ruolo per-ente. `spatie/laravel-permission` in modalità
-"teams" mappa i permessi sul tenant corrente.
+**Tenancy.** The Organization panel uses Filament's native multi-tenancy, with
+`Organization` as the tenant. A staff user can belong to multiple organizations (pivot
+`organization_user`) with a per-organization role. `spatie/laravel-permission` in
+"teams" mode maps permissions onto the current tenant.
 
-### 3.2 Struttura del codice (modular monolith)
+### 3.2 Code structure (modular monolith)
 
 ```
 app/
@@ -95,125 +102,125 @@ app/
 ├── Models/                # Eloquent
 ├── States/                # Adoption/ApplicationState (spatie/model-states)
 │   └── Application/        #   Submitted, UnderReview, Interview, Approved, ...
-├── Actions/               # Business logic atomica e testabile
+├── Actions/               # Atomic, testable business logic
 │   ├── Applications/       #   SubmitApplication, AdvanceApplication, ...
 │   ├── Adoptions/          #   FinalizeAdoption, GenerateContract, ...
 │   └── Fostering/
-├── Policies/              # Autorizzazione
-├── Data/                  # DTO (spatie/laravel-data)
+├── Policies/              # Authorization
+├── Data/                  # DTOs (spatie/laravel-data)
 ├── Filament/
-│   ├── Admin/             # Resources/Pages/Widgets pannello admin
-│   ├── Shelter/           # Resources/Pages/Widgets pannello ente (tenant)
-│   └── Adopter/           # Pannello adottante
-├── Livewire/              # Componenti sito pubblico
+│   ├── Admin/             # Resources/Pages/Widgets of the admin panel
+│   ├── Shelter/           # Resources/Pages/Widgets of the organization panel (tenant)
+│   └── Adopter/           # Adopter panel
+├── Livewire/              # Public site components
 ├── Notifications/         # Email/DB/broadcast
-├── Support/               # Helper, servizi trasversali
+├── Support/               # Helpers, cross-cutting services
 └── Providers/Filament/    # AdminPanelProvider, ShelterPanelProvider, AdopterPanelProvider
 ```
 
 ---
 
-## 4. Modello dati (adattato all'Europa)
+## 4. Data model (adapted to Europe)
 
-Legenda relazioni: `1─*` uno-a-molti, `*─*` molti-a-molti.
+Relationship legend: `1─*` one-to-many, `*─*` many-to-many.
 
-### Entità principali
+### Main entities
 
-**organizations** (canile/rifugio/associazione/società) — *tenant*
+**organizations** (pound/shelter/association/nonprofit) — *tenant*
 - `name`, `slug`, `type` (enum: `canile_comunale`, `canile_privato`, `rifugio`,
   `associazione`, `societa`), `description` (translatable)
-- Dati legali UE: `legal_name`, `vat_number` (P.IVA), `tax_code` (cod. fiscale),
+- EU legal data: `legal_name`, `vat_number` (VAT), `tax_code` (tax code),
   `registration_number`
-- Indirizzo: `country` (ISO-3166), `region`, `province`, `city`, `postal_code`,
+- Address: `country` (ISO-3166), `region`, `province`, `city`, `postal_code`,
   `address_line`, `latitude`, `longitude`
-- Contatti: `email`, `phone`, `website`, social
+- Contacts: `email`, `phone`, `website`, social
 - `logo`, `cover`, `status` (enum: `pending`, `verified`, `suspended`), `verified_at`
 - `1─*` animals, staff, applications, adoptions, appointments, donations
 
-**users** — identità auth unica (no colonna ruolo: ruolo via spatie/permission)
-- `name`, `email`, `password`, `locale`, `phone`, `email_verified_at`, 2FA opz.
-- `*─*` organizations (pivot `organization_user` con `role`, `verified`, `invited_at`)
+**users** — a single auth identity (no role column: role via spatie/permission)
+- `name`, `email`, `password`, `locale`, `phone`, `email_verified_at`, optional 2FA
+- `*─*` organizations (pivot `organization_user` with `role`, `verified`, `invited_at`)
 - `1─1` adopter_profile
 
-**animals** (cane/gatto/altro) — sostituisce `dogs`
+**animals** (dog/cat/other) — replaces `dogs`
 - `organization_id`, `name`, `slug`, `species` (enum), `breed`, `sex` (enum),
   `birthdate` / `estimated_age`, `age_unit`, `size` (enum), `weight`, `color`
-- Salute: `microchip_number`, `sterilized`, `vaccinated`, `dewormed`,
+- Health: `microchip_number`, `sterilized`, `vaccinated`, `dewormed`,
   `fiv_felv`/`tests`, `health_notes`, `special_needs`
-- Comportamento: `temperament`, `energy_level`, `good_with_kids`,
+- Behavior: `temperament`, `energy_level`, `good_with_kids`,
   `good_with_dogs`, `good_with_cats`, `training_level`, `description` (translatable)
-- Gestione: `status` (enum: `draft`, `available`, `reserved`, `adoption_pending`,
+- Management: `status` (enum: `draft`, `available`, `reserved`, `adoption_pending`,
   `adopted`, `fostered`, `medical_hold`, `not_available`), `intake_date`,
   `intake_source`, `application_paused` + `pause_reason`, `featured`
-- Media (medialibrary): foto (max N), documenti
+- Media (medialibrary): photos (max N), documents
 - `1─*` applications, medical_records, appointments; `1─1` adoption
 
-**adopter_profiles** — questionario di screening (GDPR-aware)
-- `user_id`, contatti, indirizzo UE, `housing_type`, `has_garden`/`fenced`,
+**adopter_profiles** — screening questionnaire (GDPR-aware)
+- `user_id`, contacts, EU address, `housing_type`, `has_garden`/`fenced`,
   `rent_or_own`, `landlord_allows_pets`, `adults_in_home`, `kids_in_home`,
   `other_pets`, `experience`, `hours_alone_weekday/weekend`, `lifestyle`,
   `ideal_animal`, `contingency_plan`, `previous_surrender`, `referral_source`
-- Consensi GDPR: `consent_data_processing`, `consent_marketing`, `consented_at`
+- GDPR consents: `consent_data_processing`, `consent_marketing`, `consented_at`
 - `1─1` user
 
-**adoption_applications** — candidatura per un animale
-- `animal_id`, `user_id` (adottante), `organization_id`, `assigned_to` (staff)
-- `status` (state machine, vedi §5), `staff_notes`, `submitted_at`,
+**adoption_applications** — application for an animal
+- `animal_id`, `user_id` (adopter), `organization_id`, `assigned_to` (staff)
+- `status` (state machine, see §5), `staff_notes`, `submitted_at`,
   `decided_at`, `decision_reason`
-- vincolo unico `(animal_id, user_id)` per evitare doppioni
+- unique constraint `(animal_id, user_id)` to avoid duplicates
 - `*─1` animal, user
 
-**adoptions** — adozione finalizzata
+**adoptions** — finalized adoption
 - `animal_id`, `user_id`, `organization_id`, `application_id`, `adopted_at`,
   `fee`, `currency` (EUR), `contract_path`, `follow_up_status`
 - `1─1` animal
 
-**foster_placements** + **foster_applications** — affido (rilevante in UE)
-- Analogo alle adozioni ma temporaneo: `start_date`, `end_date`, `type`
+**foster_placements** + **foster_applications** — fostering (relevant in the EU)
+- Analogous to adoptions but temporary: `start_date`, `end_date`, `type`
   (`pre_adoption`, `medical`, `emergency`, `long_term`)
 
-**appointments** — visite/incontri con l'animale
+**appointments** — visits/meetings with the animal
 - `animal_id`, `user_id`, `organization_id`, `scheduled_at`, `type`
   (`visit`, `interview`, `home_check`), `status`, `notes`
 
-**medical_records** — cartella sanitaria
+**medical_records** — medical chart
 - `animal_id`, `type` (`vaccination`, `treatment`, `surgery`, `checkup`,
-  `deworming`), `date`, `vet_name`, `description`, `next_due_at`, allegati
+  `deworming`), `date`, `vet_name`, `description`, `next_due_at`, attachments
 
-**message_threads** / **messages** — comunicazione ente ↔ adottante
-- thread legato a candidatura/animale; notifiche in-app + email
+**message_threads** / **messages** — organization ↔ adopter communication
+- thread linked to an application/animal; in-app + email notifications
 
 **donations**
 - `organization_id`, `donor_user_id?`, `amount`, `currency` (EUR),
   `type` (`one_off`, `recurring`), `provider_ref` (Stripe), `status`
 
-**favorites** — wishlist adottante (`user_id`, `animal_id`)
+**favorites** — adopter wishlist (`user_id`, `animal_id`)
 
-**content_pages** — mini-CMS per pagina pubblica ente (translatable)
+**content_pages** — mini-CMS for the organization's public page (translatable)
 
-**Trasversali:** `activity_log` (audit), `notifications`, `media`,
+**Cross-cutting:** `activity_log` (audit), `notifications`, `media`,
 `roles`/`permissions`/`model_has_roles` (spatie), `settings` (spatie-settings).
 
-### Adattamenti Europa vs Baja
-- Multi-specie (non solo cani) e multi-ente reale (Baja assume 1 rescue).
-- Campi legali UE (P.IVA, codice fiscale), indirizzi/regioni UE, valuta EUR.
-- **Microchip** e (roadmap) integrazione anagrafe canina / EU pet passport.
-- GDPR: consensi espliciti, retention, oblio, geolocalizzazione approssimata sulle mappe pubbliche.
-- **Affido** come cittadino di prima classe (molto usato in Italia/UE).
+### Europe vs Baja adaptations
+- Multi-species (not just dogs) and real multi-organization (Baja assumes 1 rescue).
+- EU legal fields (VAT, tax code), EU addresses/regions, EUR currency.
+- **Microchip** and (roadmap) integration with the national dog registry / EU pet passport.
+- GDPR: explicit consents, retention, the right to be forgotten, approximate geolocation on public maps.
+- **Fostering** as a first-class citizen (widely used in Italy/EU).
 
 ---
 
-## 5. Workflow di adozione (macchina a stati)
+## 5. Adoption workflow (state machine)
 
-Implementato con `spatie/laravel-model-states` su `adoption_applications.status`.
+Implemented with `spatie/laravel-model-states` on `adoption_applications.status`.
 
 ```
                  ┌──────────────┐
-                 │  Submitted   │  (adottante invia; profilo completo obbligatorio)
+                 │  Submitted   │  (adopter submits; a complete profile is required)
                  └──────┬───────┘
                         ▼
                  ┌──────────────┐      withdraw ┌───────────┐
-                 │ UnderReview  │──────────────▶│ Withdrawn │ (adottante)
+                 │ UnderReview  │──────────────▶│ Withdrawn │ (adopter)
                  └──────┬───────┘               └───────────┘
              ┌──────────┼───────────┐
              ▼          ▼           ▼
@@ -223,144 +230,144 @@ Implementato con `spatie/laravel-model-states` su `adoption_applications.status`
       └─────┬──────┘
             ▼
       ┌────────────┐        ┌────────────────┐
-      │  Approved  │───────▶│ AdoptionPending│ (animale riservato)
+      │  Approved  │───────▶│ AdoptionPending│ (animal reserved)
       └────────────┘        └───────┬────────┘
                                     ▼
                             ┌───────────────┐
-                            │   Completed   │ (crea Adoption + contratto)
+                            │   Completed   │ (creates Adoption + contract)
                             └───────────────┘
 ```
 
-**Regole/guardie principali:**
-- `Submitted` richiede `adopter_profile` completo + consensi GDPR.
-- Vincolo: un animale può avere una sola candidatura in `AdoptionPending`/`Completed`.
-- Transizioni consentite solo a staff verificato dell'ente proprietario (Policy).
-- Ogni transizione → activity log + notifica all'adottante.
-- `Completed` è terminale: crea `Adoption`, aggiorna `animal.status = adopted`,
-  genera contratto PDF, invia email, chiude le altre candidature dell'animale.
+**Main rules/guards:**
+- `Submitted` requires a complete `adopter_profile` + GDPR consents.
+- Constraint: an animal can have only one application in `AdoptionPending`/`Completed`.
+- Transitions allowed only to verified staff of the owning organization (Policy).
+- Every transition → activity log + notification to the adopter.
+- `Completed` is terminal: creates `Adoption`, updates `animal.status = adopted`,
+  generates the contract PDF, sends email, closes the animal's other applications.
 
-Workflow analogo (ridotto) per **affidi**.
+An analogous (reduced) workflow for **fostering**.
 
 ---
 
-## 6. Ruoli e permessi
+## 6. Roles and permissions
 
-`spatie/laravel-permission` in modalità **teams** (team = organization).
+`spatie/laravel-permission` in **teams** mode (team = organization).
 
-| Ruolo | Scope | Capacità principali |
+| Role | Scope | Main capabilities |
 |---|---|---|
-| **Super Admin** | Piattaforma | Verifica enti, gestione utenti globali, impostazioni, moderazione |
-| **Org Owner** | Ente | Tutto sull'ente + gestione staff e fatturazione |
-| **Org Staff** | Ente | Animali, candidature, affidi, medico, appuntamenti, messaggi |
-| **Org Volunteer** | Ente | Sola lettura + note (permessi limitati) |
-| **Adopter** | Sé stesso | Profilo, candidature, favoriti, appuntamenti, messaggi |
+| **Super Admin** | Platform | Organization verification, global user management, settings, moderation |
+| **Org Owner** | Organization | Everything about the organization + staff and billing management |
+| **Org Staff** | Organization | Animals, applications, fosters, medical, appointments, messages |
+| **Org Volunteer** | Organization | Read-only + notes (limited permissions) |
+| **Adopter** | Themselves | Profile, applications, favorites, appointments, messages |
 
-- Staff invitato via email; `verified` prima di poter operare (come Baja, ma
-  la verifica dell'*ente* la fa il Super Admin, quella dello *staff* l'Org Owner).
-- Autorizzazione applicata via **Policy** su ogni modello + tenant scoping automatico.
-
----
-
-## 7. Roadmap per fasi
-
-Ogni fase è un incremento rilasciabile e testato. Le stime sono indicative
-(sviluppo part-time singolo dev).
-
-### Fase 0 — Fondamenta (rebuild) · ~1 settimana
-- Nuova install Laravel 13 + Filament 5, PHP 8.4.
-- Docker Compose aggiornato: PHP-FPM, Nginx, PostgreSQL, Redis, Meilisearch, Mailpit.
-- Toolchain qualità: Pint, Larastan (livello max), Rector, Pest, GitHub Actions CI.
-- Convenzioni base: Enums, struttura cartelle §3.2, `.env` documentato.
-- **Deliverable:** app che gira in Docker, pipeline CI verde.
-
-### Fase 1 — Dominio core + pannello Ente · ~2 settimane
-- Migrazioni: organizations, users, memberships, animals, medical_records.
-- Multi-tenancy Filament + spatie/permission (teams).
-- Auth (register/login/verify/reset, 2FA opz.), ruoli seedati.
-- Pannello Ente: CRUD Animali (con medialibrary + translatable), cartella medica.
-- Factory + seeder realistici (Faker IT).
-- **Deliverable:** uno staff gestisce animali del proprio ente end-to-end.
-
-### Fase 2 — Catalogo pubblico + portale adottante + candidature · ~3 settimane
-- Sito pubblico Livewire: home, ricerca/filtri (Scout+Meilisearch), scheda animale,
-  pagina ente, favoriti.
-- Pannello Adottante: profilo/questionario GDPR, invio candidatura, stato candidature.
-- Macchina a stati candidature (§5) + Actions + Policy + notifiche email/DB.
-- Pannello Ente: gestione candidature (kanban/tabella per stato, note, assegnazione).
-- **Deliverable:** flusso adozione completo submitted→completed con contratto PDF.
-
-### Fase 3 — Affidi, appuntamenti, medico avanzato · ~2 settimane
-- Affido (foster) con proprio workflow.
-- Appuntamenti/visite con calendario e reminder.
-- Scadenzario sanitario (vaccini/richiami) con notifiche.
-- **Deliverable:** gestione operativa quotidiana del canile.
-
-### Fase 4 — Comunicazione, notifiche, donazioni · ~2 settimane
-- Messaggistica ente↔adottante (thread) + notifiche realtime (Reverb).
-- Donazioni con Cashier/Stripe (SEPA, one-off + ricorrenti).
-- Centro notifiche in-app + email transazionali brandizzate.
-- **Deliverable:** engagement e raccolta fondi.
-
-### Fase 5 — GDPR, i18n, ricerca avanzata · ~2 settimane
-- Gestione consensi, export dati personali, cancellazione/anonimizzazione,
-  retention automatica (job schedulati), cookie consent, privacy policy.
-- Traduzioni IT/EN complete (interfaccia + contenuti), pronto per ES/FR/DE.
-- Facet di ricerca, salvataggio ricerche, alert nuovi animali.
-- **Deliverable:** conformità e pronto multi-paese.
-
-### Fase 6 — Governance piattaforma + analytics · ~1-2 settimane
-- Pannello Admin: verifica/sospensione enti, moderazione, utenti globali, settings.
-- Dashboard/KPI (adozioni, tempi medi, tasso conversione) con widget Filament.
-- Report esportabili (CSV/PDF).
-- **Deliverable:** operabilità della piattaforma da parte del gestore.
-
-### Fase 7 — Hardening & deploy produzione · ~1-2 settimane
-- Copertura test target (dominio 100%, feature critiche), Larastan pulito.
-- Sicurezza: rate limiting, policy review, security headers, dependency audit.
-- Osservabilità: Pulse, health checks, Sentry/log, backup automatici (spatie-backup).
-- Deploy: Forge/Ploi o Kubernetes; Horizon + Reverb + scheduler come servizi;
-  storage S3 UE; SSL; CI/CD con zero-downtime deploy.
-- **Deliverable:** ArkVel in produzione.
-
-### Fase 8 — Estensioni (post-MVP)
-- API pubblica (Sanctum) + eventuale app mobile.
-- Integrazione anagrafe canina nazionale / microchip / EU pet passport.
-- Import/export verso altri gestionali canile; portali di adozione aggregati.
-- Firma elettronica contratti; QR in scheda animale; PWA.
+- Staff invited via email; `verified` before being able to operate (as in Baja, but
+  the *organization's* verification is done by the Super Admin, the *staff's* by the Org Owner).
+- Authorization applied via a **Policy** on every model + automatic tenant scoping.
 
 ---
 
-## 8. Test, qualità, CI/CD
+## 7. Phased roadmap
 
-- **Pest**: unit (Enums, States, Actions), feature (flussi Filament/Livewire),
-  architettura (Pest arch) per far rispettare le convenzioni di §3.2.
-- **Larastan** livello max, **Pint** (preset Laravel), **Rector** per upgrade.
-- **GitHub Actions**: lint → static analysis → test (Postgres+Redis service) →
-  build asset → (deploy su tag).
-- **Copertura**: dominio adozione/affido 100%; regressione su ogni bug.
+Each phase is a releasable, tested increment. The estimates are indicative
+(part-time, single-developer work).
+
+### Phase 0 — Foundations (rebuild) · ~1 week
+- Fresh Laravel 13 + Filament 5 install, PHP 8.4.
+- Updated Docker Compose: PHP-FPM, Nginx, PostgreSQL, Redis, Meilisearch, Mailpit.
+- Quality toolchain: Pint, Larastan (max level), Rector, Pest, GitHub Actions CI.
+- Base conventions: Enums, the §3.2 folder structure, a documented `.env`.
+- **Deliverable:** an app that runs in Docker, a green CI pipeline.
+
+### Phase 1 — Core domain + Organization panel · ~2 weeks
+- Migrations: organizations, users, memberships, animals, medical_records.
+- Filament multi-tenancy + spatie/permission (teams).
+- Auth (register/login/verify/reset, optional 2FA), seeded roles.
+- Organization panel: Animals CRUD (with medialibrary + translatable), medical chart.
+- Realistic factories + seeders (Italian Faker).
+- **Deliverable:** staff manage their organization's animals end-to-end.
+
+### Phase 2 — Public catalog + adopter portal + applications · ~3 weeks
+- Public Livewire site: home, search/filters (Scout+Meilisearch), animal page,
+  organization page, favorites.
+- Adopter panel: profile/GDPR questionnaire, application submission, application status.
+- Applications state machine (§5) + Actions + Policy + email/DB notifications.
+- Organization panel: application management (kanban/table by status, notes, assignment).
+- **Deliverable:** complete adoption flow submitted→completed with a contract PDF.
+
+### Phase 3 — Fostering, appointments, advanced medical · ~2 weeks
+- Fostering with its own workflow.
+- Appointments/visits with a calendar and reminders.
+- Medical scheduling (vaccines/boosters) with notifications.
+- **Deliverable:** day-to-day operational management of the shelter.
+
+### Phase 4 — Communication, notifications, donations · ~2 weeks
+- Organization↔adopter messaging (threads) + realtime notifications (Reverb).
+- Donations with Cashier/Stripe (SEPA, one-off + recurring).
+- In-app notification center + branded transactional email.
+- **Deliverable:** engagement and fundraising.
+
+### Phase 5 — GDPR, i18n, advanced search · ~2 weeks
+- Consent management, personal data export, deletion/anonymization,
+  automatic retention (scheduled jobs), cookie consent, privacy policy.
+- Complete IT/EN translations (interface + content), ready for ES/FR/DE.
+- Search facets, saved searches, new-animal alerts.
+- **Deliverable:** compliant and multi-country ready.
+
+### Phase 6 — Platform governance + analytics · ~1-2 weeks
+- Admin panel: organization verification/suspension, moderation, global users, settings.
+- Dashboard/KPIs (adoptions, average times, conversion rate) with Filament widgets.
+- Exportable reports (CSV/PDF).
+- **Deliverable:** operability of the platform by the operator.
+
+### Phase 7 — Hardening & production deploy · ~1-2 weeks
+- Test coverage target (domain 100%, critical features), clean Larastan.
+- Security: rate limiting, policy review, security headers, dependency audit.
+- Observability: Pulse, health checks, Sentry/logs, automatic backups (spatie-backup).
+- Deploy: Forge/Ploi or Kubernetes; Horizon + Reverb + scheduler as services;
+  EU S3 storage; SSL; CI/CD with zero-downtime deploys.
+- **Deliverable:** ArkVel in production.
+
+### Phase 8 — Extensions (post-MVP)
+- Public API (Sanctum) + possible mobile app.
+- Integration with the national dog registry / microchip / EU pet passport.
+- Import/export to other shelter management systems; aggregated adoption portals.
+- Electronic contract signing; QR code on the animal page; PWA.
 
 ---
 
-## 9. Deployment & operatività
+## 8. Testing, quality, CI/CD
 
-- **Infra UE** per data residency (Hetzner/Scaleway/OVH).
-- Servizi: app (PHP-FPM+Nginx), PostgreSQL, Redis, Meilisearch, Reverb, Horizon,
-  scheduler, storage S3-compatibile UE.
-- **Backup** giornalieri cifrati (spatie-backup) + verifica ripristino.
-- **Health checks** (spatie-health) + alerting; **Pulse** per performance.
-- Secrets via env/secret manager; migrazioni in deploy; `optimize` in build.
+- **Pest**: unit (Enums, States, Actions), feature (Filament/Livewire flows),
+  architecture (Pest arch) to enforce the §3.2 conventions.
+- **Larastan** at max level, **Pint** (Laravel preset), **Rector** for upgrades.
+- **GitHub Actions**: lint → static analysis → test (Postgres+Redis services) →
+  asset build → (deploy on tag).
+- **Coverage**: adoption/fostering domain 100%; a regression on every bug.
 
 ---
 
-## 10. Decisioni aperte da confermare
+## 9. Deployment & operations
 
-1. **Portale adottante**: pannello Filament dedicato (più rapido) vs frontend
-   Livewire custom (più libertà UX). *Proposta: Filament per il dashboard,
-   Livewire per il catalogo pubblico.*
-2. **Specie supportate**: solo cani/gatti all'MVP o generico da subito?
-   *Proposta: enum generico, UI focalizzata cani/gatti all'inizio.*
-3. **Pagamenti donazioni**: Stripe da subito o rimandare a Fase 4? *Proposta: Fase 4.*
-4. **Paese/i pilota**: solo Italia all'inizio (semplifica campi legali/anagrafe)
-   o multi-paese da subito? *Proposta: Italia pilota, architettura multi-paese.*
-5. **Riuso vs rebuild pulito**: confermato rebuild da zero (nuovo skeleton),
-   riusando il presente doc e il dominio Baja come riferimento.
+- **EU infra** for data residency (Hetzner/Scaleway/OVH).
+- Services: app (PHP-FPM+Nginx), PostgreSQL, Redis, Meilisearch, Reverb, Horizon,
+  scheduler, EU S3-compatible storage.
+- **Daily encrypted backups** (spatie-backup) + restore verification.
+- **Health checks** (spatie-health) + alerting; **Pulse** for performance.
+- Secrets via env/secret manager; migrations on deploy; `optimize` in the build.
+
+---
+
+## 10. Open decisions to confirm
+
+1. **Adopter portal**: a dedicated Filament panel (faster) vs a custom Livewire
+   frontend (more UX freedom). *Proposal: Filament for the dashboard,
+   Livewire for the public catalog.*
+2. **Supported species**: dogs/cats only at MVP or generic from the start?
+   *Proposal: a generic enum, UI focused on dogs/cats initially.*
+3. **Donation payments**: Stripe from the start or defer to Phase 4? *Proposal: Phase 4.*
+4. **Pilot country/countries**: Italy only at first (simplifies legal/registry fields)
+   or multi-country from the start? *Proposal: Italy as the pilot, a multi-country architecture.*
+5. **Reuse vs clean rebuild**: confirmed a rebuild from scratch (a new skeleton),
+   reusing this document and the Baja domain as a reference.

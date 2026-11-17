@@ -1,65 +1,65 @@
-# ArkVel — Calendario appuntamenti & sincronizzazione esterna
+# ArkVel — Appointment calendar & external synchronization
 
-> Fase 3.5. Estende gli appuntamenti (Fase 3) con un vero calendario in-app e la
-> sincronizzazione bidirezionale con i calendari esterni (Google, Proton, Apple,
-> Outlook, Fastmail, Nextcloud, iCloud). Pensato per un ente che gestisce decine di
-> appuntamenti a settimana.
-
----
-
-## 1. Calendario in-app (`/manage`)
-
-Nel pannello ente, **Appuntamenti → Calendario**: viste **mese/settimana/giorno**
-(FullCalendar v6, MIT), colori per stato, tenant-scoped.
-
-- **Click su un evento** → modale con dettaglio e azioni staff: Conferma, Completa,
-  Assente (no-show), Annulla — tutte delegano alle Action di dominio
-  (`app/Actions/Appointments/*`), rispettano `AppointmentPolicy` e le guardie.
-- **Drag-and-drop** per riprogrammare (guardia slot futuro + anti-overlap;
-  `RescheduleAppointment`); **click su slot vuoto** per creare (richiedente ristretto
-  ai soli utenti già in relazione con l'ente — GDPR).
-- L'interattività (drag/create) è abilitata solo per chi ha `appointment.manage`
-  (membro verificato); il **volontario** vede un calendario in sola lettura.
-
-La vista lista/tabella con filtri (`AppointmentResource`) resta disponibile come vista
-secondaria.
-
-> Scelta tecnica: nessun plugin calendario Filament 5 (nessuno stabile/mantenuto).
-> FullCalendar è caricato via `FilamentAsset::register` (build globale su CDN,
-> vendorizzabile in locale) e inizializzato con Alpine — nessuna dipendenza fragile.
+> Phase 3.5. Extends appointments (Phase 3) with a real in-app calendar and
+> bidirectional synchronization with external calendars (Google, Proton, Apple,
+> Outlook, Fastmail, Nextcloud, iCloud). Designed for an organization handling dozens of
+> appointments a week.
 
 ---
 
-## 2. Feed iCal in sottoscrizione (universale, sola andata)
+## 1. In-app calendar (`/manage`)
 
-Ogni ente ha un **URL segreto** di sottoscrizione (`/calendar/{ente}/{token}`) a cui
-qualunque client si abbona: **Google, Proton, Apple, Outlook**. Aggiornamento
-automatico, standard iCalendar, un solo meccanismo per tutti i provider.
+In the organization panel, **Appointments → Calendar**: **month/week/day** views
+(FullCalendar v6, MIT), color-coded by status, tenant-scoped.
 
-- In **Appuntamenti → Calendario → Feed iCal**: URL copiabile + rigenera/revoca il
-  token (invalida il vecchio URL). Visibile solo a chi gestisce.
-- Token ad alta entropia nell'URL (come i feed segreti di Google/Fastmail),
-  confrontato a tempo costante (`hash_equals`); token errato/ente inesistente →
-  `404` indistinguibile; rate-limited.
-- Ogni appuntamento ha anche un **download `.ics`** ("Aggiungi al calendario") e le
-  email di conferma/spostamento allegano l'`.ics`.
+- **Click an event** → modal with details and staff actions: Confirm, Complete,
+  No-show, Cancel — all delegating to the domain Actions
+  (`app/Actions/Appointments/*`), honoring `AppointmentPolicy` and the guards.
+- **Drag-and-drop** to reschedule (future-slot guard + anti-overlap;
+  `RescheduleAppointment`); **click an empty slot** to create (the requester is restricted
+  to users already in a relationship with the organization — GDPR).
+- Interactivity (drag/create) is enabled only for those with `appointment.manage`
+  (a verified member); the **volunteer** sees a read-only calendar.
 
-È il modo più semplice per far entrare gli appuntamenti nel calendario personale dello
-staff senza collegare account.
+The list/table view with filters (`AppointmentResource`) remains available as a secondary
+view.
+
+> Technical choice: no Filament 5 calendar plugin (none stable/maintained).
+> FullCalendar is loaded via `FilamentAsset::register` (global CDN build,
+> self-hostable locally) and initialized with Alpine — no fragile dependency.
 
 ---
 
-## 3. Connessioni bidirezionali (Google / CalDAV)
+## 2. iCal subscription feed (universal, one-way)
 
-Architettura provider-agnostica: interfaccia `ExternalCalendarProvider`
-(`pushEvent`/`deleteEvent`/`pullChanges`) + registry; aggiungere un provider = aggiungere
-una classe. Le credenziali sono **cifrate at-rest** (`credentials` cast `encrypted:array`),
-mai loggate, mai in messaggi d'errore. Gestione in **Appuntamenti → Connessioni calendario**.
+Each organization has a **secret URL** to subscribe to (`/calendar/{organization}/{token}`)
+that any client can subscribe to: **Google, Proton, Apple, Outlook**. Automatic
+refresh, iCalendar standard, a single mechanism for every provider.
+
+- Under **Appointments → Calendar → iCal feed**: copyable URL + regenerate/revoke the
+  token (invalidates the old URL). Visible only to those who manage.
+- High-entropy token in the URL (like the secret feeds of Google/Fastmail),
+  compared in constant time (`hash_equals`); wrong token/nonexistent organization →
+  an indistinguishable `404`; rate-limited.
+- Every appointment also has an **`.ics` download** ("Add to calendar") and the
+  confirmation/reschedule emails attach the `.ics`.
+
+It's the simplest way to get appointments into the staff's personal calendar without
+linking accounts.
+
+---
+
+## 3. Bidirectional connections (Google / CalDAV)
+
+Provider-agnostic architecture: an `ExternalCalendarProvider` interface
+(`pushEvent`/`deleteEvent`/`pullChanges`) + a registry; adding a provider = adding
+a class. Credentials are **encrypted at rest** (`credentials` cast `encrypted:array`),
+never logged, never in error messages. Managed under **Appointments → Calendar connections**.
 
 ### 3.1 Google Calendar (OAuth)
-Collega il Google Calendar dell'ente; ArkVel crea/aggiorna/cancella gli eventi via API
-(nessuna SDK `google/apiclient`: solo client HTTP, config-gated). **Per abilitarlo** servono
-le credenziali di un progetto Google Cloud in `.env`:
+Connect the organization's Google Calendar; ArkVel creates/updates/deletes events via the API
+(no `google/apiclient` SDK: an HTTP client only, config-gated). **To enable it** you need
+the credentials of a Google Cloud project in `.env`:
 
 ```
 GOOGLE_CALENDAR_CLIENT_ID=...
@@ -67,83 +67,83 @@ GOOGLE_CALENDAR_CLIENT_SECRET=...
 GOOGLE_CALENDAR_REDIRECT_URI=https://<host>/calendar/google/callback
 ```
 
-Scope richiesto: `https://www.googleapis.com/auth/calendar.events` (offline, refresh
-token). Senza credenziali l'azione "Collega Google" è disabilitata (feature inerte).
+Required scope: `https://www.googleapis.com/auth/calendar.events` (offline, refresh
+token). Without credentials the "Connect Google" action is disabled (inert feature).
 
 ### 3.2 CalDAV (Fastmail, Nextcloud, iCloud, mailbox.org, …)
-Collega un calendario CalDAV con **URL della collezione + username + app-password**.
-Nessuna configurazione globale: ogni ente inserisce i propri dati,
-verificati (PROPFIND) prima di salvare. Push via `PUT`/`DELETE`, pull via `REPORT`
-sync-collection + `calendar-multiget`. Il parsing XML è **XXE-safe** (niente
-`LIBXML_NOENT`, DOCTYPE rifiutato): un server ostile non può leggere file locali.
+Connect a CalDAV calendar with a **collection URL + username + app password**.
+No global configuration: each organization enters its own data,
+verified (PROPFIND) before saving. Push via `PUT`/`DELETE`, pull via `REPORT`
+sync-collection + `calendar-multiget`. The XML parsing is **XXE-safe** (no
+`LIBXML_NOENT`, DOCTYPE rejected): a hostile server cannot read local files.
 
-> **Proton Calendar NON espone CalDAV** (il Proton Bridge è solo mail, IMAP/SMTP).
-> Per Proton usa il **feed iCal in sottoscrizione** (§2), che Proton Calendar supporta.
+> **Proton Calendar does NOT expose CalDAV** (the Proton Bridge is mail-only, IMAP/SMTP).
+> For Proton use the **iCal subscription feed** (§2), which Proton Calendar supports.
 
 ---
 
-## 4. Sincronizzazione bidirezionale
+## 4. Bidirectional synchronization
 
-- **Push (ArkVel → esterni):** ogni mutazione di un appuntamento (crea/conferma/sposta/
-  annulla) scatena, via observer, un job accodato (`SyncAppointmentToCalendarsJob`,
-  after-commit) che spinge verso **tutte** le connessioni attive dell'ente. Isolamento
-  dei guasti per connessione; una connessione rotta passa a `Error` e non blocca le altre.
-- **Pull (esterni → ArkVel):** il comando schedulato **`arkvel:sync-calendars`** (ogni
-  15 min) tira le modifiche dai calendari collegati (direction=Both) e le riconcilia:
-  uno **spostamento** esterno → `RescheduleAppointment`; una **cancellazione** esterna →
-  `CancelAppointment`. ArkVel resta **autoritativo**: le modifiche esterne passano sempre
-  dalle Action (guardie, activity log, notifiche); una modifica che violerebbe una guardia
-  (slot passato, overlap, stato terminale) viene **scartata**, non forzata.
-- **Convergenza (niente ping-pong):** si agisce solo quando il valore esterno *differisce*
-  da quello ArkVel. Una riprogrammazione da pull ri-spinge lo stesso valore; il pull
-  successivo vede `start == scheduled_at` → no-op. Converge in un giro.
-- **Isolamento tenant:** un evento esterno può toccare solo appuntamenti dell'ente della
-  connessione (verificato sia per id evento sia per mappatura).
+- **Push (ArkVel → external):** every appointment mutation (create/confirm/reschedule/
+  cancel) triggers, via an observer, a queued job (`SyncAppointmentToCalendarsJob`,
+  after-commit) that pushes to **all** of the organization's active connections. Fault isolation
+  per connection; a broken connection moves to `Error` and doesn't block the others.
+- **Pull (external → ArkVel):** the scheduled command **`arkvel:sync-calendars`** (every
+  15 min) pulls changes from the connected calendars (direction=Both) and reconciles them:
+  an external **reschedule** → `RescheduleAppointment`; an external **deletion** →
+  `CancelAppointment`. ArkVel stays **authoritative**: external changes always go
+  through the Actions (guards, activity log, notifications); a change that would violate a guard
+  (past slot, overlap, terminal state) is **discarded**, not forced.
+- **Convergence (no ping-pong):** we act only when the external value *differs*
+  from ArkVel's. A reschedule from a pull re-pushes the same value; the next pull
+  sees `start == scheduled_at` → no-op. Converges in one round.
+- **Tenant isolation:** an external event can only touch appointments of the connection's
+  organization (verified both by event id and by mapping).
 
-### Infrastruttura
-Il push usa il worker `queue` (Redis) già presente; il pull usa il servizio `scheduler`
-(`schedule:work`) della Fase 3. Le connessioni e le mappature evento↔appuntamento vivono
-in `calendar_connections` e `appointment_external_events`.
+### Infrastructure
+The push uses the existing `queue` worker (Redis); the pull uses the `scheduler` service
+(`schedule:work`) from Phase 3. Connections and event↔appointment mappings live
+in `calendar_connections` and `appointment_external_events`.
 
 ---
 
 ## 5. Privacy / GDPR
 
-Gli eventi esportati/sincronizzati sono **minimizzati**: contengono solo
-`SUMMARY = "{tipo}: {animale}"`, `LOCATION = ente + città` (mai la via), data/ora e stato.
-**Mai** email, telefono, cognome del richiedente né note interne. La politica di
-minimizzazione è definita in un unico punto (`AppointmentEventMapper`), condivisa da feed
-ICS e provider esterni. Collegare un calendario di terze parti (es. Google) è un
-trasferimento di dati verso quel fornitore: la minimizzazione limita il dato esposto al
-minimo indispensabile per identificare l'incontro.
+Exported/synchronized events are **minimized**: they contain only
+`SUMMARY = "{type}: {animal}"`, `LOCATION = organization + city` (never the street), date/time and status.
+**Never** the requester's email, phone, last name, or internal notes. The minimization
+policy is defined in a single place (`AppointmentEventMapper`), shared by the ICS feed
+and external providers. Connecting a third-party calendar (e.g. Google) is a transfer
+of data to that provider: minimization limits the data exposed to the
+bare minimum needed to identify the meeting.
 
 ---
 
-## 6. Come provarlo
+## 6. How to try it
 
-1. `docker compose up -d` (app :8090, Mailpit :8025) e `docker compose exec -T php php
-   artisan migrate:fresh --seed`. Ogni ente demo ha una **connessione Log** attiva
-   (provider fittizio: registra i push nei log, dimostrabile senza credenziali).
-2. Login staff (`staff+milano@arkvel.test` / `password`) → **Appuntamenti → Calendario**:
-   trascina un evento, crea da uno slot, gestisci dal modale.
-3. **Feed iCal:** copia l'URL da "Feed iCal" e abbonati da Google/Proton/Apple.
-4. **Reminder/scadenze:** `php artisan arkvel:send-appointment-reminders` /
-   `arkvel:send-medical-reminders` (email in Mailpit :8025).
-5. **Pull di riconciliazione:** `php artisan arkvel:sync-calendars` (con connessioni reali
-   configurate; in demo la connessione Log non produce cambi esterni).
-6. **Google/CalDAV live:** imposta le `GOOGLE_CALENDAR_*` (Google) o collega un CalDAV
-   dalla pagina Connessioni; poi collega dall'UI. I test girano tutti con HTTP fittizio
-   (`Http::fake`), quindi non servono credenziali per la suite.
+1. `docker compose up -d` (app :8090, Mailpit :8025) and `docker compose exec -T php php
+   artisan migrate:fresh --seed`. Each demo organization has an active **Log connection**
+   (dummy provider: logs pushes to the logs, demonstrable without credentials).
+2. Staff login (`staff+milano@arkvel.test` / `password`) → **Appointments → Calendar**:
+   drag an event, create from a slot, manage from the modal.
+3. **iCal feed:** copy the URL from "iCal feed" and subscribe from Google/Proton/Apple.
+4. **Reminders/due dates:** `php artisan arkvel:send-appointment-reminders` /
+   `arkvel:send-medical-reminders` (emails in Mailpit :8025).
+5. **Reconciliation pull:** `php artisan arkvel:sync-calendars` (with real connections
+   configured; in the demo the Log connection produces no external changes).
+6. **Google/CalDAV live:** set the `GOOGLE_CALENDAR_*` vars (Google) or connect a CalDAV
+   from the Connections page; then connect from the UI. The tests all run with a fake HTTP client
+   (`Http::fake`), so no credentials are needed for the suite.
 
 ---
 
-## 7. Mappa dei componenti
+## 7. Component map
 
-| Ambito | File |
+| Area | Files |
 |---|---|
-| Calendario UI | `app/Filament/Shelter/Pages/AppointmentCalendar.php` (+ view), `CalendarConnections.php` |
-| Export ICS | `app/Support/Calendar/{IcsWriter,AppointmentCalendarExport,IcsStatus}.php`, `Http/Controllers/CalendarFeedController.php` |
+| Calendar UI | `app/Filament/Shelter/Pages/AppointmentCalendar.php` (+ view), `CalendarConnections.php` |
+| ICS export | `app/Support/Calendar/{IcsWriter,AppointmentCalendarExport,IcsStatus}.php`, `Http/Controllers/CalendarFeedController.php` |
 | Mapping/PII | `app/Support/Calendar/{AppointmentEventMapper,CalendarEventData}.php` |
-| Provider | `app/Support/Calendar/Providers/*` (Log/Google/CalDav), `CalDav/CalDavClient.php`, `Google/*` |
-| Connessioni/pipeline | `app/Models/{CalendarConnection,AppointmentExternalEvent}.php`, `Jobs/SyncAppointmentToCalendarsJob.php`, `Observers/AppointmentObserver.php` |
+| Providers | `app/Support/Calendar/Providers/*` (Log/Google/CalDav), `CalDav/CalDavClient.php`, `Google/*` |
+| Connections/pipeline | `app/Models/{CalendarConnection,AppointmentExternalEvent}.php`, `Jobs/SyncAppointmentToCalendarsJob.php`, `Observers/AppointmentObserver.php` |
 | Pull/reconcile | `app/Support/Calendar/CalendarReconciler.php`, `Console/Commands/SyncCalendarsCommand.php` |
