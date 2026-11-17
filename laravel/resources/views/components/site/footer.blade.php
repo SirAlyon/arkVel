@@ -88,7 +88,8 @@
                     @foreach ($legal as $item)
                         <li class="flex items-center gap-2">
                             @if ($item['url'] !== null)
-                                <x-ui.link :href="$item['url']" wire:navigate.hover>{{ $item['label'] }}</x-ui.link>
+                                {{-- min-h-6: 24px minimum target size (WCAG 2.2 AA 2.5.8); the footer fine-print links are text-small and would otherwise be ~22px tall. --}}
+                                <x-ui.link :href="$item['url']" wire:navigate.hover class="min-h-6">{{ $item['label'] }}</x-ui.link>
                             @else
                                 {{ $item['label'] }} <x-ui.badge>{{ __('public.footer.coming_soon') }}</x-ui.badge>
                             @endif
