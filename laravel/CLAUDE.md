@@ -1,56 +1,57 @@
-# ArkVel — regole Laravel/Filament (livello app)
+# ArkVel — Laravel/Filament rules (app level)
 
-> Gli standard generali (SOLID, OOP, test, git, quality gate) sono nel
-> [CLAUDE.md](../CLAUDE.md) di root. Questo file copre i dettagli dello strato Laravel.
-> **Tutti i comandi vanno eseguiti nel container** (`docker compose exec -T php ...`):
-> il PHP locale è 8.2, l'app richiede 8.4.
+> The general standards (SOLID, OOP, testing, git, quality gate) are in the root
+> [CLAUDE.md](../CLAUDE.md). This file covers the details of the Laravel layer.
+> **All commands must be run inside the container** (`docker compose exec -T php ...`):
+> the host PHP is 8.2, the app requires 8.4.
 
-## Layout del codice (modular monolith)
+## Code layout (modular monolith)
 
 ```
 app/
-├── Enums/       # insiemi di valori fissi (implementano HasLabel/HasColor)
-├── Models/      # Eloquent: relazioni, cast, scope, accessor — niente business logic
-├── States/      # macchine a stati (spatie/laravel-model-states)
-├── Actions/     # un caso d'uso = una classe invokable, con test unit
-├── Data/        # DTO tipizzati (spatie/laravel-data)
-├── Policies/    # autorizzazione per Model
-├── Support/     # servizi trasversali, contratti, binding
-├── Filament/    # Admin/ Shelter/ Adopter/  (Resource, Pages, Widgets)
-└── Livewire/    # componenti del sito pubblico
+├── Enums/       # fixed sets of values (implement HasLabel/HasColor)
+├── Models/      # Eloquent: relationships, casts, scopes, accessors — no business logic
+├── States/      # state machines (spatie/laravel-model-states)
+├── Actions/     # one use case = one invokable class, with unit tests
+├── Data/        # typed DTOs (spatie/laravel-data)
+├── Policies/    # per-Model authorization
+├── Support/     # cross-cutting services, contracts, bindings
+├── Filament/    # Admin/ Shelter/ Adopter/  (Resources, Pages, Widgets)
+└── Livewire/    # public site components
 ```
 
-## Regole pratiche
+## Practical rules
 
-- `declare(strict_types=1);` in ogni file; tipizzazione completa.
-- **Migrazioni**: una tabella per file, `down()` sempre coerente, FK con
-  `->constrained()` e `on delete` esplicito. Enum applicativi come `string` + cast
-  Eloquent verso l'enum PHP (non `enum` di colonna DB).
-- **Model**: `protected function casts(): array` (stile L11+), `$fillable` esplicito,
-  relazioni tipizzate con return type (`: HasMany`, `: BelongsTo`).
-- **Factory** per ogni Model (servono ai test e ai seeder).
-- **Enum**: label tradotte via `HasLabel` → `__('enums.<enum_snake>.<value>')` in `lang/{it,en}/enums.php` (il test `EnumLabelsTranslationTest` verifica che ogni case abbia la chiave in entrambe le lingue); colori via `HasColor` per gli stati.
-- **Stati**: transizioni solo tramite la macchina a stati; ogni transizione logga
-  (activitylog) e notifica dove previsto.
-- **Filament 5**: una Resource per Model, componenti riusabili, RelationManager per
-  le relazioni, Widgets per i KPI. Le azioni delegano alle classi `Action`.
-  API incerta → consulta https://filamentphp.com/docs/5.x/ .
-- **Tenancy**: le risorse d'ente sono sempre tenant-scoped; verifica l'assenza di
-  fughe cross-tenant nei test.
+- `declare(strict_types=1);` in every file; complete type hints.
+- **Migrations**: one table per file, `down()` always consistent, FKs with
+  `->constrained()` and an explicit `on delete`. Application enums as `string` + an Eloquent
+  cast to the PHP enum (not a DB column `enum`).
+- **Models**: `protected function casts(): array` (L11+ style), explicit `$fillable`,
+  typed relationships with a return type (`: HasMany`, `: BelongsTo`).
+- **Factory** for every Model (needed by tests and seeders).
+- **Enums**: labels translated via `HasLabel` → `__('enums.<enum_snake>.<value>')` in `lang/{it,en}/enums.php` (the `EnumLabelsTranslationTest` test verifies that every case has the key in both languages); colors via `HasColor` for states.
+- **States**: transitions only through the state machine; every transition logs
+  (activitylog) and notifies where applicable.
+- **Filament 5**: one Resource per Model, reusable components, RelationManagers for
+  relationships, Widgets for KPIs. Actions delegate to the `Action` classes.
+  Unsure about the API → check https://filamentphp.com/docs/5.x/ .
+- **Tenancy**: organization resources are always tenant-scoped; verify the absence of
+  cross-tenant leaks in tests.
 
-## Test
+## Testing
 
-- Pest 4 in `tests/{Unit,Feature}`. Config test: SQLite in memoria (vedi `phpunit.xml`).
-- Ogni Action → test unit; ogni flusso Filament/HTTP → feature test con `RefreshDatabase`.
-- Esegui: `docker compose exec -T php ./vendor/bin/pest`.
+- Pest 4 in `tests/{Unit,Feature}`. Test config: in-memory SQLite (see `phpunit.xml`).
+- Every Action → unit test; every Filament/HTTP flow → feature test with `RefreshDatabase`.
+- Run: `docker compose exec -T php ./vendor/bin/pest`.
 
 ## Laravel Boost
 
-Installato (dev). Guidelines per-versione nel blocco sotto, skill in `laravel/.claude/skills/`,
-server MCP configurato nel `.mcp.json` della **root** (gira nel container:
+Installed (dev). Per-version guidelines in the block below; the Boost skills live in
+`laravel/.claude/` as local-only tooling (not checked into the repo). The MCP server is
+configured in the **root** `.mcp.json` (runs in the container:
 `docker compose exec -T php php artisan boost:mcp`).
-Per aggiornare: `docker compose exec -T php php artisan boost:update`.
-Se rilanci `boost:install --mcp`, cancella il `laravel/.mcp.json` che rigenera: usa `php` dell'host (8.2).
+To update: `docker compose exec -T php php artisan boost:update`.
+If you re-run `boost:install --mcp`, delete the `laravel/.mcp.json` it regenerates: use the host `php` (8.2).
 
 ===
 

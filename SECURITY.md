@@ -19,7 +19,7 @@ Report vulnerabilities privately through one of these channels:
 1. **GitHub Private Vulnerability Reporting** — preferred.
    Go to the repository's **Security** tab → **Report a vulnerability**.
    _(Maintainers: enable this under Settings → Security → "Private vulnerability reporting".)_
-2. **Email** — **security@kiba.studio** _(replace with your preferred contact)_.
+2. **Email** — **hello@kiba.studio**
 
 Please include:
 

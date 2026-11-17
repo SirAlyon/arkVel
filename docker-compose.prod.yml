@@ -59,7 +59,7 @@ services:
     command: ["php", "artisan", "queue:work", "--queue=default", "--tries=3", "--sleep=1", "--max-time=3600"]
 
   # Coda MEDIA dedicata: conversioni immagini (AVIF, job lunghi e pesanti). Timeout e
-  # memoria più alti (vedi docs/RILASCIO-UI.md §4). Richiede MEDIA_QUEUE=media in laravel/.env.
+  # memoria più alti (vedi docs/UI-RELEASE.md §4). Richiede MEDIA_QUEUE=media in laravel/.env.
   queue-media:
     <<: *php
     container_name: arkvel-queue-media

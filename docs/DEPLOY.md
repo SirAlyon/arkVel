@@ -4,7 +4,7 @@
 > (`docker-compose.prod.yml`): php-fpm, nginx, PostgreSQL, Redis, Meilisearch, Reverb,
 > code e scheduler, con **Caddy** davanti per il TLS automatico. I passi **applicativi** di
 > contorno (scout, media, verifiche post-deploy) e le **variabili** sono in
-> [RILASCIO-UI.md](RILASCIO-UI.md). Taglia consigliata: **VPS 4 GB / 2 vCPU** (il tier 1 GB
+> [UI-RELEASE.md](UI-RELEASE.md). Taglia consigliata: **VPS 4 GB / 2 vCPU** (il tier 1 GB
 > va in OOM: Meilisearch + worker immagini da 512 MB + build). Migrazione futura su AWS:
 > stesso stack Docker su un'istanza EC2.
 
@@ -186,7 +186,7 @@ docker compose -f docker-compose.prod.yml restart queue queue-media scheduler re
 
 ## 9. Verifiche post-deploy
 
-Esegui le verifiche di [RILASCIO-UI.md §6](RILASCIO-UI.md): `/sitemap.xml` e `/robots.txt`,
+Esegui le verifiche di [UI-RELEASE.md §6](UI-RELEASE.md): `/sitemap.xml` e `/robots.txt`,
 `Content-Language`/`Vary`, `/accedi`-`/registrati`-reset-verifica, catalogo+ricerca+mappa,
 **pagine legali `/privacy` e `/termini`**, **donazione Stripe end-to-end** col webhook (ora
 raggiungibile), **realtime** (apri due sessioni: un messaggio compare live → Reverb ok),

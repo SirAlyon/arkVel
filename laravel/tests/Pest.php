@@ -10,7 +10,15 @@ use Filament\Facades\Filament;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
-pest()->extend(TestCase::class)->in('Feature');
+// I feature test renderizzano pagine pubbliche il cui layout usa `@vite`, ma la suite NON
+// builda gli asset (lo fa solo la suite browser): senza manifest `@vite` lancia
+// ViteManifestNotFoundException (500). Disabilitiamo Vite nei feature test (la suite
+// browser, che builda davvero, tiene Vite attivo).
+pest()->extend(TestCase::class)
+    ->beforeEach(function (): void {
+        $this->withoutVite();
+    })
+    ->in('Feature');
 pest()->extend(TestCase::class)->in('Unit');
 // Suite browser: fuori dai testsuite di phpunit.xml, quindi esclusa dalla run standard
 // (container php e CI). Si lancia con `docker compose run --rm browser-tests`.

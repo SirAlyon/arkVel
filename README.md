@@ -1,9 +1,9 @@
-<p align="center">
-  <!-- Logo: sostituisci con un asset committato (es. docs/assets/logo.png) per non dipendere da host esterni. -->
-  <img src="https://imgur.com/BopSOwn.png" alt="ArkVel" width="260">
-</p>
-
-<h1 align="center">ArkVel</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img src="docs/assets/logo.svg" alt="ArkVel" width="320">
+  </picture>
+</h1>
 
 <p align="center">
   <strong>Open-source adoption & management platform for animal shelters, rescues and associations in Europe.</strong><br>
@@ -64,7 +64,26 @@ It's not just a listings site: it's an end-to-end system covering the **public a
 
 ## Screenshots
 
-> _Coming soon._ Add images under `docs/screenshots/` and reference them here.
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshots/public-home.jpg" alt="Public home page: search box, featured animal and live counts of animals and verified organisations"></td>
+    <td width="50%"><img src="docs/assets/screenshots/public-catalog-map.jpg" alt="Adoption catalogue in map view: filters with counts, organisations clustered on a map of Italy and an accessible list next to it"></td>
+  </tr>
+  <tr>
+    <td><b>Public site</b> — home with search and live counts</td>
+    <td><b>Catalogue</b> — filters with counts and a map of organisations (approximate locations)</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshots/public-mobile.jpg" alt="Two phone screens: the home page and an animal card in the catalogue"></td>
+    <td width="50%"><img src="docs/assets/screenshots/shelter-animals.jpg" alt="Organisation panel: list of animals with species, sex, lifecycle state and actions"></td>
+  </tr>
+  <tr>
+    <td><b>Mobile</b> — the public site is designed mobile-first</td>
+    <td><b>Organisation management</b> (<code>/manage</code>, Italian UI) — animals and their lifecycle state</td>
+  </tr>
+</table>
+
+<sub>Demo data from the seeder.</sub>
 
 ---
 
@@ -105,14 +124,14 @@ docker compose exec php sh -lc "npm ci && npm run build"
 
 ## Deployment
 
-Production runs the same Docker stack with Caddy for automatic TLS. See **[docs/DEPLOY.md](docs/DEPLOY.md)** for the full runbook (server, DNS, env, Reverb behind TLS, Meilisearch, queues, backups) and **[docs/RILASCIO-UI.md](docs/RILASCIO-UI.md)** for the release checklist.
+Production runs the same Docker stack with Caddy for automatic TLS. See **[docs/DEPLOY.md](docs/DEPLOY.md)** for the full runbook (server, DNS, env, Reverb behind TLS, Meilisearch, queues, backups) and **[docs/UI-RELEASE.md](docs/UI-RELEASE.md)** for the release checklist.
 
 ## Documentation
 
-- [docs/PIANO-DI-SVILUPPO.md](docs/PIANO-DI-SVILUPPO.md) — roadmap & architecture
-- [docs/CALENDARIO.md](docs/CALENDARIO.md) — calendar & external sync
-- [docs/COMUNICAZIONE.md](docs/COMUNICAZIONE.md) — messaging, realtime & notifications
-- [docs/DONAZIONI.md](docs/DONAZIONI.md) — donations (Stripe)
+- [docs/DEVELOPMENT-PLAN.md](docs/DEVELOPMENT-PLAN.md) — roadmap & architecture
+- [docs/CALENDAR.md](docs/CALENDAR.md) — calendar & external sync
+- [docs/COMMUNICATION.md](docs/COMMUNICATION.md) — messaging, realtime & notifications
+- [docs/DONATIONS.md](docs/DONATIONS.md) — donations (Stripe)
 - [docs/WCAG-CHECKLIST.md](docs/WCAG-CHECKLIST.md) — accessibility
 
 ---

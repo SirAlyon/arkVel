@@ -35,6 +35,11 @@ function renderPublicLayout(array $data = []): TestView
  */
 function fakeViteDevServer(): void
 {
+    // Il suite Feature disabilita Vite di default (withoutVite in tests/Pest.php, per non
+    // dipendere da una build). Questi test invece provano proprio l'output di Vite: qui
+    // ripristiniamo il Vite reale prima di attivarne la modalità "hot".
+    app()->forgetInstance(Vite::class);
+
     $hot = tempnam(sys_get_temp_dir(), 'vite-hot');
     file_put_contents($hot, 'http://vite.test');
     app(Vite::class)->useHotFile($hot);
@@ -87,6 +92,8 @@ it('follows the chosen theme and shows the theme selectors on themeable pages', 
 });
 
 it('includes the theme script before the stylesheets', function (): void {
+    fakeViteDevServer();
+
     $html = (string) renderPublicLayout();
 
     expect(strpos($html, 'window.arkvelTheme'))->toBeLessThan(strpos($html, 'rel="stylesheet"'));

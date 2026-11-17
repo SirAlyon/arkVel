@@ -1,63 +1,63 @@
-# ArkVel — Checklist WCAG 2.2 AA del sito pubblico
+# ArkVel — Public site WCAG 2.2 AA checklist
 
-> Ambito: sito pubblico Livewire (home, catalogo, scheda animale, enti, donazioni, autenticazione)
-> e libreria `x-ui.*`. I pannelli Filament sono fuori ambito.
+> Scope: the public Livewire site (home, catalog, animal page, organizations, donations, authentication)
+> and the `x-ui.*` library. The Filament panels are out of scope.
 >
-> Verifiche automatiche comuni: **axe** (`assertNoAccessibilityIssues`) in light e dark nei test
-> browser di `laravel/tests/Browser` (pagine e `Components/*`); **contrasti** dei token in
-> `laravel/tests/Unit/DesignTokens/ColorContrastTest.php` (coppie in
-> `App\Support\DesignTokens\ContrastPairs`); **target** con `BrowserScripts::undersizedTargets`.
-> axe non copre tutto: i criteri marcati «manuale» sono stati verificati nelle `/ui-review` delle
-> fasi UI-2…UI-7 (docs/PIANO-UI-FRONTEND.md).
+> Common automated checks: **axe** (`assertNoAccessibilityIssues`) in light and dark in the browser
+> tests under `laravel/tests/Browser` (pages and `Components/*`); token **contrasts** in
+> `laravel/tests/Unit/DesignTokens/ColorContrastTest.php` (pairs in
+> `App\Support\DesignTokens\ContrastPairs`); **targets** via `BrowserScripts::undersizedTargets`.
+> axe doesn't cover everything: the criteria marked "manual" were verified in the `/ui-review` runs of
+> phases UI-2…UI-7 (docs/FRONTEND-PLAN.md).
 
-| Criterio | Come è soddisfatto | Dove è verificato |
+| Criterion | How it's met | Where it's tested |
 |---|---|---|
-| **1.1.1** Contenuti non testuali | `x-ui.picture` richiede `alt` (o `decorative`); icone Lucide decorative con `aria-hidden`, con `label` diventano `role="img"`; galleria con alt per foto («Foto n di N di …») | `MediaComponentsTest`, `ActionsComponentsTest` (feature), axe |
-| **1.3.1** Informazioni e relazioni | HTML semantico; `x-ui.field` collega label, aiuto ed errore (`for`, `aria-describedby`, `aria-invalid`); fieldset/legend per i gruppi; titoli senza salti | `FormsComponentsTest`, `PickersComponentsTest`, test di gerarchia dei titoli in `DomainComponentsTest` e `HomeTest` (browser) |
-| **1.3.2** Sequenza significativa | Ordine del DOM uguale all'ordine visivo; marker della mappa nell'ordine dell'elenco | `MapTest` (browser) |
-| **1.3.5** Scopo degli input | `autocomplete` su nome, email, password (`current-password` / `new-password`), `username` nel reset | `AuthTest` (browser), feature delle pagine auth |
-| **1.4.1** Uso del colore | Stati mai solo cromatici: badge con testo, preferito con `aria-pressed` e cuore pieno/vuoto, errori con icona e testo, link sottolineati | feature dei componenti; manuale |
-| **1.4.3** Contrasto (minimo) | Solo token semantici; ogni coppia testo/fondo ≥ 4,5:1 in light e dark | `ColorContrastTest`, axe |
-| **1.4.4** Ridimensionamento del testo | Tipografia in `rem` e `clamp`, layout fluidi | manuale |
-| **1.4.10** Reflow | Nessuno scorrimento orizzontale a 320 px su tutte le pagine | test «no horizontal overflow at 320 px» nei test browser di pagine e componenti |
-| **1.4.11** Contrasto non testuale | Bordi dei controlli con `line-strong` (≥ 3:1), anello di focus ≥ 3:1 anche sui blocchi colorati (`focusScopes`) | `ColorContrastTest` |
-| **1.4.12** Spaziatura del testo | Nessun contenitore di testo ad altezza fissa | manuale |
-| **1.4.13** Contenuto al passaggio del mouse o al focus | `x-ui.tooltip`: appare su hover e focus, resta col puntatore sopra, Esc lo chiude senza spostare il focus | `OverlaysComponentsTest` (browser) |
-| **2.1.1** Tastiera | Tutti i widget da tastiera (pattern APG): dialog, drawer, dropdown, tabs, accordion, combobox, date picker (Cally), galleria, mappa (marker come bottoni, +/−) | test browser dei componenti e `MapTest` |
-| **2.1.2** Nessuna trappola | Dialog e drawer modali nativi (`showModal`) chiudibili con Esc; la mappa non intrappola né il focus né lo scroll (Ctrl/⌘ + rotella) | `OverlaysComponentsTest`, `MapTest` |
-| **2.4.1** Salto di blocchi | Skip link come primo elemento, anche dopo `wire:navigate` | `ShellTest` (browser) |
-| **2.4.2** Titolo della pagina | Titoli tradotti per pagina (`seo.titles.*`, `public.titles.*`), aggiornati dopo `wire:navigate` | `SeoPagesTest`, `ShellTest` |
-| **2.4.3** Ordine del focus | Focus gestito all'apertura e chiusura di livelli, dopo l'invio dei form (riepilogo errori o messaggio di esito), chiudendo un toast | `OverlaysComponentsTest`, `AnimalDetailTest`, `AuthTest` (browser) |
-| **2.4.4** Scopo del link | Link esteso sul nome della card (nessun link vuoto); «Vedi gli animali di {ente}» nel riquadro della mappa | `DomainComponentsTest`, `MapTest` |
-| **2.4.6** Intestazioni ed etichette | Label visibili su tutti i campi, ricerca compresa | feature dei componenti e delle pagine |
-| **2.4.7** Focus visibile | Anello globale di 3 px (`:focus-visible`) mai soppresso | test «visible focus ring» nei browser test dei componenti |
-| **2.4.11** Focus non coperto | `scroll-padding` per l'header sticky, i footer dei drawer e la barra mobile della scheda; i toast fanno scorrere la pagina; marker fuori vista `inert` | `OverlaysComponentsTest`, `MapTest`, `ShellTest` |
-| **2.5.3** Etichetta nel nome | I nomi accessibili iniziano con il testo visibile (es. logo, menu account) | `HeaderTest` (feature) |
-| **2.5.7** Movimenti di trascinamento | Galleria e mappa usabili con bottoni (precedente/successiva, +/−) oltre allo swipe | `MediaComponentsTest`, `MapTest` |
-| **2.5.8** Dimensione del target (minimo) | Controlli ≥ 44 px (oltre i 24 richiesti); link testuali ≥ 24 px | `BrowserScripts::undersizedTargets` nei test browser |
-| **3.1.1** Lingua della pagina | `<html lang>` dalla lingua attiva; header `Content-Language` | `ShellTest`, `ContentLanguageTest` |
-| **3.1.2** Lingua delle parti | Descrizioni nella lingua disponibile con `lang` quando diversa (`TranslatedText`) | `AnimalDetailTest`, `OrganizationPageTest` (feature) |
-| **3.2.1 / 3.2.2** Al focus / all'input | Nessun cambio di contesto al focus; filtri e ricerca aggiornano solo i risultati, annunciati in una regione live | `CatalogTest` (browser) |
-| **3.2.3 / 3.2.4** Navigazione e identificazione coerenti | Shell unica (header, footer, breadcrumb) e componenti `x-ui` condivisi | — |
-| **3.3.1** Identificazione degli errori | Errori testuali vicino al campo e in `x-ui.error-summary` (con focus) | `FormsComponentsTest`, `AuthTest`, `AnimalDetailTest` |
-| **3.3.2** Etichette o istruzioni | Aiuti collegati con `aria-describedby`, indicatore testuale «obbligatorio/facoltativo» | `FormsComponentsTest` |
-| **3.3.3** Suggerimenti per gli errori | Messaggi specifici tradotti (formato, lunghezza, link scaduto con «Chiedi un nuovo link») | feature delle pagine auth |
-| **3.3.7** Inserimento ridondante | Nessun dato già fornito richiesto di nuovo nello stesso flusso | manuale |
-| **3.3.8** Autenticazione accessibile | Login con email e password, gestori di password supportati (`autocomplete`), nessun test cognitivo | `AuthTest` |
-| **4.1.2** Nome, ruolo, valore | Ruoli e stati ARIA dei pattern APG (`aria-expanded`, `aria-pressed`, `aria-selected`, `role="switch"`, `role="dialog"`…) | feature e browser dei componenti, axe |
-| **4.1.3** Messaggi di stato | Regioni `role="status"` / `role="alert"` (toast, esito dei form, risultati del catalogo, pagina caricata dopo `wire:navigate`) | `OverlaysComponentsTest`, `CatalogTest`, `ShellTest` |
+| **1.1.1** Non-text content | `x-ui.picture` requires `alt` (or `decorative`); decorative Lucide icons with `aria-hidden`, and with a `label` they become `role="img"`; gallery with alt per photo ("Photo n of N of …") | `MediaComponentsTest`, `ActionsComponentsTest` (feature), axe |
+| **1.3.1** Info and relationships | Semantic HTML; `x-ui.field` links label, help and error (`for`, `aria-describedby`, `aria-invalid`); fieldset/legend for groups; headings with no skips | `FormsComponentsTest`, `PickersComponentsTest`, heading-hierarchy tests in `DomainComponentsTest` and `HomeTest` (browser) |
+| **1.3.2** Meaningful sequence | DOM order matches visual order; map markers in list order | `MapTest` (browser) |
+| **1.3.5** Identify input purpose | `autocomplete` on name, email, password (`current-password` / `new-password`), `username` in reset | `AuthTest` (browser), feature tests of the auth pages |
+| **1.4.1** Use of color | States never color-only: badges with text, favorite with `aria-pressed` and a filled/empty heart, errors with icon and text, underlined links | component feature tests; manual |
+| **1.4.3** Contrast (minimum) | Semantic tokens only; every text/background pair ≥ 4.5:1 in light and dark | `ColorContrastTest`, axe |
+| **1.4.4** Resize text | Typography in `rem` and `clamp`, fluid layouts | manual |
+| **1.4.10** Reflow | No horizontal scrolling at 320 px on any page | the "no horizontal overflow at 320 px" test in the browser tests of pages and components |
+| **1.4.11** Non-text contrast | Control borders with `line-strong` (≥ 3:1), focus ring ≥ 3:1 even on colored blocks (`focusScopes`) | `ColorContrastTest` |
+| **1.4.12** Text spacing | No fixed-height text containers | manual |
+| **1.4.13** Content on hover or focus | `x-ui.tooltip`: appears on hover and focus, stays while the pointer is over it, Esc dismisses it without moving focus | `OverlaysComponentsTest` (browser) |
+| **2.1.1** Keyboard | All widgets keyboard-operable (APG patterns): dialog, drawer, dropdown, tabs, accordion, combobox, date picker (Cally), gallery, map (markers as buttons, +/−) | browser tests of the components and `MapTest` |
+| **2.1.2** No keyboard trap | Native modal dialog and drawer (`showModal`) closeable with Esc; the map traps neither focus nor scroll (Ctrl/⌘ + wheel) | `OverlaysComponentsTest`, `MapTest` |
+| **2.4.1** Bypass blocks | Skip link as the first element, even after `wire:navigate` | `ShellTest` (browser) |
+| **2.4.2** Page titled | Translated per-page titles (`seo.titles.*`, `public.titles.*`), updated after `wire:navigate` | `SeoPagesTest`, `ShellTest` |
+| **2.4.3** Focus order | Focus managed when opening and closing layers, after form submission (error summary or outcome message), when closing a toast | `OverlaysComponentsTest`, `AnimalDetailTest`, `AuthTest` (browser) |
+| **2.4.4** Link purpose | Extended link over the card name (no empty link); "See {organization}'s animals" in the map panel | `DomainComponentsTest`, `MapTest` |
+| **2.4.6** Headings and labels | Visible labels on all fields, search included | component and page feature tests |
+| **2.4.7** Focus visible | A global 3 px ring (`:focus-visible`), never suppressed | the "visible focus ring" test in the component browser tests |
+| **2.4.11** Focus not obscured | `scroll-padding` for the sticky header, drawer footers and the page's mobile bar; toasts scroll the page; off-screen markers `inert` | `OverlaysComponentsTest`, `MapTest`, `ShellTest` |
+| **2.5.3** Label in name | Accessible names start with the visible text (e.g. logo, account menu) | `HeaderTest` (feature) |
+| **2.5.7** Dragging movements | Gallery and map usable with buttons (previous/next, +/−) besides swipe | `MediaComponentsTest`, `MapTest` |
+| **2.5.8** Target size (minimum) | Controls ≥ 44 px (beyond the required 24); text links ≥ 24 px | `BrowserScripts::undersizedTargets` in the browser tests |
+| **3.1.1** Language of page | `<html lang>` from the active language; `Content-Language` header | `ShellTest`, `ContentLanguageTest` |
+| **3.1.2** Language of parts | Descriptions in the available language with `lang` when different (`TranslatedText`) | `AnimalDetailTest`, `OrganizationPageTest` (feature) |
+| **3.2.1 / 3.2.2** On focus / on input | No change of context on focus; filters and search update only the results, announced in a live region | `CatalogTest` (browser) |
+| **3.2.3 / 3.2.4** Consistent navigation and identification | A single shell (header, footer, breadcrumb) and shared `x-ui` components | — |
+| **3.3.1** Error identification | Textual errors near the field and in `x-ui.error-summary` (with focus) | `FormsComponentsTest`, `AuthTest`, `AnimalDetailTest` |
+| **3.3.2** Labels or instructions | Help linked with `aria-describedby`, a textual "required/optional" indicator | `FormsComponentsTest` |
+| **3.3.3** Error suggestion | Specific translated messages (format, length, expired link with "Request a new link") | feature tests of the auth pages |
+| **3.3.7** Redundant entry | No data already provided requested again in the same flow | manual |
+| **3.3.8** Accessible authentication | Login with email and password, password managers supported (`autocomplete`), no cognitive test | `AuthTest` |
+| **4.1.2** Name, role, value | ARIA roles and states of the APG patterns (`aria-expanded`, `aria-pressed`, `aria-selected`, `role="switch"`, `role="dialog"`…) | component feature and browser tests, axe |
+| **4.1.3** Status messages | `role="status"` / `role="alert"` regions (toasts, form outcome, catalog results, page loaded after `wire:navigate`) | `OverlaysComponentsTest`, `CatalogTest`, `ShellTest` |
 
-## Movimento
+## Motion
 
-`prefers-reduced-motion` (WCAG 2.3.3, AAA, adottato comunque): durate dei token a ~0, nessuna
-comparsa allo scroll, nessuna View Transition, la mappa salta senza animare
+`prefers-reduced-motion` (WCAG 2.3.3, AAA, adopted anyway): token durations to ~0, no
+reveal-on-scroll, no View Transitions, the map jumps without animating
 (`MotionTest`, `MapTest`).
 
-## Eccezioni e limiti noti
+## Known exceptions and limits
 
-- **Contenuti degli enti:** testi e foto caricati dagli enti (descrizioni, `alt` personalizzati)
-  non sono controllabili dal codice; in mancanza di `alt` si usa «Foto n di N di <nome>».
-- **Mappa:** è un complemento; l'elenco alternativo degli stessi enti è sempre presente. Le
-  etichette dei luoghi vengono dalle tile (stile `fiord` in dark: maiuscole).
-- **Bianco su `block-leaf` in dark:** 4,64:1, conforme ma con poco margine.
-- **Script inline** (tema): con una futura Content Security Policy richiederanno un nonce.
+- **Organization content:** texts and photos uploaded by organizations (descriptions, custom `alt`)
+  are not controllable from the code; in the absence of `alt`, "Photo n of N of <name>" is used.
+- **Map:** it's a complement; the alternative list of the same organizations is always present. The
+  place labels come from the tiles (`fiord` style in dark: uppercase).
+- **White on `block-leaf` in dark:** 4.64:1, compliant but with little margin.
+- **Inline scripts** (theme): with a future Content Security Policy they'll need a nonce.
